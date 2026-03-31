@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: sign_language_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sign_lang_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sign_lang_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-sign_language_db}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sign_lang_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sign_language_network
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: sign_language_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-admin_pass}
+      MONGO_INITDB_DATABASE: sign_language_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test -u admin -p admin_pass
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sign_language_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: sign_language_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sign_language_network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: sign_language_backend
+    environment:
+      DATABASE_URL: postgresql://sign_lang_user:sign_lang_pass@postgres:5432/sign_language_db
+      MONGO_URL: mongodb://admin:admin_pass@mongodb:27017/sign_language_mongodb?authSource=admin
+      REDIS_URL: redis://redis:6379/0
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8000
+      ENVIRONMENT: development
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_started
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - ./uploads:/app/uploads
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - sign_language_network
+
+  # React Frontend (optional for docker, usually run locally)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sign_language_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    command: npm run dev
+    depends_on:
+      - backend
+    networks:
+      - sign_language_network
+
+volumes:
+  postgres_data:
+    driver: local
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  sign_language_network:
+    driver: bridge
