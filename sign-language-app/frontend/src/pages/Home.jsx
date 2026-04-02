@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 const Home = () => {
   return (
     <div className="max-w-7xl mx-auto py-12 px-4">
@@ -7,10 +9,13 @@ const Home = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 cursor-pointer">
+        <Link 
+          to="/gesture-recognition"
+          className="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 hover:border-blue-500 border border-transparent cursor-pointer transition transform hover:scale-105"
+        >
           <h3 className="text-xl font-semibold mb-2">🎥 Real-time Recognition</h3>
           <p className="text-gray-400">Recognize sign language gestures in real-time using your camera</p>
-        </div>
+        </Link>
         
         <div className="bg-gray-800 p-6 rounded-lg hover:bg-gray-700 cursor-pointer">
           <h3 className="text-xl font-semibold mb-2">📚 Learn Vocabulary</h3>
