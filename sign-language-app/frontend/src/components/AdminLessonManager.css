@@ -1,0 +1,256 @@
+.admin-lesson-manager {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+}
+
+.manager-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #1f2937;
+}
+
+.lesson-form {
+  background-color: #f9fafb;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-group.checkbox input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.form-group.checkbox label {
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.form-actions button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lessons-filter {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.lessons-filter button {
+  padding: 8px 16px;
+  background-color: #f3f4f6;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.lessons-filter button:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.lessons-filter button.active {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.lessons-table {
+  overflow-x: auto;
+}
+
+.lessons-table table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.lessons-table thead {
+  background-color: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.lessons-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.lessons-table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s ease;
+}
+
+.lessons-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.lessons-table td {
+  padding: 15px 12px;
+}
+
+.lessons-table strong {
+  display: block;
+  color: #1f2937;
+  margin-bottom: 5px;
+}
+
+.lessons-table .description {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge.beginner {
+  background-color: #d4f4dd;
+  color: #065f46;
+}
+
+.badge.intermediate {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge.advanced {
+  background-color: #fee2e2;
+  color: #7f1d1d;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status.active {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.status.inactive {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.lesson-manager.loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+@media (max-width: 768px) {
+  .manager-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .lessons-table th,
+  .lessons-table td {
+    padding: 10px 6px;
+    font-size: 12px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .btn-small {
+    width: 100%;
+  }
+}

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import logging
-from app.routes import auth, gesture, chat, learn, profile
+from app.routes import auth, gesture, chat, learn, profile, admin_learning
 from app.services.database import init_db
 
 # Configure logging
@@ -42,6 +42,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(gesture.router, prefix="/api/gesture", tags=["gesture"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(learn.router, prefix="/api/learn", tags=["learn"])
+app.include_router(admin_learning.router, prefix="/api", tags=["admin"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 
 # Health check endpoint
