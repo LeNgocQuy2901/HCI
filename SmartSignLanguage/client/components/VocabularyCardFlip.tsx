@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RotateCw, Check, X, Play } from "lucide-react";
+import { categoryLabels, difficultyLabels } from "@shared/vocabulary";
 
 interface VocabularyCardProps {
   card: VocabType;
@@ -33,7 +34,7 @@ export default function VocabularyCardComponent({
         {!isFlipped && (
           <div className="flex flex-col items-center justify-center h-full space-y-6 animate-fadeIn">
             <div className="text-center">
-              <Badge className="mb-4">{card.category}</Badge>
+              <Badge className="mb-4">{categoryLabels[card.category]}</Badge>
               <h2 className="text-5xl font-bold text-foreground mb-2">
                 {card.word}
               </h2>
@@ -45,13 +46,12 @@ export default function VocabularyCardComponent({
             </div>
 
             <div className="text-center text-sm text-muted-foreground mt-8">
-              <p>Click to reveal sign demonstration</p>
+              <p>Nhấp để xem minh họa ký hiệu</p>
             </div>
 
             <div className="flex gap-2">
               <Badge variant="outline">
-                {card.difficulty.charAt(0).toUpperCase() +
-                  card.difficulty.slice(1)}
+                {difficultyLabels[card.difficulty]}
               </Badge>
             </div>
           </div>
@@ -73,7 +73,7 @@ export default function VocabularyCardComponent({
                 <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
                   <div className="text-center">
                     <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Video not available</p>
+                    <p className="text-sm">Không có video</p>
                   </div>
                 </div>
               </video>
@@ -81,14 +81,14 @@ export default function VocabularyCardComponent({
 
             {/* Description */}
             <div className="text-center">
-              <h3 className="font-semibold text-foreground mb-2">How to Sign:</h3>
+              <h3 className="font-semibold text-foreground mb-2">Cách ký hiệu:</h3>
               <p className="text-foreground leading-relaxed">
                 {card.description}
               </p>
             </div>
 
             <div className="text-center text-sm text-muted-foreground">
-              <p>Click to hide</p>
+              <p>Nhấp để ẩn</p>
             </div>
           </div>
         )}
@@ -106,7 +106,7 @@ export default function VocabularyCardComponent({
             }}
           >
             <Check className="h-4 w-4" />
-            Got it!
+            Đã hiểu
           </Button>
           <Button
             variant="outline"
@@ -117,7 +117,7 @@ export default function VocabularyCardComponent({
             }}
           >
             <X className="h-4 w-4" />
-            Review Again
+            Xem lại
           </Button>
           <Button
             variant="ghost"

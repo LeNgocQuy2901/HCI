@@ -83,14 +83,14 @@ export default function Learn() {
   const handleMarkCorrect = () => {
     if (!currentCard) return;
     learningStore.updateProgress(currentCard.id, userId, 4); // 4/5 quality
-    toast({ description: "Great! You got it right!" });
+    toast({ description: "Tuyệt! Bạn làm đúng rồi!" });
     handleNextCard();
   };
 
   const handleMarkWrong = () => {
     if (!currentCard) return;
     learningStore.updateProgress(currentCard.id, userId, 2); // 2/5 quality
-    toast({ description: "No worries, you'll get it next time!" });
+    toast({ description: "Không sao, lần sau bạn sẽ làm được!" });
     handleNextCard();
   };
 
@@ -98,7 +98,7 @@ export default function Learn() {
     if (currentCardIndex < cards.length - 1) {
       setCurrentCardIndex(currentCardIndex + 1);
     } else {
-      toast({ description: "You've completed this category!" });
+      toast({ description: "Bạn đã hoàn thành chủ đề này!" });
       setCurrentCardIndex(0);
     }
   };
@@ -120,7 +120,7 @@ export default function Learn() {
         id: `quiz-${index}`,
         type: questionType as "video-to-text" | "text-to-video" | "multiple-choice",
         cardId: card.id,
-        question: `What is the sign for "${card.word}"?`,
+        question: "Kí hiệu trên là gì?",
         options,
         correctAnswerIndex,
         difficulty: card.difficulty,
@@ -138,8 +138,8 @@ export default function Learn() {
   }) => {
     const percentage = (results.score / results.totalQuestions) * 100;
     toast({
-      title: "Quiz Complete!",
-      description: `You scored ${results.score}/${results.totalQuestions} (${Math.round(percentage)}%)`,
+      title: "Hoàn thành bài kiểm tra!",
+      description: `Bạn đạt ${results.score}/${results.totalQuestions} (${Math.round(percentage)}%)`,
     });
     setQuizMode(false);
     setQuizQuestions([]);
@@ -154,7 +154,7 @@ export default function Learn() {
             onClick={() => setQuizMode(false)}
             className="mb-6"
           >
-            ← Back to Learn
+            ← Quay lại học
           </Button>
           <QuizComponent
             questions={quizQuestions}
@@ -172,11 +172,11 @@ export default function Learn() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <BookOpen className="h-8 w-8" />
-            <h1 className="text-4xl font-bold">Learn Sign Language</h1>
+            <h1 className="text-4xl font-bold">Học ngôn ngữ ký hiệu</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Master sign language with interactive cards, quizzes, and spaced
-            repetition
+            Làm chủ ngôn ngữ ký hiệu với thẻ học tương tác, bài kiểm tra và ôn
+            tập lặp lại ngắt quãng
           </p>
         </div>
 
@@ -188,19 +188,19 @@ export default function Learn() {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="learn" className="gap-2">
               <BookOpen className="h-4 w-4" />
-              Learn
+              Học
             </TabsTrigger>
             <TabsTrigger value="review" className="gap-2">
               <Zap className="h-4 w-4" />
-              Review
+              Ôn tập
             </TabsTrigger>
             <TabsTrigger value="quiz" className="gap-2">
               <HelpCircle className="h-4 w-4" />
-              Quiz
+              Kiểm tra
             </TabsTrigger>
             <TabsTrigger value="stats" className="gap-2">
               <BarChart3 className="h-4 w-4" />
-              Stats
+              Thống kê
             </TabsTrigger>
           </TabsList>
 
@@ -210,7 +210,7 @@ export default function Learn() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="text-sm font-semibold mb-2 block">
-                    Category
+                    Chủ đề
                   </label>
                   <Select
                     value={selectedCategory}
@@ -232,7 +232,7 @@ export default function Learn() {
                 </div>
                 <div>
                   <label className="text-sm font-semibold mb-2 block">
-                    Difficulty
+                    Độ khó
                   </label>
                   <Select
                     value={selectedDifficulty}
@@ -261,7 +261,7 @@ export default function Learn() {
                       {currentCardIndex + 1} / {cards.length}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
-                      Flip the card to see the sign
+                      Lật thẻ để xem ký hiệu
                     </p>
                   </div>
 
@@ -282,7 +282,7 @@ export default function Learn() {
               <Card className="p-6">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <Zap className="h-5 w-5 text-yellow-500" />
-                  Due for Review ({dueCards.length})
+                  Cần ôn tập ({dueCards.length})
                 </h3>
                 <div className="space-y-2">
                   {dueCards.length > 0 ? (
@@ -300,12 +300,12 @@ export default function Learn() {
                       >
                         <p className="font-medium">{card.word}</p>
                         <p className="text-xs text-muted-foreground">
-                          {card.category}
+                          {categoryLabels[card.category]}
                         </p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted-foreground">All caught up!</p>
+                    <p className="text-muted-foreground">Bạn đã theo kịp hết rồi!</p>
                   )}
                 </div>
               </Card>
@@ -314,7 +314,7 @@ export default function Learn() {
               <Card className="p-6">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <BookOpen className="h-5 w-5 text-blue-500" />
-                  New Cards ({newCards.length})
+                  Thẻ mới ({newCards.length})
                 </h3>
                 <div className="space-y-2">
                   {newCards.length > 0 ? (
@@ -335,13 +335,13 @@ export default function Learn() {
                       >
                         <p className="font-medium">{card.word}</p>
                         <p className="text-xs text-muted-foreground">
-                          {card.category}
+                          {categoryLabels[card.category]}
                         </p>
                       </div>
                     ))
                   ) : (
                     <p className="text-muted-foreground">
-                      No new cards available
+                      Không có thẻ mới
                     </p>
                   )}
                 </div>
@@ -354,10 +354,10 @@ export default function Learn() {
             <Card className="p-6 text-center space-y-4">
               <HelpCircle className="h-16 w-16 mx-auto text-blue-500" />
               <div>
-                <h3 className="text-2xl font-bold mb-2">Test Your Knowledge</h3>
+                <h3 className="text-2xl font-bold mb-2">Kiểm tra kiến thức của bạn</h3>
                 <p className="text-muted-foreground mb-6">
-                  Take a quiz to evaluate what you've learned and reinforce your
-                  memory
+                  Làm bài kiểm tra để đánh giá những gì bạn đã học và củng cố
+                  trí nhớ
                 </p>
               </div>
 
@@ -367,13 +367,13 @@ export default function Learn() {
                     {cards.length}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Available in {categoryLabels[selectedCategory]}
+                    Có sẵn trong {categoryLabels[selectedCategory]}
                   </p>
                 </Card>
                 <Card className="p-4 bg-muted">
                   <p className="text-3xl font-bold text-green-500">10</p>
                   <p className="text-sm text-muted-foreground">
-                    Questions per quiz
+                    Câu hỏi mỗi bài
                   </p>
                 </Card>
                 <Card className="p-4 bg-muted">
@@ -381,14 +381,14 @@ export default function Learn() {
                     {stats.totalReviewsToday}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Practiced today
+                    Đã luyện tập hôm nay
                   </p>
                 </Card>
               </div>
 
               <Button onClick={generateQuiz} size="lg" className="gap-2">
                 <HelpCircle className="h-5 w-5" />
-                Start {categoryLabels[selectedCategory]} Quiz
+                Bắt đầu kiểm tra chủ đề {categoryLabels[selectedCategory]}
               </Button>
             </Card>
           </TabsContent>

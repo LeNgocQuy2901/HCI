@@ -17,47 +17,47 @@ export default function Index() {
   const features = [
     {
       icon: BookOpen,
-      title: "Learn Vocabulary",
+      title: "Học từ vựng",
       description:
-        "Build your sign language skills with our comprehensive vocabulary library. Learn at your own pace with interactive lessons.",
+        "Rèn luyện ngôn ngữ ký hiệu với thư viện từ vựng đầy đủ. Học theo tốc độ của bạn bằng các bài học tương tác.",
       href: "/learn",
     },
     {
       icon: Zap,
-      title: "Text ↔ Sign Translation",
+      title: "Dịch văn bản ↔ ký hiệu",
       description:
-        "Instantly translate between text and sign language. Perfect for communication and learning.",
+        "Dịch ngay giữa văn bản và ngôn ngữ ký hiệu. Phù hợp cho giao tiếp và học tập.",
       href: "/translate",
     },
     {
       icon: Tv,
-      title: "Realtime Recognition",
+      title: "Nhận dạng thời gian thực",
       description:
-        "Our AI-powered camera recognizes sign language in real-time. See your signs translated instantly.",
+        "Camera AI nhận dạng ngôn ngữ ký hiệu theo thời gian thực. Xem ký hiệu của bạn được dịch ngay lập tức.",
       href: "/recognition",
     },
     {
       icon: Users,
-      title: "Chat & Connect",
+      title: "Trò chuyện và kết nối",
       description:
-        "Connect with other sign language learners. Chat with real-time translation support.",
+        "Kết nối với những người học ngôn ngữ ký hiệu khác. Trò chuyện với hỗ trợ dịch theo thời gian thực.",
       href: "/chat",
     },
   ];
 
   const stats = [
-    { number: "10K+", label: "Words & Phrases" },
-    { number: "50K+", label: "Active Users" },
-    { number: "99%", label: "Accuracy Rate" },
+    { number: "10K+", label: "Từ và cụm từ" },
+    { number: "50K+", label: "Người dùng đang hoạt động" },
+    { number: "99%", label: "Độ chính xác" },
   ];
 
   const benefits = [
-    "Free and accessible to everyone",
-    "Works on any device",
-    "Offline learning modes",
-    "Progress tracking and achievements",
-    "Community support",
-    "Regular updates and new content",
+    "Miễn phí và ai cũng có thể dùng",
+    "Hoạt động trên mọi thiết bị",
+    "Có chế độ học ngoại tuyến",
+    "Theo dõi tiến độ và thành tích",
+    "Có cộng đồng hỗ trợ",
+    "Cập nhật thường xuyên và thêm nội dung mới",
   ];
 
   return (
@@ -70,17 +70,17 @@ export default function Index() {
             <div className="space-y-8">
               <div className="space-y-4">
                 <h1 className="text-5xl md:text-6xl font-bold leading-tight text-foreground">
-                  Learn and Communicate with
+                  Học và giao tiếp bằng
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
                     {" "}
-                    Sign Language
+                    ngôn ngữ ký hiệu
                   </span>
-                  using AI
+                  với AI
                 </h1>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Break down communication barriers with our AI-powered sign
-                  language platform. Learn vocabulary, translate in real-time,
-                  and connect with a supportive community.
+                  Xóa bỏ rào cản giao tiếp với nền tảng ngôn ngữ ký hiệu sử
+                  dụng AI. Học từ vựng, dịch theo thời gian thực và kết nối với
+                  cộng đồng hỗ trợ.
                 </p>
               </div>
 
@@ -92,7 +92,7 @@ export default function Index() {
                   asChild
                 >
                   <Link to="/learn" className="gap-2 inline-flex items-center">
-                    Start Learning
+                    Bắt đầu học
                     <ArrowRight size={20} />
                   </Link>
                 </Button>
@@ -103,7 +103,7 @@ export default function Index() {
                   asChild
                 >
                   <Link to="/recognition">
-                    Try Realtime Recognition
+                    Thử nhận dạng thời gian thực
                   </Link>
                 </Button>
               </div>
@@ -135,10 +135,10 @@ export default function Index() {
                     <div className="relative flex flex-col items-center gap-4">
                       <Video size={48} className="text-primary animate-pulse" />
                       <p className="text-sm font-medium text-foreground">
-                        Camera Preview
+                        Xem trước camera
                       </p>
                       <p className="text-xs text-muted-foreground text-center">
-                        AI Recognition Ready
+                        Sẵn sàng nhận dạng bằng AI
                       </p>
                     </div>
                   </div>
@@ -147,7 +147,7 @@ export default function Index() {
                   <div className="mt-8 flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-2 rounded-full border border-primary/20">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                     <span className="text-xs font-medium text-foreground">
-                      Recognition Active
+                      Nhận dạng đang hoạt động
                     </span>
                   </div>
                 </div>
@@ -161,13 +161,13 @@ export default function Index() {
       <section className="py-20 md:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-primary font-semibold mb-2">Features</p>
+            <p className="text-primary font-semibold mb-2">Tính năng</p>
             <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Everything You Need
+              Mọi thứ bạn cần
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Comprehensive tools designed to make sign language learning and
-              communication effortless and enjoyable.
+              Bộ công cụ toàn diện giúp việc học và giao tiếp bằng ngôn ngữ ký
+              hiệu trở nên dễ dàng và thú vị.
             </p>
           </div>
 
@@ -193,7 +193,7 @@ export default function Index() {
                     {feature.description}
                   </p>
                   <div className="mt-4 flex items-center text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                    Explore
+                    Khám phá
                     <ArrowRight size={16} className="ml-2" />
                   </div>
                 </Link>
@@ -210,7 +210,7 @@ export default function Index() {
             {/* Left: Benefits List */}
             <div>
               <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-8">
-                Why Choose SignLanguage AI?
+                Vì sao chọn SignLanguage AI?
               </h2>
               <div className="space-y-4">
                 {benefits.map((benefit, i) => (
@@ -254,11 +254,11 @@ export default function Index() {
       <section className="py-20 md:py-28 bg-gradient-to-r from-primary/95 to-secondary/95 text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Ready to Start Your Journey?
+            Sẵn sàng bắt đầu hành trình của bạn?
           </h2>
           <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Join thousands of learners who are breaking down communication
-            barriers and connecting with sign language.
+            Hãy tham gia cùng hàng nghìn người học đang phá bỏ rào cản giao
+            tiếp và kết nối bằng ngôn ngữ ký hiệu.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -266,7 +266,7 @@ export default function Index() {
               className="bg-white text-primary hover:bg-white/90 rounded-full px-8 font-semibold"
               asChild
             >
-              <Link to="/register">Get Started Free</Link>
+              <Link to="/register">Bắt đầu miễn phí</Link>
             </Button>
             <Button
               size="lg"
@@ -274,7 +274,7 @@ export default function Index() {
               className="border-white/50 text-white hover:bg-white/10 rounded-full px-8"
               asChild
             >
-              <Link to="/chat">Join Community</Link>
+              <Link to="/chat">Tham gia cộng đồng</Link>
             </Button>
           </div>
 
@@ -282,15 +282,15 @@ export default function Index() {
           <div className="mt-12 pt-8 border-t border-white/20 flex flex-wrap justify-center gap-8 text-sm text-white/80">
             <div className="flex items-center gap-2">
               <Star size={18} className="fill-white text-white" />
-              <span>Trusted by 50K+ users</span>
+              <span>Được 50K+ người dùng tin tưởng</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 size={18} />
-              <span>Free and open access</span>
+              <span>Miễn phí và truy cập mở</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap size={18} />
-              <span>AI-powered recognition</span>
+              <span>Nhận dạng bằng AI</span>
             </div>
           </div>
         </div>
@@ -301,10 +301,10 @@ export default function Index() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-foreground mb-4">
-              How It Works
+              Cách hoạt động
             </h2>
             <p className="text-xl text-muted-foreground">
-              Three simple steps to get started
+              Ba bước đơn giản để bắt đầu
             </p>
           </div>
 
@@ -312,18 +312,18 @@ export default function Index() {
             {[
               {
                 number: "01",
-                title: "Sign Up",
-                description: "Create your free account in seconds",
+                title: "Đăng ký",
+                description: "Tạo tài khoản miễn phí chỉ trong vài giây",
               },
               {
                 number: "02",
-                title: "Choose Your Path",
-                description: "Select learning, translation, or recognition",
+                title: "Chọn lộ trình",
+                description: "Chọn học, dịch hoặc nhận dạng",
               },
               {
                 number: "03",
-                title: "Start Exploring",
-                description: "Learn at your own pace with AI assistance",
+                title: "Bắt đầu khám phá",
+                description: "Học theo tốc độ của bạn với hỗ trợ từ AI",
               },
             ].map((step, i) => (
               <div key={i} className="relative">

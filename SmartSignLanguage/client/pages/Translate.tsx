@@ -6,17 +6,17 @@ export default function Translate() {
   return (
     <Layout>
       <PlaceholderPage
-        title="Text ↔ Sign Language Translation"
-        description="Instantly translate between text and sign language. Perfect for communication, learning, and accessibility."
+        title="Dịch văn bản ↔ ngôn ngữ ký hiệu"
+        description="Dịch ngay giữa văn bản và ngôn ngữ ký hiệu. Phù hợp cho giao tiếp, học tập và khả năng tiếp cận."
         icon={<Zap size={64} className="text-primary" />}
-        ctaText="Back to Home"
+        ctaText="Quay về trang chủ"
         features={[
-          "Real-time text to sign language translation",
-          "Sign language to text translation",
-          "Video output showing sign language animations",
-          "Support for multiple sign language variants",
-          "History of recent translations",
-          "Download or share translations",
+          "Dịch văn bản sang ngôn ngữ ký hiệu theo thời gian thực",
+          "Dịch ngôn ngữ ký hiệu sang văn bản",
+          "Xuất video hiển thị hoạt ảnh ký hiệu",
+          "Hỗ trợ nhiều biến thể ngôn ngữ ký hiệu",
+          "Lịch sử các bản dịch gần đây",
+          "Tải xuống hoặc chia sẻ bản dịch",
         ]}
       />
     </Layout>

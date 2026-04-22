@@ -15,8 +15,8 @@ import { LogOut, Loader2, User as UserIcon } from "lucide-react";
 const profileSchema = z.object({
   fullName: z
     .string()
-    .min(1, "Full name is required")
-    .max(100, "Full name must be at most 100 characters"),
+    .min(1, "Họ tên là bắt buộc")
+    .max(100, "Họ tên không được vượt quá 100 ký tự"),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -76,7 +76,7 @@ export default function Profile() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to update profile");
+        throw new Error(error.error || "Không thể cập nhật hồ sơ");
       }
 
       const result = await response.json();
@@ -84,13 +84,13 @@ export default function Profile() {
       useAuthStore.getState().saveToStorage();
 
       toast({
-        title: "Success",
-        description: "Profile updated successfully",
+        title: "Thành công",
+        description: "Cập nhật hồ sơ thành công",
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Failed to update profile",
+        title: "Lỗi",
+        description: error.message || "Không thể cập nhật hồ sơ",
         variant: "destructive",
       });
     } finally {
@@ -102,8 +102,8 @@ export default function Profile() {
     await logout();
     navigate("/login");
     toast({
-      title: "Success",
-      description: "Logged out successfully",
+      title: "Thành công",
+      description: "Đăng xuất thành công",
     });
   };
 
@@ -141,9 +141,9 @@ export default function Profile() {
             {/* User Info */}
             <div className="space-y-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Member since</p>
+                <p className="text-muted-foreground">Thành viên từ</p>
                 <p>
-                  {new Date(user.createdAt).toLocaleDateString("en-US", {
+                  {new Date(user.createdAt).toLocaleDateString("vi-VN", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -155,7 +155,7 @@ export default function Profile() {
             {/* Edit Profile Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">Họ và tên</Label>
                 <Input
                   id="fullName"
                   type="text"
@@ -176,10 +176,10 @@ export default function Profile() {
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    Đang lưu...
                   </>
                 ) : (
-                  "Save Changes"
+                  "Lưu thay đổi"
                 )}
               </Button>
             </form>
@@ -191,7 +191,7 @@ export default function Profile() {
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              Đăng xuất
             </Button>
           </div>
         </Card>

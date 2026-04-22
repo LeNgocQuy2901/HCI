@@ -6,17 +6,17 @@ export default function Recognition() {
   return (
     <Layout>
       <PlaceholderPage
-        title="Realtime Sign Recognition"
-        description="Our AI-powered camera recognizes sign language in real-time. See your signs translated instantly with hand detection and pose analysis."
+        title="Nhận dạng ngôn ngữ ký hiệu thời gian thực"
+        description="Camera AI nhận dạng ngôn ngữ ký hiệu theo thời gian thực. Xem ký hiệu của bạn được dịch ngay lập tức với phát hiện tay và phân tích tư thế."
         icon={<Tv size={64} className="text-primary" />}
-        ctaText="Back to Home"
+        ctaText="Quay về trang chủ"
         features={[
-          "Real-time camera feed with hand detection",
-          "Instant sign language recognition",
-          "Bounding box and pose visualization",
-          "Recognition confidence score",
-          "History of recognized signs",
-          "Performance statistics and analytics",
+          "Luồng camera thời gian thực với phát hiện bàn tay",
+          "Nhận dạng ngôn ngữ ký hiệu tức thì",
+          "Hiển thị khung giới hạn và tư thế",
+          "Điểm tin cậy nhận dạng",
+          "Lịch sử các ký hiệu đã nhận dạng",
+          "Thống kê hiệu năng và phân tích",
         ]}
       />
     </Layout>

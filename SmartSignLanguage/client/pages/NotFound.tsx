@@ -9,7 +9,7 @@ const NotFound = () => {
 
   useEffect(() => {
     console.error(
-      "404 Error: User attempted to access non-existent route:",
+      "Lỗi 404: Người dùng đã truy cập vào tuyến không tồn tại:",
       location.pathname,
     );
   }, [location.pathname]);
@@ -26,18 +26,18 @@ const NotFound = () => {
           {/* Content */}
           <h1 className="text-6xl font-bold text-foreground mb-2">404</h1>
           <h2 className="text-2xl font-semibold text-foreground mb-4">
-            Page Not Found
+            Không tìm thấy trang
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Sorry, we couldn't find the page you're looking for. The link may be
-            broken or the page may have been removed.
+            Xin lỗi, chúng tôi không tìm thấy trang bạn đang tìm. Liên kết có
+            thể bị lỗi hoặc trang đã bị xóa.
           </p>
 
           {/* CTA */}
           <Button asChild size="lg">
             <Link to="/" className="gap-2 inline-flex items-center">
               <Home size={20} />
-              Back to Home
+              Quay về trang chủ
             </Link>
           </Button>
         </div>

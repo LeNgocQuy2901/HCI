@@ -2,6 +2,8 @@
 export type Category = "greetings" | "numbers" | "emotions" | "daily" | "actions" | "family" | "health";
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
+import { getDriveVideoName } from "./google-drive";
+
 export interface VocabularyCard {
   id: string;
   word: string;
@@ -74,7 +76,7 @@ export interface Achievement {
 export const vocabularyCards: VocabularyCard[] = [
   {
     id: "greet-hello",
-    word: "Hello",
+    word: getDriveVideoName("greet-hello"),
     category: "greetings",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/greet-hello",
@@ -83,7 +85,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "greet-thank-you",
-    word: "Thank You",
+    word: getDriveVideoName("greet-thank-you"),
     category: "greetings",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/greet-thank-you",
@@ -92,7 +94,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "num-zero",
-    word: "Zero",
+    word: getDriveVideoName("num-0"),
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-0",
@@ -101,7 +103,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "num-one",
-    word: "One",
+    word: getDriveVideoName("num-1"),
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-1",
@@ -110,7 +112,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "num-two",
-    word: "Two",
+    word: getDriveVideoName("num-2"),
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-2",
@@ -119,7 +121,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "num-three",
-    word: "Three",
+    word: getDriveVideoName("num-3"),
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-3",
@@ -128,7 +130,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "num-four",
-    word: "Four",
+    word: getDriveVideoName("num-4"),
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-4",
@@ -137,7 +139,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "num-five",
-    word: "Five",
+    word: getDriveVideoName("num-5"),
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-5",
@@ -146,7 +148,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "num-six",
-    word: "Six",
+    word: getDriveVideoName("num-6"),
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-6",
@@ -155,7 +157,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "emotion-happy",
-    word: "Happy",
+    word: getDriveVideoName("emotion-happy"),
     category: "emotions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/emotion-happy",
@@ -164,7 +166,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "emotion-sad",
-    word: "Sad",
+    word: getDriveVideoName("emotion-sad"),
     category: "emotions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/emotion-sad",
@@ -173,7 +175,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "daily-eat",
-    word: "Eat",
+    word: getDriveVideoName("daily-eat"),
     category: "daily",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/daily-eat",
@@ -182,7 +184,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "daily-drink",
-    word: "Drink",
+    word: getDriveVideoName("daily-drink"),
     category: "daily",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/daily-drink",
@@ -191,7 +193,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "action-walk",
-    word: "Walk",
+    word: getDriveVideoName("action-walk"),
     category: "actions",
     difficulty: "intermediate",
     videoUrl: "/api/video-stream/action-walk",
@@ -200,7 +202,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "viet-cau-don-ban-khoe-khong",
-    word: "Bạn khỏe không?",
+    word: getDriveVideoName("greet-how-are-you"),
     category: "greetings",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/greet-how-are-you",
@@ -209,7 +211,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "viet-cau-phuc-lau-qua-khong-gap",
-    word: "Lâu quá không gặp, bạn khỏe không?",
+    word: getDriveVideoName("greet-long-time-no-see"),
     category: "greetings",
     difficulty: "intermediate",
     videoUrl: "/api/video-stream/greet-long-time-no-see",
@@ -218,7 +220,7 @@ export const vocabularyCards: VocabularyCard[] = [
   },
   {
     id: "viet-cau-phuc-lau-qua-khong-gap-2",
-    word: "Lâu quá không gặp, bạn khỏe không? (Phiên bản 2)",
+    word: getDriveVideoName("greet-long-time-no-see"),
     category: "greetings",
     difficulty: "intermediate",
     videoUrl: "/api/video-stream/greet-long-time-no-see",
@@ -240,19 +242,19 @@ export const categories = [
 export const difficulties = ["beginner", "intermediate", "advanced"] as const;
 
 export const categoryLabels: Record<Category, string> = {
-  greetings: "Greetings",
-  numbers: "Numbers",
-  emotions: "Emotions",
-  daily: "Daily Life",
-  actions: "Actions",
-  family: "Family",
-  health: "Health",
+  greetings: "Chào hỏi",
+  numbers: "Số đếm",
+  emotions: "Cảm xúc",
+  daily: "Đời sống",
+  actions: "Hành động",
+  family: "Gia đình",
+  health: "Sức khỏe",
 };
 
 export const difficultyLabels: Record<Difficulty, string> = {
-  beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
+  beginner: "Cơ bản",
+  intermediate: "Trung cấp",
+  advanced: "Nâng cao",
 };
 
 // Helper functions

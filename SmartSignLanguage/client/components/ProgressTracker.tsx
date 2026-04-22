@@ -30,25 +30,25 @@ export default function ProgressTracker({
           <div className="text-2xl font-bold text-primary">
             {stats.masteredWords}
           </div>
-          <p className="text-xs text-muted-foreground">Mastered</p>
+          <p className="text-xs text-muted-foreground">Đã nắm vững</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-orange-500">
             {stats.currentStreak}
           </div>
-          <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
+          <p className="text-xs text-muted-foreground">Chuỗi ngày 🔥</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-blue-500">
             {stats.totalReviewsToday}
           </div>
-          <p className="text-xs text-muted-foreground">Today</p>
+          <p className="text-xs text-muted-foreground">Hôm nay</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-green-500">
             {Math.round(masteryPercentage)}%
           </div>
-          <p className="text-xs text-muted-foreground">Complete</p>
+          <p className="text-xs text-muted-foreground">Hoàn thành</p>
         </Card>
       </div>
     );
@@ -62,7 +62,7 @@ export default function ProgressTracker({
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Overall Progress
+              Tiến độ tổng quan
             </h3>
             <Badge variant="outline">
               {stats.masteredWords} / {stats.totalWords}
@@ -70,7 +70,7 @@ export default function ProgressTracker({
           </div>
           <Progress value={masteryPercentage} className="h-3" />
           <p className="text-sm text-muted-foreground">
-            {Math.round(masteryPercentage)}% of vocabulary mastered
+            {Math.round(masteryPercentage)}% từ vựng đã nắm vững
           </p>
         </div>
       </Card>
@@ -84,10 +84,10 @@ export default function ProgressTracker({
               <span className="text-2xl">🔥</span>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Current Streak</p>
+              <p className="text-sm text-muted-foreground">Chuỗi hiện tại</p>
               <p className="text-3xl font-bold">{stats.currentStreak}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Longest: {stats.longestStreak} days
+                Dài nhất: {stats.longestStreak} ngày
               </p>
             </div>
           </div>
@@ -100,11 +100,11 @@ export default function ProgressTracker({
               <Calendar className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Today's Reviews</p>
+              <p className="text-sm text-muted-foreground">Ôn tập hôm nay</p>
               <p className="text-3xl font-bold">{stats.totalReviewsToday}</p>
               {stats.nextReviewDate && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Next review: {new Date(stats.nextReviewDate).toLocaleDateString()}
+                  Lần ôn tiếp theo: {new Date(stats.nextReviewDate).toLocaleDateString("vi-VN")}
                 </p>
               )}
             </div>
@@ -118,10 +118,10 @@ export default function ProgressTracker({
               <Award className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Mastered Words</p>
+              <p className="text-sm text-muted-foreground">Từ đã nắm vững</p>
               <p className="text-3xl font-bold">{stats.masteredWords}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Keep up the great work!
+                Cố gắng giữ nhịp tốt nhé!
               </p>
             </div>
           </div>
@@ -134,10 +134,10 @@ export default function ProgressTracker({
               <BookOpen className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Words</p>
+              <p className="text-sm text-muted-foreground">Tổng số từ</p>
               <p className="text-3xl font-bold">{stats.totalWords}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Available to learn
+                Có sẵn để học
               </p>
             </div>
           </div>

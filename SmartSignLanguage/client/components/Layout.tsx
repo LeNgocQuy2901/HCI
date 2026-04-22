@@ -24,16 +24,16 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/learn", label: "Learn" },
-    { href: "/translate", label: "Translate" },
-    { href: "/recognition", label: "Recognition" },
-    { href: "/chat", label: "Chat" },
+    { href: "/", label: "Trang chủ" },
+    { href: "/learn", label: "Học" },
+    { href: "/translate", label: "Dịch" },
+    { href: "/recognition", label: "Nhận dạng" },
+    { href: "/chat", label: "Trò chuyện" },
   ];
 
   // Add Profile link only if authenticated
   if (isAuthenticated) {
-    navLinks.push({ href: "/profile", label: "Profile" });
+    navLinks.push({ href: "/profile", label: "Hồ sơ" });
   }
 
   // Get user initials for avatar
@@ -51,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
     await logout();
     setMobileMenuOpen(false);
     navigate("/");
-    toast({ description: "You've been logged out" });
+    toast({ description: "Bạn đã đăng xuất" });
   };
 
   return (
@@ -110,12 +110,12 @@ export default function Layout({ children }: LayoutProps) {
                     <DropdownMenuItem className="gap-2" asChild>
                       <Link to="/profile">
                         <User size={16} />
-                        <span>Profile</span>
+                        <span>Hồ sơ</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2">
                       <Settings size={16} />
-                      <span>Settings</span>
+                      <span>Cài đặt</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -123,17 +123,17 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      <span>Logout</span>
+                      <span>Đăng xuất</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <>
                   <Button variant="outline" size="sm" asChild>
-                    <Link to="/login">Login</Link>
+                    <Link to="/login">Đăng nhập</Link>
                   </Button>
                   <Button size="sm" asChild>
-                    <Link to="/register">Sign Up</Link>
+                    <Link to="/register">Đăng ký</Link>
                   </Button>
                 </>
               )}
@@ -192,7 +192,7 @@ export default function Layout({ children }: LayoutProps) {
                     >
                       <Link to="/profile">
                         <User size={16} />
-                        Profile
+                        Hồ sơ
                       </Link>
                     </Button>
                     <Button
@@ -201,16 +201,16 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      Logout
+                      Đăng xuất
                     </Button>
                   </>
                 ) : (
                   <>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link to="/login">Login</Link>
+                      <Link to="/login">Đăng nhập</Link>
                     </Button>
                     <Button className="w-full" asChild>
-                      <Link to="/register">Sign Up</Link>
+                      <Link to="/register">Đăng ký</Link>
                     </Button>
                   </>
                 )}
@@ -230,65 +230,65 @@ export default function Layout({ children }: LayoutProps) {
             <div>
               <h4 className="font-semibold mb-4">SignLanguage AI</h4>
               <p className="text-sm text-muted-foreground">
-                Making sign language accessible to everyone.
+                Làm cho ngôn ngữ ký hiệu trở nên dễ tiếp cận với mọi người.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
+              <h4 className="font-semibold mb-4">Sản phẩm</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link to="/learn" className="hover:text-foreground">
-                    Learn
+                    Học
                   </Link>
                 </li>
                 <li>
                   <Link to="/translate" className="hover:text-foreground">
-                    Translate
+                    Dịch
                   </Link>
                 </li>
                 <li>
                   <Link to="/recognition" className="hover:text-foreground">
-                    Recognition
+                    Nhận dạng
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Community</h4>
+              <h4 className="font-semibold mb-4">Cộng đồng</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link to="/chat" className="hover:text-foreground">
-                    Chat
+                    Trò chuyện
                   </Link>
                 </li>
                 <li>
                   <Link to="/feedback" className="hover:text-foreground">
-                    Feedback
+                    Góp ý
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
+              <h4 className="font-semibold mb-4">Pháp lý</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <a href="#" className="hover:text-foreground">
-                    Privacy
+                    Quyền riêng tư
                   </a>
                 </li>
                 <li>
                   <a href="#" className="hover:text-foreground">
-                    Terms
+                    Điều khoản
                   </a>
                 </li>
               </ul>
             </div>
           </div>
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-            <p>&copy; 2024 SignLanguage AI. All rights reserved.</p>
+            <p>&copy; 2024 SignLanguage AI. Bảo lưu mọi quyền.</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <a href="#" className="hover:text-foreground">
-                Twitter
+                X
               </a>
               <a href="#" className="hover:text-foreground">
                 Facebook

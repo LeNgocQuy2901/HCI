@@ -36,8 +36,8 @@ export const driveVideoMap: Record<string, { fileId: string; name: string }> = {
     name: "Xin chào hoặc chào (3 cách).mp4",
   },
   "greet-thank-you": {
-    fileId: "PLACEHOLDER_THANK_YOU",
-    name: "Thank You.mp4",
+    fileId: "1VNRBKR8DNQLqaJg8xHVriCeN8EUeIVpt",
+    name: "Cảm ơn.mp4",
   },
   "greet-happy-to-meet": {
     fileId: "1H7VxO2IUE66XyJFImOsyVf19DvLz45lH",
@@ -48,7 +48,7 @@ export const driveVideoMap: Record<string, { fileId: string; name: string }> = {
     name: "Câu đơn_Bạn khỏe không.mp4",
   },
   "greet-long-time-no-see": {
-    fileId: "PLACEHOLDER_LONG_TIME",
+    fileId: "1rAaPKZqX-c0JSA6ed92y01nXaxFzIF_V",
     name: "Câu phúc_Lâu quá không gặp, bạn khỏe không.mp4",
   },
   "greet-meet": {
@@ -75,9 +75,9 @@ export const driveVideoMap: Record<string, { fileId: string; name: string }> = {
     fileId: "PLACEHOLDER_DAILY_DRINK",
     name: "Drink.mp4",
   },
-  "action-walk": {
-    fileId: "PLACEHOLDER_ACTION_WALK",
-    name: "Walk.mp4",
+  "action-go": {
+    fileId: "1a_R3KILGJoTP1zLR1i6qBkg3eWOzhAFk",
+    name: "Đi.mp4",
   },
   "info-name": {
     fileId: "_q855ZNYGrOVqqMgT45kXeHjaDsmioGA",
@@ -113,6 +113,22 @@ export function getVideoUrl(videoKey: string): string {
     return `/api/video-stream/${videoKey}`;
   }
   return `/api/video-stream/${videoKey}`;
+}
+
+/**
+ * Get the display name from Google Drive for a given video key.
+ * Falls back to the key when the mapping is missing.
+ */
+export function getDriveVideoName(videoKey: string): string {
+  const video = driveVideoMap[videoKey];
+  if (!video) {
+    return videoKey;
+  }
+
+  return video.name
+    .replace(/\.mp4$/i, "")
+    .replace(/^[A-Za-z0-9]+[-_ ]+/, "")
+    .trim();
 }
 
 /**

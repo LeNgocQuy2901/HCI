@@ -6,17 +6,17 @@ export default function Feedback() {
   return (
     <Layout>
       <PlaceholderPage
-        title="Share Your Feedback"
-        description="Help us improve SignLanguage AI. Tell us what you love and what we can do better."
+        title="Gửi góp ý"
+        description="Giúp chúng tôi cải thiện SignLanguage AI. Hãy cho biết bạn thích điều gì và chúng tôi có thể làm tốt hơn ở đâu."
         icon={<MessageSquare size={64} className="text-primary" />}
-        ctaText="Back to Home"
+        ctaText="Quay về trang chủ"
         features={[
-          "Rate your experience with stars",
-          "Written feedback form",
-          "Feature request submission",
-          "Bug report functionality",
-          "Email notifications for responses",
-          "Community feedback voting",
+          "Đánh giá trải nghiệm bằng sao",
+          "Biểu mẫu góp ý bằng văn bản",
+          "Gửi yêu cầu tính năng",
+          "Báo lỗi",
+          "Thông báo qua email khi có phản hồi",
+          "Bình chọn góp ý từ cộng đồng",
         ]}
       />
     </Layout>
