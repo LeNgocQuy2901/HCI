@@ -46,9 +46,9 @@ export default function Index() {
   ];
 
   const stats = [
-    { number: "10K+", label: "Từ và cụm từ" },
-    { number: "50K+", label: "Người dùng đang hoạt động" },
-    { number: "99%", label: "Độ chính xác" },
+    { number: "", label: "Từ và cụm từ" },
+    { number: "", label: "Người dùng đang hoạt động" },
+    { number: "", label: "Độ chính xác" },
   ];
 
   const benefits = [

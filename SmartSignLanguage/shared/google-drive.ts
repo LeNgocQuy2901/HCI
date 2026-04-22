@@ -60,24 +60,84 @@ export const driveVideoMap: Record<string, { fileId: string; name: string }> = {
     name: "Khỏe.mp4",
   },
   "emotion-happy": {
-    fileId: "PLACEHOLDER_EMOTION_HAPPY",
-    name: "Happy.mp4",
+    fileId: "19-fpL5lSfxdzDpvs4Rbwt4RQjCs8FRos",
+    name: "Phần 1_Vui.mp4",
   },
   "emotion-sad": {
-    fileId: "PLACEHOLDER_EMOTION_SAD",
-    name: "Sad.mp4",
+    fileId: "1logdz0RTQzfjuj5X3aYu0-i9WwhnOrWS",
+    name: "Phần 1_Buồn.mp4",
   },
-  "daily-eat": {
-    fileId: "PLACEHOLDER_DAILY_EAT",
-    name: "Eat.mp4",
+  "emotion-angry": {
+    fileId: "1iQsb09aH6o1lCj49BwOJ4-D0j6fCLGqk",
+    name: "Phần 1_Tức giận.mp4",
   },
-  "daily-drink": {
-    fileId: "PLACEHOLDER_DAILY_DRINK",
-    name: "Drink.mp4",
+  "emotion-disappointed": {
+    fileId: "1lutuEn27ReMDRGGF2_TmXXiyZRcw7IVz",
+    name: "Phần 2_Thất vọng.mp4",
   },
-  "action-go": {
-    fileId: "1a_R3KILGJoTP1zLR1i6qBkg3eWOzhAFk",
-    name: "Đi.mp4",
+  "emotion-tired": {
+    fileId: "1wOvqYjN8EKOBK6_4jphvq7DQfXISI2fC",
+    name: "Phần 3_Không tôi hơi mệt thôi.mp4",
+  },
+  "animal-cat": {
+    fileId: "PLACEHOLDER_ANIMAL_CAT",
+    name: "Con mèo.mp4",
+  },
+  "animal-bird": {
+    fileId: "PLACEHOLDER_ANIMAL_BIRD",
+    name: "Con chim.mp4",
+  },
+  "animal-fish": {
+    fileId: "PLACEHOLDER_ANIMAL_FISH",
+    name: "Con cá.mp4",
+  },
+  "animal-mosquito": {
+    fileId: "PLACEHOLDER_ANIMAL_MOSQUITO",
+    name: "Con muỗi.mp4",
+  },
+  "animal-monkey": {
+    fileId: "PLACEHOLDER_ANIMAL_MONKEY",
+    name: "Con khỉ.mp4",
+  },
+  "color-black": {
+    fileId: "PLACEHOLDER_COLOR_BLACK",
+    name: "Màu đen.mp4",
+  },
+  "color-red": {
+    fileId: "1_p6qptWclkRDGrIYM5SXvEI29xvlB_kC",
+    name: "Màu đỏ.mp4",
+  },
+  "color-blue": {
+    fileId: "1nUcCFFSnVfLfAmkw-t7ZOFr8lrRkqOHb",
+    name: "Màu xanh dương.mp4",
+  },
+  "color-yellow": {
+    fileId: "1ci4RSOSm8Wzrgk9OoYJtGWN4kqqMRhve",
+    name: "Màu vàng.mp4",
+  },
+  "color-pink": {
+    fileId: "1GuVMTEvUkYG-GRaMWxZuCK4nCldfoqnf",
+    name: "Màu hồng.mp4",
+  },
+  "family-anh": {
+    fileId: "1Arl-PDjYs21BxI31i-V3ua0D5aUPxgKG",
+    name: "Anh.mp4",
+  },
+  "family-ong-ngoai": {
+    fileId: "1kwaAsXK5PVEuUZleBV1EjtxJxzbkv2KU",
+    name: "Ông_ngoại.mp4",
+  },
+  "family-me": {
+    fileId: "1YGwmZbb8N_Msrl1Y109ZRVjhWpurb7iL",
+    name: "Mẹ.mp4",
+  },
+  "family-ba": {
+    fileId: "1AZLInhWqE1hCAg8slf4YE2ORKhD8dmXk",
+    name: "Ba.mp4",
+  },
+  "family-chi": {
+    fileId: "1nu4XdUo0HHmCDbxzR_irWCDd1G7UnwhQ",
+    name: "Chị.mp4",
   },
   "info-name": {
     fileId: "_q855ZNYGrOVqqMgT45kXeHjaDsmioGA",
@@ -127,7 +187,7 @@ export function getDriveVideoName(videoKey: string): string {
 
   return video.name
     .replace(/\.mp4$/i, "")
-    .replace(/^[A-Za-z0-9]+[-_ ]+/, "")
+    .replace(/^B\d+[-_ ]+/, "")
     .trim();
 }
 

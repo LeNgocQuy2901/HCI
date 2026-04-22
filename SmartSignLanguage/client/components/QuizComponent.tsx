@@ -90,14 +90,16 @@ export default function QuizComponent({
           <div className="space-y-4">
             <div className="w-full max-w-xl mx-auto rounded-lg overflow-hidden bg-black flex items-center justify-center">
               <video
+                key={currentCard.id}
                 className="w-full h-auto max-h-72 bg-black"
                 controls
                 autoPlay
                 loop
                 muted
+                preload="metadata"
                 playsInline
               >
-                <source src={currentCard.videoUrl} type="video/mp4" />
+                <source key={currentCard.videoUrl} src={currentCard.videoUrl} type="video/mp4" />
                 <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
                   <div className="text-center">
                     <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
