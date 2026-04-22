@@ -36,6 +36,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+!SmartSignLanguage/client/lib/
+!SmartSignLanguage/client/lib/**
 
 # ===== NODE & FRONTEND =====
 frontend/node_modules/
