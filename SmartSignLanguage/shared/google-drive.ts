@@ -79,6 +79,26 @@ export const driveVideoMap: Record<string, { fileId: string; name: string }> = {
     fileId: "1wOvqYjN8EKOBK6_4jphvq7DQfXISI2fC",
     name: "Phần 3_Không tôi hơi mệt thôi.mp4",
   },
+  "action-sleep": {
+    fileId: "1eQuPW7wvZqoexj9kKXTYFnYU_9gDtzKn",
+    name: "Ngủ.mp4",
+  },
+  "action-walk": {
+    fileId: "1a_R3KILGJoTP1zLR1i6qBkg3eWOzhAFk",
+    name: "Đi.mp4",
+  },
+  "action-read": {
+    fileId: "1feRbRfhfSnhQEZ6WLEUUHnQWGkMrIuIY",
+    name: "Đọc sách.mp4",
+  },
+  "action-listen-to-music": {
+    fileId: "1aAH15HddrKAVxGF1yU_SbXB8dR2e0WAF",
+    name: "Nghe nhạc.mp4",
+  },
+  "action-watch-movie": {
+    fileId: "150dOCh6402ozUUiSHAEYysS9sEE7c3ND",
+    name: "Xem phim.mp4",
+  },
   "animal-cat": {
     fileId: "PLACEHOLDER_ANIMAL_CAT",
     name: "Con mèo.mp4",

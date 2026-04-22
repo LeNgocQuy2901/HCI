@@ -66,7 +66,7 @@ export default function QuizComponent({
           <h3 className="font-semibold">
             Câu hỏi {currentIndex + 1} / {questions.length}
           </h3>
-          <Badge>{Math.round(progress)}% complete</Badge>
+          <Badge>{Math.round(progress)}% hoàn thành</Badge>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
@@ -77,9 +77,9 @@ export default function QuizComponent({
         <div className="flex gap-2">
           <Badge variant="secondary">
             {current.type === "video-to-text"
-              ? "Video → văn bản"
+              ? "Ký hiệu → văn bản"
               : current.type === "text-to-video"
-                ? "Văn bản → video"
+                ? "Văn bản → ký hiệu"
                 : "Trắc nghiệm"}
           </Badge>
           <Badge variant="outline">{difficultyLabels[current.difficulty]}</Badge>

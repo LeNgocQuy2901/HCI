@@ -33,12 +33,16 @@ const calculateSM2 = (
 interface LearningStore {
   // Progress tracking
   progress: Map<string, SRSProgress>;
+  understoodCards: Map<string, boolean>;
   addProgress: (cardId: string, userId: string) => void;
   updateProgress: (
     cardId: string,
     userId: string,
     quality: number // 0-5
   ) => void;
+  markCardUnderstood: (cardId: string, userId: string) => void;
+  unmarkCardUnderstood: (cardId: string, userId: string) => void;
+  getUnderstoodCards: (userId: string) => VocabularyCard[];
   getProgressByCard: (cardId: string) => SRSProgress | undefined;
   getProgressStats: (userId: string) => {
     totalWords: number;
@@ -71,6 +75,7 @@ export const useLearningStore = create<LearningStore>()(
   persist(
     (set, get) => ({
       progress: new Map(),
+      understoodCards: new Map(),
       streaks: new Map(),
 
       addProgress: (cardId, userId) => {
@@ -134,6 +139,23 @@ export const useLearningStore = create<LearningStore>()(
         }
       },
 
+      markCardUnderstood: (cardId, userId) => {
+        const store = get();
+        store.understoodCards.set(`${userId}:${cardId}`, true);
+      },
+
+      unmarkCardUnderstood: (cardId, userId) => {
+        const store = get();
+        store.understoodCards.delete(`${userId}:${cardId}`);
+      },
+
+      getUnderstoodCards: (userId) => {
+        const store = get();
+        return vocabularyCards.filter((card) =>
+          store.understoodCards.has(`${userId}:${card.id}`)
+        );
+      },
+
       getProgressByCard: (cardId) => {
         const store = get();
         for (const [, progress] of store.progress) {
@@ -150,9 +172,13 @@ export const useLearningStore = create<LearningStore>()(
           (p) => p.userId === userId
         );
 
-        const masteredCount = userProgress.filter(
+        const masteredProgressCount = userProgress.filter(
           (p) => p.status === "mastered"
         ).length;
+        const understoodCount = Array.from(store.understoodCards.keys()).filter(
+          (key) => key.startsWith(`${userId}:`)
+        ).length;
+        const masteredCount = Math.max(masteredProgressCount, understoodCount);
         const streak = store.getStreak(userId);
 
         const today = new Date().toDateString();
@@ -290,6 +316,9 @@ export const useLearningStore = create<LearningStore>()(
             state: {
               ...data.state,
               progress: new Map(Object.entries(data.state.progress || {})),
+              understoodCards: new Map(
+                Object.entries(data.state.understoodCards || {})
+              ),
               streaks: new Map(Object.entries(data.state.streaks || {})),
             },
           };
@@ -298,6 +327,7 @@ export const useLearningStore = create<LearningStore>()(
           const data = {
             state: {
               progress: Object.fromEntries(value.state.progress),
+              understoodCards: Object.fromEntries(value.state.understoodCards),
               streaks: Object.fromEntries(value.state.streaks),
             },
           };

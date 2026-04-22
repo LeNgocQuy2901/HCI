@@ -41,6 +41,9 @@ export default function Learn() {
   const [selectedCategory, setSelectedCategory] = useState<Category>(
     "greetings"
   );
+  const [selectedQuizCategory, setSelectedQuizCategory] = useState<Category>(
+    "greetings"
+  );
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(
     "beginner"
   );
@@ -50,6 +53,7 @@ export default function Learn() {
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
 
   const userId = user?.id || "guest";
+  const understoodCards = learningStore.getUnderstoodCards(userId);
 
   // Initialize or get learning data
   useEffect(() => {
@@ -65,15 +69,13 @@ export default function Learn() {
 
   // Initialize cards in learning store on first load
   useEffect(() => {
-    if (user?.id) {
-      vocabularyCards.forEach((card) => {
-        const key = `${user.id}:${card.id}`;
-        if (!learningStore.progress.has(key)) {
-          learningStore.addProgress(card.id, user.id);
-        }
-      });
-    }
-  }, [user?.id]);
+    vocabularyCards.forEach((card) => {
+      const key = `${userId}:${card.id}`;
+      if (!learningStore.progress.has(key)) {
+        learningStore.addProgress(card.id, userId);
+      }
+    });
+  }, [userId]);
 
   const currentCard = cards[currentCardIndex];
   const stats = learningStore.getProgressStats(userId);
@@ -82,13 +84,23 @@ export default function Learn() {
 
   const handleMarkCorrect = () => {
     if (!currentCard) return;
-    learningStore.updateProgress(currentCard.id, userId, 4); // 4/5 quality
+    const progressKey = `${userId}:${currentCard.id}`;
+    if (!learningStore.progress.has(progressKey)) {
+      learningStore.addProgress(currentCard.id, userId);
+    }
+    learningStore.markCardUnderstood(currentCard.id, userId);
+    learningStore.updateProgress(currentCard.id, userId, 3); // keep card in review flow
     toast({ description: "Tuyệt! Bạn làm đúng rồi!" });
     handleNextCard();
   };
 
   const handleMarkWrong = () => {
     if (!currentCard) return;
+    const progressKey = `${userId}:${currentCard.id}`;
+    if (!learningStore.progress.has(progressKey)) {
+      learningStore.addProgress(currentCard.id, userId);
+    }
+    learningStore.unmarkCardUnderstood(currentCard.id, userId);
     learningStore.updateProgress(currentCard.id, userId, 2); // 2/5 quality
     toast({ description: "Không sao, lần sau bạn sẽ làm được!" });
     handleNextCard();
@@ -104,24 +116,35 @@ export default function Learn() {
   };
 
   const generateQuiz = () => {
-    const quizCards = cards.slice(0, 10);
+    const topicCards = vocabularyCards.filter(
+      (card) => card.category === selectedQuizCategory
+    );
+    const quizCards = topicCards.slice(0, 10);
+
     const questions: QuizQuestion[] = quizCards.map((card, index) => {
-      const questionType = index % 3 === 0 ? "video-to-text" : index % 3 === 1 ? "text-to-video" : "multiple-choice";
-      
-      const wrongAnswers = vocabularyCards
+      const questionType =
+        index % 3 === 0
+          ? "video-to-text"
+          : index % 3 === 1
+            ? "text-to-video"
+            : "multiple-choice";
+
+      const options = topicCards
         .filter((c) => c.id !== card.id)
-        .slice(0, 3)
-        .map((c) => c.word);
-      
-      const options = [card.word, ...wrongAnswers].sort(() => Math.random() - 0.5);
-      const correctAnswerIndex = options.indexOf(card.word);
+        .map((c) => c.word)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+
+      options.push(card.word);
+      const shuffledOptions = options.sort(() => Math.random() - 0.5);
+      const correctAnswerIndex = shuffledOptions.indexOf(card.word);
 
       return {
         id: `quiz-${index}`,
         type: questionType as "video-to-text" | "text-to-video" | "multiple-choice",
         cardId: card.id,
         question: "Kí hiệu trên là gì?",
-        options,
+        options: shuffledOptions,
         correctAnswerIndex,
         difficulty: card.difficulty,
       };
@@ -266,6 +289,7 @@ export default function Learn() {
                   </div>
 
                   <VocabularyCardFlip
+                      key={currentCard.id}
                     card={currentCard}
                     onMarkCorrect={handleMarkCorrect}
                     onMarkWrong={handleMarkWrong}
@@ -282,17 +306,23 @@ export default function Learn() {
               <Card className="p-6">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <Zap className="h-5 w-5 text-yellow-500" />
-                  Cần ôn tập ({dueCards.length})
+                  Cần ôn tập ({understoodCards.length})
                 </h3>
                 <div className="space-y-2">
-                  {dueCards.length > 0 ? (
-                    dueCards.map((card) => (
+                  {understoodCards.length > 0 ? (
+                    understoodCards.map((card) => (
                       <div
                         key={card.id}
                         className="p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80"
                         onClick={() => {
-                          const idx = cards.findIndex((c) => c.id === card.id);
+                          const categoryCards = vocabularyCards.filter(
+                            (c) => c.category === card.category
+                          );
+                          const idx = categoryCards.findIndex(
+                            (c) => c.id === card.id
+                          );
                           if (idx !== -1) {
+                            setSelectedCategory(card.category);
                             setCurrentCardIndex(idx);
                             setActiveTab("learn");
                           }
@@ -305,7 +335,9 @@ export default function Learn() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted-foreground">Bạn đã theo kịp hết rồi!</p>
+                    <p className="text-muted-foreground">
+                      Chưa có thẻ nào được đánh dấu Đã hiểu
+                    </p>
                   )}
                 </div>
               </Card>
@@ -361,13 +393,36 @@ export default function Learn() {
                 </p>
               </div>
 
+              <div className="max-w-sm mx-auto text-left space-y-2">
+                <label className="text-sm font-semibold block">
+                  Chọn chủ đề làm bài
+                </label>
+                <Select
+                  value={selectedQuizCategory}
+                  onValueChange={(v) => setSelectedQuizCategory(v as Category)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(categoryLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card className="p-4 bg-muted">
                   <p className="text-3xl font-bold text-blue-500">
-                    {cards.length}
+                    {vocabularyCards.filter(
+                      (card) => card.category === selectedQuizCategory
+                    ).length}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Có sẵn trong {categoryLabels[selectedCategory]}
+                    Có sẵn trong {categoryLabels[selectedQuizCategory]}
                   </p>
                 </Card>
                 <Card className="p-4 bg-muted">
@@ -388,7 +443,7 @@ export default function Learn() {
 
               <Button onClick={generateQuiz} size="lg" className="gap-2">
                 <HelpCircle className="h-5 w-5" />
-                Bắt đầu kiểm tra chủ đề {categoryLabels[selectedCategory]}
+                Bắt đầu kiểm tra chủ đề {categoryLabels[selectedQuizCategory]}
               </Button>
             </Card>
           </TabsContent>

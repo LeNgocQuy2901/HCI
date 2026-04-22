@@ -69,14 +69,19 @@ export default function Index() {
             {/* Left: Text Content */}
             <div className="space-y-8">
               <div className="space-y-4">
-                <h1 className="text-5xl md:text-6xl font-bold leading-tight text-foreground">
-                  Học và giao tiếp bằng
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-                    {" "}
-                    ngôn ngữ ký hiệu
-                  </span>
-                  với AI
-                </h1>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <img
+                    src="/img/logo2.png"
+                    alt="Smart Sign Language logo"
+                    className="h-16 w-16 rounded-2xl object-cover shadow-lg ring-1 ring-border bg-white"
+                  />
+                  <h1 className="text-5xl md:text-6xl font-bold leading-tight text-foreground">
+                    Smart Sign Language
+                  </h1>
+                </div>
+                <p className="text-2xl md:text-3xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+                  Học và giao tiếp bằng ngôn ngữ ký hiệu với AI
+                </p>
                 <p className="text-xl text-muted-foreground leading-relaxed">
                   Xóa bỏ rào cản giao tiếp với nền tảng ngôn ngữ ký hiệu sử
                   dụng AI. Học từ vựng, dịch theo thời gian thực và kết nối với
@@ -125,28 +130,28 @@ export default function Index() {
             <div className="relative hidden md:block">
               <div className="relative aspect-square bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl border border-primary/10 overflow-hidden">
                 {/* Decorative circles */}
-                <div className="absolute top-10 right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-10 left-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl"></div>
+                <div className="absolute top-10 right-10 w-36 h-36 bg-primary/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-10 left-10 w-44 h-44 bg-secondary/10 rounded-full blur-3xl"></div>
 
                 {/* Camera preview placeholder */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
-                  <div className="w-48 h-48 bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-10">
+                  <div className="w-64 h-64 xl:w-72 xl:h-72 bg-white/80 backdrop-blur rounded-3xl border-2 border-primary/20 flex items-center justify-center relative overflow-hidden shadow-xl">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5"></div>
-                    <div className="relative flex flex-col items-center gap-4">
-                      <Video size={48} className="text-primary animate-pulse" />
-                      <p className="text-sm font-medium text-foreground">
+                    <div className="relative flex flex-col items-center gap-5">
+                      <Video size={60} className="text-primary animate-pulse" />
+                      <p className="text-base font-semibold text-foreground">
                         Xem trước camera
                       </p>
-                      <p className="text-xs text-muted-foreground text-center">
+                      <p className="text-sm text-muted-foreground text-center">
                         Sẵn sàng nhận dạng bằng AI
                       </p>
                     </div>
                   </div>
 
                   {/* Recognition indicator */}
-                  <div className="mt-8 flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-2 rounded-full border border-primary/20">
+                  <div className="mt-10 flex items-center gap-2 bg-white/80 backdrop-blur px-5 py-3 rounded-full border border-primary/20 shadow-sm">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-foreground">
+                    <span className="text-sm font-medium text-foreground">
                       Nhận dạng đang hoạt động
                     </span>
                   </div>
@@ -210,7 +215,7 @@ export default function Index() {
             {/* Left: Benefits List */}
             <div>
               <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-8">
-                Vì sao chọn SignLanguage AI?
+                Vì sao chọn Smart Sign Language?
               </h2>
               <div className="space-y-4">
                 {benefits.map((benefit, i) => (
