@@ -1,0 +1,176 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * Tailwind CSS theme - Sign Language Platform
+   * Comprehensive design system for consistent UI
+   */
+  :root {
+    /* Light mode - Clean, modern, accessible */
+    --background: 0 0% 100%;
+    --foreground: 220 13% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 20%;
+
+    /* Primary: Modern blue (Google/Duolingo inspired) */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Soft purple for inclusive feel */
+    --secondary: 260 84% 60%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 13% 91%;
+    --muted-foreground: 220 13% 45%;
+
+    /* Accent: Warm color for CTAs */
+    --accent: 37 92% 50%;
+    --accent-foreground: 220 13% 20%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 96%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 220 13% 13%;
+    --foreground: 220 13% 95%;
+
+    --card: 220 13% 18%;
+    --card-foreground: 220 13% 95%;
+
+    --popover: 220 13% 18%;
+    --popover-foreground: 220 13% 95%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 220 13% 13%;
+
+    --secondary: 260 84% 60%;
+    --secondary-foreground: 220 13% 13%;
+
+    --muted: 220 13% 35%;
+    --muted-foreground: 220 13% 65%;
+
+    --accent: 37 92% 50%;
+    --accent-foreground: 220 13% 13%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 220 13% 13%;
+
+    --border: 220 13% 25%;
+    --input: 220 13% 20%;
+    --ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg bg-secondary px-4 py-2.5 font-medium text-secondary-foreground shadow-sm hover:bg-secondary/90 transition-colors;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2.5 font-medium text-foreground hover:bg-muted transition-colors;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-card p-6 text-card-foreground shadow-sm;
+  }
+
+  .input-field {
+    @apply rounded-lg border border-input bg-input px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
+
+  .section-title {
+    @apply text-3xl font-bold text-foreground;
+  }
+
+  .section-subtitle {
+    @apply text-lg text-muted-foreground;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slideInDown {
+    animation: slideInDown 0.3s ease-in-out;
+  }
+
+  .animate-slideInUp {
+    animation: slideInUp 0.3s ease-in-out;
+  }
+
+  .text-gradient {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary;
+  }
+
+  .glass {
+    @apply backdrop-blur-xl bg-white/10 border border-white/20;
+  }
+}
