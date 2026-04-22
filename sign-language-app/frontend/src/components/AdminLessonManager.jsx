@@ -187,8 +187,15 @@ const AdminLessonManager = () => {
                 name="video_url"
                 value={formData.video_url}
                 onChange={handleInputChange}
-                placeholder="https://example.com/video.mp4"
+                placeholder="https://drive.google.com/file/d/FILE_ID/view or https://www.youtube.com/watch?v=VIDEO_ID"
               />
+              <small style={{ color: '#666', marginTop: '5px', display: 'block' }}>
+                Hỗ trợ: Google Drive, YouTube, hoặc MP4 links. 
+                <br />
+                <strong>Google Drive:</strong> Lấy link share và copy vào đây. Ví dụ: https://drive.google.com/file/d/1A2B3C4D5E6F7G/view
+                <br />
+                <strong>YouTube:</strong> Dán link xem video bình thường. Ví dụ: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+              </small>
             </div>
             <div className="form-group">
               <label>Thumbnail URL</label>

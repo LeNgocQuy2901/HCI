@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import AdminLessonManager from './AdminLessonManager'
 import AdminQuizManager from './AdminQuizManager'
+import AdminBulkImport from './AdminBulkImport'
 import AdminDashboardStats from './AdminDashboardStats'
 import './AdminDashboard.css'
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, lessons, quizzes, vocabulary
+  const [activeTab, setActiveTab] = useState('dashboard') // dashboard, lessons, quizzes, vocabulary, bulk-import, analytics
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -64,6 +65,13 @@ const AdminDashboard = () => {
             <span className="label">Vocabulary</span>
           </button>
           <button
+            className={`sidebar-item ${activeTab === 'bulk-import' ? 'active' : ''}`}
+            onClick={() => setActiveTab('bulk-import')}
+          >
+            <span className="icon">📥</span>
+            <span className="label">Bulk Import</span>
+          </button>
+          <button
             className={`sidebar-item ${activeTab === 'analytics' ? 'active' : ''}`}
             onClick={() => setActiveTab('analytics')}
           >
@@ -90,6 +98,10 @@ const AdminDashboard = () => {
               <h2>📚 Vocabulary Management</h2>
               <p className="coming-soon">Coming soon...</p>
             </div>
+          )}
+
+          {activeTab === 'bulk-import' && (
+            <AdminBulkImport />
           )}
 
           {activeTab === 'analytics' && (

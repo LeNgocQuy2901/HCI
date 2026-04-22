@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import logging
-from app.routes import auth, gesture, chat, learn, profile, admin_learning
+from app.routes import auth, gesture, chat, learn, profile, admin_learning, bulk_import
 from app.services.database import init_db
 
 # Configure logging
@@ -34,8 +34,12 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting up application...")
-    await init_db()
-    logger.info("Database initialized")
+    try:
+        await init_db()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.warning(f"Database initialization skipped: {e}")
+        logger.warning("Make sure PostgreSQL is running and DATABASE_URL is set correctly")
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -43,6 +47,7 @@ app.include_router(gesture.router, prefix="/api/gesture", tags=["gesture"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(learn.router, prefix="/api/learn", tags=["learn"])
 app.include_router(admin_learning.router, prefix="/api", tags=["admin"])
+app.include_router(bulk_import.router, prefix="/api", tags=["bulk_import"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 
 # Health check endpoint

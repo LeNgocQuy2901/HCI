@@ -4,6 +4,34 @@ import VocabularyView from './VocabularyView'
 import QuizView from './QuizView'
 import './LessonDetail.css'
 
+// Utility functions for video URL detection and conversion
+const getEmbeddableVideoUrl = (url) => {
+  if (!url) return null
+  
+  // Google Drive
+  if (url.includes('drive.google.com')) {
+    const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/)
+    if (fileIdMatch) {
+      return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`
+    }
+  }
+  
+  // YouTube
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    if (url.includes('embed')) return url
+    const watchMatch = url.match(/youtube\.com\/watch\?v=([^&]+)/)
+    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`
+    const shortMatch = url.match(/youtu\.be\/([^?]+)/)
+    if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`
+  }
+  
+  return url
+}
+
+const isGoogleDriveUrl = (url) => url?.includes('drive.google.com')
+const isYouTubeUrl = (url) => url?.includes('youtube.com') || url?.includes('youtu.be')
+const isEmbeddableUrl = (url) => isGoogleDriveUrl(url) || isYouTubeUrl(url)
+
 const LessonDetail = ({ lessonId, onBack }) => {
   const [lesson, setLesson] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -91,10 +119,35 @@ const LessonDetail = ({ lessonId, onBack }) => {
           <div className="content-tab">
             {lesson.video_url && (
               <div className="video-container">
-                <video width="100%" controls>
-                  <source src={lesson.video_url} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+                {isGoogleDriveUrl(lesson.video_url) ? (
+                  // Google Drive Video
+                  <iframe
+                    src={getEmbeddableVideoUrl(lesson.video_url)}
+                    width="100%"
+                    height="600"
+                    allow="autoplay"
+                    style={{ borderRadius: '8px', border: 'none' }}
+                    title={lesson.title}
+                  />
+                ) : isYouTubeUrl(lesson.video_url) ? (
+                  // YouTube Video
+                  <iframe
+                    width="100%"
+                    height="600"
+                    src={getEmbeddableVideoUrl(lesson.video_url)}
+                    title={lesson.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ borderRadius: '8px' }}
+                  />
+                ) : (
+                  // Regular MP4 or other video formats
+                  <video width="100%" controls style={{ borderRadius: '8px' }}>
+                    <source src={lesson.video_url} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                )}
               </div>
             )}
             {lesson.content && (
