@@ -30,3 +30,7 @@ dist-ssr
 data/
 .env
 .env.local
+
+# Ignore local environments
+venv/
+VieSign-Web-main/

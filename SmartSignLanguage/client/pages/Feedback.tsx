@@ -6,16 +6,16 @@ export default function Feedback() {
   return (
     <Layout>
       <PlaceholderPage
-        title="Share Your Feedback"
-        description="Help us improve SignLanguage AI. Tell us what you love and what we can do better."
+        title="Send Feedback"
+        description="Help us improve SignLanguage AI. Tell us what works well and where we can do better."
         icon={<MessageSquare size={64} className="text-primary" />}
         ctaText="Back to Home"
         features={[
-          "Rate your experience with stars",
+          "Rate your experience",
           "Written feedback form",
-          "Feature request submission",
-          "Bug report functionality",
-          "Email notifications for responses",
+          "Submit feature requests",
+          "Report bugs",
+          "Email notifications for replies",
           "Community feedback voting",
         ]}
       />

@@ -17,47 +17,47 @@ export default function Index() {
   const features = [
     {
       icon: BookOpen,
-      title: "Learn Vocabulary",
+      title: "Vocabulary Practice",
       description:
-        "Build your sign language skills with our comprehensive vocabulary library. Learn at your own pace with interactive lessons.",
+        "Practice sign language with a focused vocabulary library and interactive lessons at your own pace.",
       href: "/learn",
     },
     {
       icon: Zap,
-      title: "Text ↔ Sign Translation",
+      title: "Text to Sign Translation",
       description:
-        "Instantly translate between text and sign language. Perfect for communication and learning.",
+        "Translate between text and sign language for communication and learning.",
       href: "/translate",
     },
     {
       icon: Tv,
       title: "Realtime Recognition",
       description:
-        "Our AI-powered camera recognizes sign language in real-time. See your signs translated instantly.",
+        "Use the AI camera to recognize signs in real time and see instant results.",
       href: "/recognition",
     },
     {
       icon: Users,
-      title: "Chat & Connect",
+      title: "Chat and Connect",
       description:
-        "Connect with other sign language learners. Chat with real-time translation support.",
+        "Connect with other sign language learners with real-time translation support.",
       href: "/chat",
     },
   ];
 
   const stats = [
-    { number: "10K+", label: "Words & Phrases" },
-    { number: "50K+", label: "Active Users" },
-    { number: "99%", label: "Accuracy Rate" },
+    { number: "", label: "Words and Phrases" },
+    { number: "", label: "Active Users" },
+    { number: "", label: "Accuracy" },
   ];
 
   const benefits = [
     "Free and accessible to everyone",
-    "Works on any device",
-    "Offline learning modes",
-    "Progress tracking and achievements",
-    "Community support",
-    "Regular updates and new content",
+    "Works on every device",
+    "Offline learning mode",
+    "Track progress and achievements",
+    "Supportive community",
+    "Frequent updates and new content",
   ];
 
   return (
@@ -69,18 +69,23 @@ export default function Index() {
             {/* Left: Text Content */}
             <div className="space-y-8">
               <div className="space-y-4">
-                <h1 className="text-5xl md:text-6xl font-bold leading-tight text-foreground">
-                  Learn and Communicate with
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-                    {" "}
-                    Sign Language
-                  </span>
-                  using AI
-                </h1>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <img
+                    src="/img/logo2.png"
+                    alt="Smart Sign Language logo"
+                    className="h-16 w-16 rounded-2xl object-cover shadow-lg ring-1 ring-border bg-white"
+                  />
+                  <h1 className="text-5xl md:text-6xl font-bold leading-tight text-foreground">
+                    Smart Sign Language
+                  </h1>
+                </div>
+                <p className="text-2xl md:text-3xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
+                  Learn and communicate with sign language using AI
+                </p>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Break down communication barriers with our AI-powered sign
-                  language platform. Learn vocabulary, translate in real-time,
-                  and connect with a supportive community.
+                  Break communication barriers with an AI-powered sign language
+                  platform. Learn vocabulary, translate in real time, and
+                  connect with a supportive community.
                 </p>
               </div>
 
@@ -102,9 +107,7 @@ export default function Index() {
                   className="rounded-full px-8"
                   asChild
                 >
-                  <Link to="/recognition">
-                    Try Realtime Recognition
-                  </Link>
+                  <Link to="/recognition">Try Realtime Recognition</Link>
                 </Button>
               </div>
 
@@ -115,7 +118,9 @@ export default function Index() {
                     <p className="text-2xl md:text-3xl font-bold text-primary">
                       {stat.number}
                     </p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {stat.label}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -125,28 +130,28 @@ export default function Index() {
             <div className="relative hidden md:block">
               <div className="relative aspect-square bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl border border-primary/10 overflow-hidden">
                 {/* Decorative circles */}
-                <div className="absolute top-10 right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-10 left-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl"></div>
+                <div className="absolute top-10 right-10 w-36 h-36 bg-primary/10 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-10 left-10 w-44 h-44 bg-secondary/10 rounded-full blur-3xl"></div>
 
                 {/* Camera preview placeholder */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
-                  <div className="w-48 h-48 bg-white/80 backdrop-blur rounded-2xl border-2 border-primary/20 flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-10">
+                  <div className="w-64 h-64 xl:w-72 xl:h-72 bg-white/80 backdrop-blur rounded-3xl border-2 border-primary/20 flex items-center justify-center relative overflow-hidden shadow-xl">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5"></div>
-                    <div className="relative flex flex-col items-center gap-4">
-                      <Video size={48} className="text-primary animate-pulse" />
-                      <p className="text-sm font-medium text-foreground">
+                    <div className="relative flex flex-col items-center gap-5">
+                      <Video size={60} className="text-primary animate-pulse" />
+                      <p className="text-base font-semibold text-foreground">
                         Camera Preview
                       </p>
-                      <p className="text-xs text-muted-foreground text-center">
-                        AI Recognition Ready
+                      <p className="text-sm text-muted-foreground text-center">
+                        Ready for AI recognition
                       </p>
                     </div>
                   </div>
 
                   {/* Recognition indicator */}
-                  <div className="mt-8 flex items-center gap-2 bg-white/80 backdrop-blur px-4 py-2 rounded-full border border-primary/20">
+                  <div className="mt-10 flex items-center gap-2 bg-white/80 backdrop-blur px-5 py-3 rounded-full border border-primary/20 shadow-sm">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-foreground">
+                    <span className="text-sm font-medium text-foreground">
                       Recognition Active
                     </span>
                   </div>
@@ -166,8 +171,8 @@ export default function Index() {
               Everything You Need
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Comprehensive tools designed to make sign language learning and
-              communication effortless and enjoyable.
+              A complete toolkit that makes learning and communicating with sign
+              language simple and engaging.
             </p>
           </div>
 
@@ -181,10 +186,7 @@ export default function Index() {
                   className="group p-8 rounded-2xl border border-border hover:border-primary/50 bg-white hover:bg-primary/5 transition-all duration-300 cursor-pointer hover:shadow-lg"
                 >
                   <div className="mb-4 inline-block p-3 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                    <Icon
-                      size={24}
-                      className="text-primary"
-                    />
+                    <Icon size={24} className="text-primary" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">
                     {feature.title}
@@ -210,7 +212,7 @@ export default function Index() {
             {/* Left: Benefits List */}
             <div>
               <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-8">
-                Why Choose SignLanguage AI?
+                Why Choose Smart Sign Language?
               </h2>
               <div className="space-y-4">
                 {benefits.map((benefit, i) => (
@@ -257,8 +259,8 @@ export default function Index() {
             Ready to Start Your Journey?
           </h2>
           <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-            Join thousands of learners who are breaking down communication
-            barriers and connecting with sign language.
+            Join thousands of learners breaking communication barriers and
+            connecting through sign language.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -266,7 +268,7 @@ export default function Index() {
               className="bg-white text-primary hover:bg-white/90 rounded-full px-8 font-semibold"
               asChild
             >
-              <Link to="/register">Get Started Free</Link>
+              <Link to="/register">Start for Free</Link>
             </Button>
             <Button
               size="lg"
@@ -274,7 +276,7 @@ export default function Index() {
               className="border-white/50 text-white hover:bg-white/10 rounded-full px-8"
               asChild
             >
-              <Link to="/chat">Join Community</Link>
+              <Link to="/chat">Join the Community</Link>
             </Button>
           </div>
 
@@ -313,17 +315,17 @@ export default function Index() {
               {
                 number: "01",
                 title: "Sign Up",
-                description: "Create your free account in seconds",
+                description: "Create a free account in seconds",
               },
               {
                 number: "02",
-                title: "Choose Your Path",
-                description: "Select learning, translation, or recognition",
+                title: "Choose a Path",
+                description: "Choose learning, translation, or recognition",
               },
               {
                 number: "03",
                 title: "Start Exploring",
-                description: "Learn at your own pace with AI assistance",
+                description: "Learn at your own pace with AI support",
               },
             ].map((step, i) => (
               <div key={i} className="relative">

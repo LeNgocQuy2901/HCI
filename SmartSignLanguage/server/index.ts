@@ -4,6 +4,7 @@ import cors from "cors";
 import { handleDemo } from "./routes/demo";
 import { initializeDatabase } from "./db";
 import authRoutes from "./routes/auth";
+import videoRoutes from "./routes/video";
 
 export function createServer() {
   const app = express();
@@ -26,6 +27,9 @@ export function createServer() {
 
   // Auth routes
   app.use("/api/auth", authRoutes);
+
+  // Video routes (Google Drive proxy)
+  app.use("/api", videoRoutes);
 
   return app;
 }

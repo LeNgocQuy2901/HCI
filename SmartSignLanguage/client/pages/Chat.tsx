@@ -6,16 +6,16 @@ export default function Chat() {
   return (
     <Layout>
       <PlaceholderPage
-        title="Chat & Communication"
-        description="Connect with other sign language learners and users. Chat with real-time translation support and sign language input."
+        title="Chat and Communication"
+        description="Connect with other sign language learners and users with real-time translation support."
         icon={<MessageCircle size={64} className="text-primary" />}
         ctaText="Back to Home"
         features={[
           "Real-time messaging with other users",
-          "Sign language input via camera",
-          "Auto-translation of messages",
-          "Chat rooms organized by topic",
-          "User profiles and reputation system",
+          "Camera-based sign input",
+          "Automatic message translation",
+          "Topic-based chat rooms",
+          "User profiles and reputation",
           "Message history and search",
         ]}
       />

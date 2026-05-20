@@ -76,7 +76,7 @@ export default function Profile() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to update profile");
+        throw new Error(error.error || "Unable to update profile");
       }
 
       const result = await response.json();
@@ -90,7 +90,7 @@ export default function Profile() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update profile",
+        description: error.message || "Unable to update profile",
         variant: "destructive",
       });
     } finally {
@@ -103,7 +103,7 @@ export default function Profile() {
     navigate("/login");
     toast({
       title: "Success",
-      description: "Logged out successfully",
+      description: "Signed out successfully",
     });
   };
 
@@ -133,7 +133,9 @@ export default function Profile() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{user.fullName}</h1>
-                <p className="text-sm text-muted-foreground">@{user.username}</p>
+                <p className="text-sm text-muted-foreground">
+                  @{user.username}
+                </p>
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
             </div>
@@ -141,9 +143,9 @@ export default function Profile() {
             {/* User Info */}
             <div className="space-y-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Member since</p>
+                <p className="text-muted-foreground">Member Since</p>
                 <p>
-                  {new Date(user.createdAt).toLocaleDateString("en-US", {
+                  {new Date(user.createdAt).toLocaleDateString("vi-VN", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -155,12 +157,8 @@ export default function Profile() {
             {/* Edit Profile Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  {...register("fullName")}
-                />
+                <Label htmlFor="fullName">Member Since</Label>
+                <Input id="fullName" type="text" {...register("fullName")} />
                 {errors.fullName && (
                   <p className="text-sm text-destructive">
                     {errors.fullName.message}
@@ -168,15 +166,11 @@ export default function Profile() {
                 )}
               </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSaving}
-              >
+              <Button type="submit" className="w-full" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    Full Name
                   </>
                 ) : (
                   "Save Changes"
@@ -191,7 +185,7 @@ export default function Profile() {
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              Saving...
             </Button>
           </div>
         </Card>

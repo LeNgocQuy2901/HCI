@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RotateCw, Check, X, Play } from "lucide-react";
+import { categoryLabels, difficultyLabels } from "@shared/vocabulary";
 
 interface VocabularyCardProps {
   card: VocabType;
@@ -23,7 +24,7 @@ export default function VocabularyCardComponent({
   return (
     <div className="w-full perspective">
       <Card
-        className="min-h-96 cursor-pointer flex flex-col justify-between p-8 transition-all duration-500 transform"
+        className="min-h-[32rem] cursor-pointer flex flex-col justify-between p-6 transition-all duration-500 transform"
         onClick={() => setIsFlipped(!isFlipped)}
         style={{
           transformStyle: "preserve-3d",
@@ -33,7 +34,7 @@ export default function VocabularyCardComponent({
         {!isFlipped && (
           <div className="flex flex-col items-center justify-center h-full space-y-6 animate-fadeIn">
             <div className="text-center">
-              <Badge className="mb-4">{card.category}</Badge>
+              <Badge className="mb-4">{categoryLabels[card.category]}</Badge>
               <h2 className="text-5xl font-bold text-foreground mb-2">
                 {card.word}
               </h2>
@@ -45,25 +46,24 @@ export default function VocabularyCardComponent({
             </div>
 
             <div className="text-center text-sm text-muted-foreground mt-8">
-              <p>Click to reveal sign demonstration</p>
+              <p>Click to view the sign demo</p>
             </div>
 
             <div className="flex gap-2">
               <Badge variant="outline">
-                {card.difficulty.charAt(0).toUpperCase() +
-                  card.difficulty.slice(1)}
+                {difficultyLabels[card.difficulty]}
               </Badge>
             </div>
           </div>
         )}
 
-        {/* Back Side - Video & Description */}
+        {/* Back Side - Video Only */}
         {isFlipped && (
-          <div className="flex flex-col items-center justify-between h-full space-y-4 animate-fadeIn">
+          <div className="flex flex-col items-center justify-start h-full pt-4 gap-2 animate-fadeIn">
             {/* Video Player */}
-            <div className="w-full max-w-sm rounded-lg overflow-hidden bg-black flex items-center justify-center">
+            <div className="w-full max-w-2xl rounded-2xl overflow-hidden bg-black flex items-center justify-center shadow-2xl">
               <video
-                className="w-full h-auto max-h-64 bg-black"
+                className="w-full h-auto max-h-[24rem] bg-black"
                 controls
                 autoPlay
                 loop
@@ -73,22 +73,16 @@ export default function VocabularyCardComponent({
                 <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
                   <div className="text-center">
                     <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Video not available</p>
+                    <p className="text-sm">No video</p>
                   </div>
                 </div>
               </video>
             </div>
 
-            {/* Description */}
             <div className="text-center">
-              <h3 className="font-semibold text-foreground mb-2">How to Sign:</h3>
-              <p className="text-foreground leading-relaxed">
-                {card.description}
+              <p className="text-base font-semibold text-foreground leading-tight">
+                {card.word}
               </p>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              <p>Click to hide</p>
             </div>
           </div>
         )}
@@ -96,7 +90,7 @@ export default function VocabularyCardComponent({
 
       {/* Action Buttons */}
       {showActions && (
-        <div className="flex gap-4 mt-6 justify-center">
+        <div className="flex gap-3 mt-3 justify-center">
           <Button
             variant="default"
             className="gap-2"
@@ -106,7 +100,7 @@ export default function VocabularyCardComponent({
             }}
           >
             <Check className="h-4 w-4" />
-            Got it!
+            Got It
           </Button>
           <Button
             variant="outline"

@@ -1,14 +1,23 @@
 import { useState } from "react";
-import { QuizQuestion, VocabularyCard, vocabularyCards } from "@shared/vocabulary";
+import {
+  QuizQuestion,
+  VocabularyCard,
+  vocabularyCards,
+} from "@shared/vocabulary";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Volume2, CheckCircle2, XCircle } from "lucide-react";
+import { Play, CheckCircle2, XCircle } from "lucide-react";
+import { categoryLabels, difficultyLabels } from "@shared/vocabulary";
 
 interface QuizComponentProps {
   questions: QuizQuestion[];
-  onComplete: (results: { score: number; totalQuestions: number; answers: number[] }) => void;
+  onComplete: (results: {
+    score: number;
+    totalQuestions: number;
+    answers: number[];
+  }) => void;
 }
 
 export default function QuizComponent({
@@ -44,7 +53,7 @@ export default function QuizComponent({
     } else {
       // Calculate score
       const correctAnswers = questions.filter(
-        (q, i) => q.correctAnswerIndex === selectedAnswers[i]
+        (q, i) => q.correctAnswerIndex === selectedAnswers[i],
       ).length;
       onComplete({
         score: correctAnswers,
@@ -63,7 +72,7 @@ export default function QuizComponent({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">
-            Question {currentIndex + 1} of {questions.length}
+            Question {currentIndex + 1} / {questions.length}
           </h3>
           <Badge>{Math.round(progress)}% complete</Badge>
         </div>
@@ -74,49 +83,63 @@ export default function QuizComponent({
       <Card className="p-8 space-y-6">
         {/* Question Type Badge */}
         <div className="flex gap-2">
-          <Badge variant="secondary">{current.type.replace("-", " ")}</Badge>
-          <Badge variant="outline">{current.difficulty}</Badge>
+          <Badge variant="secondary">
+            {current.type === "video-to-text"
+              ? "Sign to Text"
+              : current.type === "text-to-video"
+                ? "Text to Sign"
+                : "Multiple Choice"}
+          </Badge>
+          <Badge variant="outline">
+            {difficultyLabels[current.difficulty]}
+          </Badge>
         </div>
 
-        {/* Question */}
-        {current.type === "video-to-text" && currentCard && (
+        {/* Video Preview */}
+        {currentCard && (
           <div className="space-y-4">
-            <div className="h-48 bg-muted rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <Volume2 className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Watch the video: {currentCard.word}
-                </p>
-              </div>
+            <div className="w-full max-w-xl mx-auto rounded-lg overflow-hidden bg-black flex items-center justify-center">
+              <video
+                key={currentCard.id}
+                className="w-full h-auto max-h-72 bg-black"
+                controls
+                autoPlay
+                loop
+                muted
+                preload="metadata"
+                playsInline
+              >
+                <source
+                  key={currentCard.videoUrl}
+                  src={currentCard.videoUrl}
+                  type="video/mp4"
+                />
+                <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
+                  <div className="text-center">
+                    <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No video</p>
+                  </div>
+                </div>
+              </video>
             </div>
-            <div className="text-center">
-              <p className="text-lg font-semibold text-foreground">
-                What does this sign mean?
+
+            <div className="text-center space-y-2">
+              <Badge variant="outline">
+                {categoryLabels[currentCard.category]}
+              </Badge>
+              <p className="text-sm text-muted-foreground">
+                {currentCard.description}
               </p>
             </div>
           </div>
         )}
 
-        {current.type === "text-to-video" && currentCard && (
-          <div className="text-center space-y-4">
-            <p className="text-lg font-semibold text-foreground">
-              How do you sign this?
-            </p>
-            <div className="bg-primary/10 p-6 rounded-lg">
-              <p className="text-3xl font-bold text-primary">
-                {currentCard.word}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {current.type === "multiple-choice" && (
-          <div className="text-center">
-            <p className="text-lg font-semibold text-foreground">
-              {current.question}
-            </p>
-          </div>
-        )}
+        {/* Question */}
+        <div className="text-center">
+          <p className="text-lg font-semibold text-foreground">
+            {current.question}
+          </p>
+        </div>
 
         {/* Options */}
         <div className="grid grid-cols-1 gap-3">
@@ -174,11 +197,11 @@ export default function QuizComponent({
             }`}
           >
             <p className="font-semibold mb-1">
-              {isAnswerCorrect ? "✓ Correct!" : "✗ Incorrect"}
+              {isAnswerCorrect ? "Correct" : "Incorrect"}
             </p>
             <p className="text-sm">
               {isAnswerCorrect
-                ? "Great job! You got it right."
+                ? "Great job! Your answer is correct."
                 : `The correct answer is: ${current.options[current.correctAnswerIndex]}`}
             </p>
           </div>
@@ -196,7 +219,9 @@ export default function QuizComponent({
           </Button>
         ) : (
           <Button onClick={handleNext}>
-            {currentIndex < questions.length - 1 ? "Next Question" : "Finish Quiz"}
+            {currentIndex < questions.length - 1
+              ? "Next Question"
+              : "Finish Quiz"}
           </Button>
         )}
       </div>

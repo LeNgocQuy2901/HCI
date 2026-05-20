@@ -51,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
     await logout();
     setMobileMenuOpen(false);
     navigate("/");
-    toast({ description: "You've been logged out" });
+    toast({ description: "You have signed out" });
   };
 
   return (
@@ -59,24 +59,26 @@ export default function Layout({ children }: LayoutProps) {
       {/* Navigation Bar */}
       <nav className="border-b border-border bg-white sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">SL</span>
+            <Link to="/" className="flex items-center gap-3 flex-shrink-0">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+                <span className="text-white font-bold text-xs leading-none text-center">
+                  SS
+                </span>
               </div>
-              <span className="hidden sm:inline font-bold text-lg text-foreground">
-                SignLanguage AI
+              <span className="hidden sm:inline font-bold text-2xl text-foreground tracking-tight">
+                Smart Sign Language
               </span>
             </Link>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-10">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-base font-semibold text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {link.label}
                 </Link>
@@ -88,11 +90,15 @@ export default function Layout({ children }: LayoutProps) {
               {isAuthenticated && user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-3 h-11 px-4"
+                    >
+                      <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
                         {getInitials(user.fullName)}
                       </div>
-                      <span className="text-sm font-medium hidden sm:inline">
+                      <span className="text-base font-medium hidden sm:inline">
                         {user.fullName}
                       </span>
                     </Button>
@@ -115,7 +121,7 @@ export default function Layout({ children }: LayoutProps) {
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2">
                       <Settings size={16} />
-                      <span>Settings</span>
+                      <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -123,17 +129,26 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      <span>Logout</span>
+                      <span>Settings</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to="/login">Login</Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-11 px-5 text-base font-semibold"
+                    asChild
+                  >
+                    <Link to="/login">Sign Out</Link>
                   </Button>
-                  <Button size="sm" asChild>
-                    <Link to="/register">Sign Up</Link>
+                  <Button
+                    size="sm"
+                    className="h-11 px-5 text-base font-semibold"
+                    asChild
+                  >
+                    <Link to="/register">Sign In</Link>
                   </Button>
                 </>
               )}
@@ -142,21 +157,17 @@ export default function Layout({ children }: LayoutProps) {
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center gap-2">
               {isAuthenticated && user ? (
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
+                <Button variant="ghost" size="sm" className="gap-2 h-11 px-3">
+                  <div className="w-7 h-7 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
                     {getInitials(user.fullName)}
                   </div>
                 </Button>
               ) : null}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-foreground"
+                className="text-foreground p-1"
               >
-                {mobileMenuOpen ? (
-                  <X size={24} />
-                ) : (
-                  <Menu size={24} />
-                )}
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </div>
@@ -192,7 +203,7 @@ export default function Layout({ children }: LayoutProps) {
                     >
                       <Link to="/profile">
                         <User size={16} />
-                        Profile
+                        Sign Up
                       </Link>
                     </Button>
                     <Button
@@ -201,16 +212,16 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      Logout
+                      Profile
                     </Button>
                   </>
                 ) : (
                   <>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link to="/login">Login</Link>
+                      <Link to="/login">Sign Out</Link>
                     </Button>
                     <Button className="w-full" asChild>
-                      <Link to="/register">Sign Up</Link>
+                      <Link to="/register">Sign In</Link>
                     </Button>
                   </>
                 )}
@@ -228,67 +239,67 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h4 className="font-semibold mb-4">SignLanguage AI</h4>
-              <p className="text-sm text-muted-foreground">
-                Making sign language accessible to everyone.
-              </p>
+              <h4 className="font-semibold mb-4">Smart Sign Language</h4>
+              <p className="text-sm text-muted-foreground">Sign Up</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Product</h4>
+              <h4 className="font-semibold mb-4">
+                Making sign language more accessible for everyone.
+              </h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link to="/learn" className="hover:text-foreground">
-                    Learn
+                    Product
                   </Link>
                 </li>
                 <li>
                   <Link to="/translate" className="hover:text-foreground">
-                    Translate
+                    Learn
                   </Link>
                 </li>
                 <li>
                   <Link to="/recognition" className="hover:text-foreground">
-                    Recognition
+                    Translate
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Community</h4>
+              <h4 className="font-semibold mb-4">Recognition</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link to="/chat" className="hover:text-foreground">
-                    Chat
+                    Community
                   </Link>
                 </li>
                 <li>
                   <Link to="/feedback" className="hover:text-foreground">
-                    Feedback
+                    Chat
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
+              <h4 className="font-semibold mb-4">Feedback</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <a href="#" className="hover:text-foreground">
-                    Privacy
+                    Legal
                   </a>
                 </li>
                 <li>
                   <a href="#" className="hover:text-foreground">
-                    Terms
+                    Privacy
                   </a>
                 </li>
               </ul>
             </div>
           </div>
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-            <p>&copy; 2024 SignLanguage AI. All rights reserved.</p>
+            <p>Terms</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <a href="#" className="hover:text-foreground">
-                Twitter
+                X
               </a>
               <a href="#" className="hover:text-foreground">
                 Facebook

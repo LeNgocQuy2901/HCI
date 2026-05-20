@@ -9,7 +9,7 @@ const NotFound = () => {
 
   useEffect(() => {
     console.error(
-      "404 Error: User attempted to access non-existent route:",
+      "404 Error: User attempted to access a missing route:",
       location.pathname,
     );
   }, [location.pathname]);
@@ -28,16 +28,14 @@ const NotFound = () => {
           <h2 className="text-2xl font-semibold text-foreground mb-4">
             Page Not Found
           </h2>
-          <p className="text-lg text-muted-foreground mb-8">
-            Sorry, we couldn't find the page you're looking for. The link may be
-            broken or the page may have been removed.
-          </p>
+          <p className="text-lg text-muted-foreground mb-8">Page Not Found</p>
 
           {/* CTA */}
           <Button asChild size="lg">
             <Link to="/" className="gap-2 inline-flex items-center">
               <Home size={20} />
-              Back to Home
+              Sorry, we could not find the page you are looking for. The link
+              may be broken or the page may have been removed.
             </Link>
           </Button>
         </div>

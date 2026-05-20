@@ -1,0 +1,500 @@
+================================================================================
+HƯỚNG DẪN SETUP VÀ CHẠY PROJECT FUSION STARTER (Smart Sign Language)
+================================================================================
+
+PROJECT: Smart Sign Language (React + Express Full-Stack)
+TECHNOLOGY: React 18 + TypeScript + Vite + TailwindCSS + Express
+STATUS: ✅ Virtual Environment đã được tạo sẵn!
+
+⚡ QUICK START (5 PHÚT):
+========================
+
+1. Mở Command Prompt (Windows) hoặc Terminal (Mac/Linux)
+
+2. Điều hướng đến folder project:
+   > cd E:\CodeFiles\TTNM_BTL\HCL-main\SmartSignLanguage
+
+3. WINDOWS - Chạy script:
+   > start-dev.bat
+   
+   MAC/LINUX - Chạy script:
+   $ chmod +x start-dev.sh
+   $ ./start-dev.sh
+
+4. Mở trình duyệt:
+   http://localhost:8080/
+
+✨ XONG! Project đang chạy! 🎉
+
+Để hiểu chi tiết hơn, tiếp tục đọc phần dưới.
+
+================================================================================
+PHẦN 1: CHUẨN BỊ BAN ĐẦU
+================================================================================
+
+1. YÊU CẦU HỆ THỐNG:
+   - Windows 10 trở lên (hoặc macOS / Linux)
+   - Node.js: v24.13.0 (hoặc cao hơn)
+   - npm: 11.6.2 (đi kèm Node.js)
+   - Python 3.8+ (nếu dùng venv)
+   - RAM: Tối thiểu 4GB
+   - Dung lượng ổ cứng: ~2GB cho node_modules
+
+2. ⭐ PHƯƠNG ÁN KHUYÊN DÙNG: VIRTUAL ENVIRONMENT (ĐÃ SETUP SẴN)
+   ============================================================
+   
+   ✅ GOOD NEWS: Virtual Environment đã được tạo sẵn tại:
+      E:\CodeFiles\TTNM_BTL\HCL-main\SmartSignLanguage\venv/
+   
+   Điều này có nghĩa:
+   - Node_modules sẽ được cài trong folder venv (không tốn ổ C)
+   - Mỗi project có environment riêng (tránh conflict)
+   - Dễ dàng xóa/cấp lại (chỉ cần xóa folder venv)
+   
+   🚀 CÁCH CHẠY NHANH NHẤT:
+   
+   WINDOWS:
+   > start-dev.bat
+   
+   MacOS / Linux:
+   > chmod +x start-dev.sh
+   > ./start-dev.sh
+   
+   Xong! Script sẽ tự động:
+   ✓ Kích hoạt venv
+   ✓ Cài dependencies
+   ✓ Chạy dev server
+
+3. CÁCH THỦ CÔNG (Nếu muốn hiểu cách hoạt động):
+   
+   WINDOWS:
+   ---------
+   A. Kích hoạt venv:
+      > venv\Scripts\activate.bat
+      
+      Kết quả sẽ hiển thị:
+      (venv) E:\CodeFiles\TTNM_BTL\HCL-main\SmartSignLanguage>
+      
+      Dòng (venv) ở đầu chỉ venv đã được kích hoạt
+   
+   B. Cài đặt dependencies:
+      > npm install
+      
+   C. Chạy server:
+      > npm run dev
+      
+   D. Khi xong, thoát venv:
+      > deactivate
+   
+   MacOS / Linux:
+   ---------------
+   A. Kích hoạt venv:
+      $ source venv/bin/activate
+      
+      Kết quả sẽ hiển thị:
+      (venv) $ 
+      
+   B. Cài đặt dependencies:
+      (venv) $ npm install
+      
+   C. Chạy server:
+      (venv) $ npm run dev
+      
+   D. Khi xong, thoát venv:
+      (venv) $ deactivate
+
+================================================================================
+PHẦN 2: CÀI ĐẶT PROJECT (CHỈ CẦN LẦN ĐẦUTIÊN)
+================================================================================
+
+✅ BƯỚC 1: Virtual Environment đã có sẵn!
+
+   Kiểm tra thư mục project:
+   E:\CodeFiles\TTNM_BTL\HCL-main\SmartSignLanguage\venv/
+   
+   Nếu folder này tồn tại -> venv đã setup xong, bỏ qua phần này
+
+❌ Nếu folder venv KHÔNG tồn tại, tạo bằng lệnh này:
+   
+   WINDOWS:
+   > python -m venv venv
+   
+   MacOS / Linux:
+   $ python3 -m venv venv
+
+✅ BƯỚC 2: Kích hoạt Virtual Environment
+
+   WINDOWS:
+   > venv\Scripts\activate.bat
+   
+   Kết quả: (venv) E:\...>
+   
+   MacOS / Linux:
+   $ source venv/bin/activate
+   
+   Kết quả: (venv) $
+
+✅ BƯỚC 3: Cài đặt Dependencies
+
+   > npm install
+   
+   Hoặc nếu cần cài nhanh:
+   > npm install --legacy-peer-deps
+   
+   Lần đầu sẽ mất 1-2 phút, các lần sau sẽ nhanh hơn
+
+✅ BƯỚC 4: Kiểm tra cài đặt
+   
+   > npm run typecheck
+   
+   Nếu không lỗi TypeScript -> Cài đặt thành công ✓
+
+================================================================================
+PHẦN 3: CHẠY PROJECT
+================================================================================
+
+🚀 CÁCH NHANH NHẤT (Khuyên dùng):
+=================================
+
+   WINDOWS:
+   > start-dev.bat
+   
+   MacOS / Linux:
+   $ chmod +x start-dev.sh
+   $ ./start-dev.sh
+   
+   Script sẽ tự động:
+   ✓ Kích hoạt venv
+   ✓ Cài dependencies (nếu chưa cài)
+   ✓ Chạy dev server
+
+🔧 CÁCH THỦ CÔNG (Nếu muốn quản lý bằng tay):
+==============================================
+
+1️⃣ MỞ COMMAND PROMPT / TERMINAL VÀ ĐIỀU HƯỚNG:
+   > cd E:\CodeFiles\TTNM_BTL\HCL-main\SmartSignLanguage
+
+2️⃣ KÍCH HOẠT VIRTUAL ENVIRONMENT:
+   
+   WINDOWS:
+   > venv\Scripts\activate.bat
+   
+   Bây giờ dòng lệnh sẽ bắt đầu với: (venv)
+   
+   MacOS / Linux:
+   $ source venv/bin/activate
+
+3️⃣ CHẠY DEV SERVER (CHỈ CẦN LẦN ĐẦUTIÊN CÓ CÀI):
+   > npm run dev
+   
+   Kết quả:
+   ✅ Database initialized successfully at .../data/app.db
+   ➜ Local:   http://localhost:8080/
+   ➜ Network: http://192.168.1.12:8080/
+   
+   ✨ MỞ TRÌNH DUYỆT: http://localhost:8080/
+   
+   Chế độ này có:
+   - Hot reload (tự động cập nhật khi bạn lưu code)
+   - Development tools tối ưu
+   - Source maps cho debugging
+   
+   ⏹️  DỪNG SERVER: Nhấn Ctrl+C
+
+4️⃣ THOÁT VIRTUAL ENVIRONMENT (Sau khi dừng server):
+   > deactivate
+   
+   Dòng lệnh sẽ quay về bình thường (không có (venv) ở đầu)
+
+📦 BUILD DỰ ÁN (Production Release):
+=====================================
+
+   > npm run build
+   
+   Tạo thư mục dist/ chứa:
+   - dist/spa/ - Frontend tối ưu hóa
+   - dist/server/ - Backend tối ưu hóa
+   
+   Thời gian: ~1-2 phút
+
+🚀 CHẠY VERSION PRODUCTION:
+===========================
+
+   Sau khi build xong:
+   > npm start
+   
+   Server sẽ chạy ở: http://localhost:8080/
+
+🧪 CHẠY TESTS:
+==============
+
+   > npm test
+   
+   Chạy toàn bộ unit tests với Vitest
+
+📝 ĐỊNH DẠNG CODE:
+==================
+
+   > npm run format.fix
+   
+   Tự động format tất cả files theo Prettier
+
+================================================================================
+PHẦN 4: CẤU TRÚC PROJECT
+================================================================================
+
+📁 SmartSignLanguage/
+├── 📁 client/                 # React Frontend (SPA)
+│   ├── 📁 components/         # React components
+│   │   ├── 📁 ui/            # Pre-built UI library (Radix UI)
+│   │   └── *.tsx             # Custom components
+│   ├── 📁 pages/             # Route pages (Index.tsx = Home)
+│   ├── 📁 hooks/             # Custom React hooks
+│   ├── App.tsx               # Main app + routing
+│   └── global.css            # TailwindCSS + global styles
+│
+├── 📁 server/                 # Express Backend API
+│   ├── 📁 routes/            # API endpoints (/api/*)
+│   ├── 📁 models/            # Database models
+│   ├── 📁 middleware/        # Express middleware
+│   ├── db.ts                 # Database setup (SQLite)
+│   ├── auth.ts               # Authentication logic
+│   └── index.ts              # Server entry point
+│
+├── 📁 shared/                 # Shared TypeScript types
+│   ├── api.ts                # API interfaces
+│   └── vocabulary.ts         # Vocabulary types
+│
+├── 📁 public/                 # Static files
+│   ├── 📁 img/              # Images
+│   └── 📁 videos/           # Videos (organize by categories)
+│
+├── 📁 netlify/                # Netlify deployment config
+├── 📁 data/                   # Database files (auto-created)
+│   └── app.db               # SQLite database
+│
+├── package.json              # Dependencies & scripts
+├── vite.config.ts            # Vite config (Frontend)
+├── vite.config.server.ts     # Vite config (Backend)
+├── tsconfig.json             # TypeScript config
+├── tailwind.config.ts        # TailwindCSS theming
+└── pnpm-lock.yaml            # Lock file (nếu dùng pnpm)
+
+================================================================================
+PHẦN 5: MẤY CÂU LỆNH THƯỜNG DÙNG
+================================================================================
+
+Khởi động dev server:
+  > npm run dev
+
+Tạo build production:
+  > npm run build
+
+Chạy production server:
+  > npm start
+
+Kiểm tra lỗi TypeScript:
+  > npm run typecheck
+
+Chạy tests:
+  > npm test
+
+Format lại code:
+  > npm run format.fix
+
+Xóa cache (nếu cần):
+  > npm cache clean --force
+  > rmdir node_modules /s /q
+  > npm install
+
+Xem bản đầy đủ lệnh trong package.json:
+  > npm run (không có tên lệnh)
+
+================================================================================
+PHẦN 6: CẤU HÌNH MẪN CẢM
+================================================================================
+
+1. THAY ĐỔI CỔNG (Nếu 8080 đã được dùng):
+   Mở tệp: vite.config.ts
+   Tìm dòng: port: 8080
+   Thay đổi thành: port: 3000 (hoặc cổng nào bạn muốn)
+
+2. BIẾN MÔI TRƯỜNG:
+   Tạo tệp: .env.local
+   Thêm các biến cần thiết:
+   
+   VITE_API_URL=http://localhost:8080
+   VITE_APP_NAME=Smart Sign Language
+
+3. KẾT NỐI DATABASE:
+   Database mặc định: SQLite (data/app.db)
+   Nếu muốn thay đổi: Chỉnh sửa server/db.ts
+
+================================================================================
+PHẦN 7: GIẢI QUYẾT VẤN ĐỀ THƯỜNG GẶP
+================================================================================
+
+VIRTUAL ENVIRONMENT (venv):
+===========================
+
+✗ LỖI: "venv\Scripts\activate.bat" không tìm thấy
+  ✓ GIẢI PHÁP: Tạo venv lại
+    > python -m venv venv
+    > venv\Scripts\activate.bat
+
+✗ LỖI: "(venv)" không hiển thị trong command prompt
+  ✓ GIẢI PHÁP: venv chưa được kích hoạt
+    > venv\Scripts\activate.bat
+    (hoặc dùng script start-dev.bat)
+
+✗ LỖI: "Python not found"
+  ✓ GIẢI PHÁP: Cài Python từ https://www.python.org/
+    Chọn: Python 3.10+ (LTS)
+    Khi cài: ✓ Check "Add Python to PATH"
+
+✗ LỖI: Deactivate không hoạt động
+  ✓ GIẢI PHÁP: Gõ lệnh chính xác:
+    > deactivate
+    (không có dấu / backslash)
+
+NODE.JS & NPM:
+==============
+
+✗ LỖI: "npm: not found" hoặc "node: not found"
+  ✓ GIẢI PHÁP: Cài đặt Node.js từ https://nodejs.org/
+     Chọn LTS version
+     Sau cài phải khởi động lại Command Prompt
+
+✗ LỖI: "ERR! EACCES: permission denied"
+  ✓ GIẢI PHÁP: 
+    Cách 1: Chạy Command Prompt as Administrator
+    Cách 2: npm config set prefix "C:\npm" --global
+
+✗ LỖI: "Port 8080 already in use"
+  ✓ GIẢI PHÁP: Tìm process dùng port 8080
+    > netstat -ano | findstr :8080
+    Hoặc đổi cổng trong vite.config.ts
+
+✗ LỖI: "Cannot find module" hoặc "Missing dependencies"
+  ✓ GIẢI PHÁP: Xóa node_modules và reinstall
+    > rmdir node_modules /s /q
+    > npm install
+
+PROJECT:
+========
+
+✗ LỖI: "Database error" khi chạy dev
+  ✓ GIẢI PHÁP: Xóa folder data/ và chạy lại
+    > rmdir data /s /q
+    > npm run dev
+    Database sẽ tự động được tạo lại
+
+✗ LỖI: Dung lượng C ổ đầy (node_modules quá lớn)
+  ✓ GIẢI PHÁP: Dùng venv (đã setup sẵn)
+    Hoặc:
+    > rmdir node_modules /s /q
+    > npm install --legacy-peer-deps
+
+✗ LỖI: "better-sqlite3 build fail"
+  ✓ GIẢI PHÁP: Cần Python và C++ Build Tools
+    Tải: https://www.python.org/
+    Tải: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+    
+    Hoặc dùng lệnh:
+    > npm install --legacy-peer-deps --no-optional
+
+✗ LỖI: Video không load từ Google Drive
+  ✓ GIẢI PHÁP: Xem SETUP_GOOGLE_DRIVE.md
+    - File ID cần được cập nhật
+    - Xác nhận Drive folder được share công khai
+
+================================================================================
+PHẦN 8: TIPS & TRICKS - VIRTUAL ENVIRONMENT
+================================================================================
+
+1. HỎI: Folder venv là gì?
+   ĐÁP: Là Virtual Environment của Python - chứa tất cả npm packages
+        Nó cho phép project có environment riêng, không ảnh hưởng đến hệ thống
+
+2. HỎI: Tại sao cần kích hoạt venv?
+   ĐÁP: Để npm packages được cài trong venv, không tốn ổ C chính
+
+3. HỎI: Mỗi lần chạy đều phải kích hoạt venv?
+   ĐÁP: Có, hoặc dùng script start-dev.bat/sh để tự động
+
+4. HỎI: Xóa venv được không?
+   ĐÁP: Được! Chỉ cần:
+        > rmdir venv /s /q    (Windows)
+        $ rm -rf venv          (MacOS/Linux)
+        Sau đó tạo lại bằng: python -m venv venv
+
+5. HỎI: Node_modules ở đâu?
+   ĐÁP: Trong thư mục project hiện tại (E:\...\SmartSignLanguage\node_modules)
+        Được cài khi npm install trong venv
+        Dung lượng: ~500MB
+
+6. CHROME DEVTOOLS DEBUG:
+   - Chạy: npm run dev
+   - Mở DevTools: F12
+   - Network tab: xem API calls
+   - Console tab: xem errors
+
+7. THEME & STYLING:
+   - Mở: client/global.css
+   - Edit Tailwind config: tailwind.config.ts
+   - Tự động hot-reload trên browser
+
+8. THÊM PAGE MỚI:
+   - Tạo: client/pages/MyPage.tsx
+   - Thêm route trong App.tsx:
+     <Route path="/my-page" element={<MyPage />} />
+
+9. THÊM API ENDPOINT:
+   - Tạo: server/routes/my-route.ts
+   - Đăng ký trong: server/index.ts
+     app.get("/api/my-endpoint", handleMyRoute);
+
+10. MULTIPLE TERMINALS:
+    Terminal 1: npm run dev  (Dev server)
+    Terminal 2: npm test     (Tests)
+    
+    Mỗi terminal cần kích hoạt venv riêng!
+
+================================================================================
+PHẦN 9: DEPLOYMENT (PHÁT HÀNH)
+================================================================================
+
+Netlify:
+  1. npm run build
+  2. Kết nối GitHub với Netlify
+  3. Chọn folder dist/spa
+  4. Deploy
+
+Vercel:
+  1. npm run build
+  2. Push code lên GitHub
+  3. Import project trên Vercel
+  4. Auto-deploy
+
+================================================================================
+LIÊN HỆ & THAM KHẢO
+================================================================================
+
+Project Template: Fusion Starter
+Framework: React 18 + TypeScript + Vite
+API Server: Express
+Database: SQLite (better-sqlite3)
+Styling: TailwindCSS 3 + Radix UI
+Testing: Vitest
+
+Tài liệu:
+- React: https://react.dev
+- TypeScript: https://www.typescriptlang.org
+- TailwindCSS: https://tailwindcss.com
+- Vite: https://vitejs.dev
+- Express: https://expressjs.com
+
+================================================================================
+NGÀY TẠO: 22/04/2026
+PHIÊN BẢN: 1.0
+================================================================================

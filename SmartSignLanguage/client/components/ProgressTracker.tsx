@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Award, TrendingUp, Calendar, BookOpen } from "lucide-react";
+import { Award, TrendingUp, Calendar, BookOpen, Flame } from "lucide-react";
 
 interface ProgressStats {
   totalWords: number;
@@ -36,7 +36,7 @@ export default function ProgressTracker({
           <div className="text-2xl font-bold text-orange-500">
             {stats.currentStreak}
           </div>
-          <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
+          <p className="text-xs text-muted-foreground">Day Streak</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-blue-500">
@@ -48,7 +48,7 @@ export default function ProgressTracker({
           <div className="text-2xl font-bold text-green-500">
             {Math.round(masteryPercentage)}%
           </div>
-          <p className="text-xs text-muted-foreground">Complete</p>
+          <p className="text-xs text-muted-foreground">Completed</p>
         </Card>
       </div>
     );
@@ -70,7 +70,7 @@ export default function ProgressTracker({
           </div>
           <Progress value={masteryPercentage} className="h-3" />
           <p className="text-sm text-muted-foreground">
-            {Math.round(masteryPercentage)}% of vocabulary mastered
+            {Math.round(masteryPercentage)}% vocabulary mastered
           </p>
         </div>
       </Card>
@@ -81,7 +81,7 @@ export default function ProgressTracker({
         <Card className="p-6">
           <div className="flex items-start gap-4">
             <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🔥</span>
+              <Flame className="h-5 w-5 text-orange-600" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Current Streak</p>
@@ -104,7 +104,8 @@ export default function ProgressTracker({
               <p className="text-3xl font-bold">{stats.totalReviewsToday}</p>
               {stats.nextReviewDate && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Next review: {new Date(stats.nextReviewDate).toLocaleDateString()}
+                  Next review:{" "}
+                  {new Date(stats.nextReviewDate).toLocaleDateString("en-US")}
                 </p>
               )}
             </div>
@@ -121,7 +122,7 @@ export default function ProgressTracker({
               <p className="text-sm text-muted-foreground">Mastered Words</p>
               <p className="text-3xl font-bold">{stats.masteredWords}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Keep up the great work!
+                Keep up the pace.
               </p>
             </div>
           </div>

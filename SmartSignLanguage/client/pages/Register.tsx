@@ -12,24 +12,24 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
-const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  username: z
-    .string()
-    .min(3, "Username must be at least 3 characters")
-    .max(30, "Username must be at most 30 characters"),
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters"),
-  fullName: z
-    .string()
-    .min(1, "Full name is required")
-    .max(100, "Full name must be at most 100 characters"),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+const registerSchema = z
+  .object({
+    email: z.string().email("Invalid email address"),
+    username: z
+      .string()
+      .min(3, "Username must be at least 3 characters")
+      .max(30, "Username must be at most 30 characters"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    fullName: z
+      .string()
+      .min(1, "Full name is required")
+      .max(100, "Full name must be at most 100 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -65,7 +65,7 @@ export default function Register() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Registration failed",
+        description: error.message || "Sign up failed",
         variant: "destructive",
       });
     } finally {
@@ -88,11 +88,11 @@ export default function Register() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Full Name */}
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">Create Account</Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Alex Nguyen"
                   {...formRegister("fullName")}
                 />
                 {errors.fullName && (
@@ -120,11 +120,13 @@ export default function Register() {
 
               {/* Username */}
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="username">
+                  Sign up to start learning sign language today
+                </Label>
                 <Input
                   id="username"
                   type="text"
-                  placeholder="johndoe"
+                  placeholder="alexnguyen"
                   {...formRegister("username")}
                 />
                 {errors.username && (
@@ -136,7 +138,7 @@ export default function Register() {
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Full Name</Label>
                 <Input
                   id="password"
                   type="password"
@@ -152,7 +154,7 @@ export default function Register() {
 
               {/* Confirm Password */}
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">Username</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -175,19 +177,19 @@ export default function Register() {
                 {isSubmitting || isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
+                    Password
                   </>
                 ) : (
-                  "Create Account"
+                  "????????"
                 )}
               </Button>
             </form>
 
             {/* Login Link */}
             <div className="text-center text-sm">
-              <span className="text-muted-foreground">Already have an account? </span>
+              <span className="text-muted-foreground">Confirm Password</span>
               <Link to="/login" className="text-primary hover:underline">
-                Sign in
+                Creating account...
               </Link>
             </div>
           </div>
