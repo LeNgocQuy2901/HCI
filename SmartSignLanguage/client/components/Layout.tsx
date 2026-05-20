@@ -24,16 +24,16 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { href: "/", label: "Trang chủ" },
-    { href: "/learn", label: "Học" },
-    { href: "/translate", label: "Dịch" },
-    { href: "/recognition", label: "Nhận dạng" },
-    { href: "/chat", label: "Trò chuyện" },
+    { href: "/", label: "Home" },
+    { href: "/learn", label: "Learn" },
+    { href: "/translate", label: "Translate" },
+    { href: "/recognition", label: "Recognition" },
+    { href: "/chat", label: "Chat" },
   ];
 
   // Add Profile link only if authenticated
   if (isAuthenticated) {
-    navLinks.push({ href: "/profile", label: "Hồ sơ" });
+    navLinks.push({ href: "/profile", label: "Profile" });
   }
 
   // Get user initials for avatar
@@ -51,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
     await logout();
     setMobileMenuOpen(false);
     navigate("/");
-    toast({ description: "Bạn đã đăng xuất" });
+    toast({ description: "You have signed out" });
   };
 
   return (
@@ -90,7 +90,11 @@ export default function Layout({ children }: LayoutProps) {
               {isAuthenticated && user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-3 h-11 px-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-3 h-11 px-4"
+                    >
                       <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
                         {getInitials(user.fullName)}
                       </div>
@@ -112,12 +116,12 @@ export default function Layout({ children }: LayoutProps) {
                     <DropdownMenuItem className="gap-2" asChild>
                       <Link to="/profile">
                         <User size={16} />
-                        <span>Hồ sơ</span>
+                        <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2">
                       <Settings size={16} />
-                      <span>Cài đặt</span>
+                      <span>Profile</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -125,17 +129,26 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      <span>Đăng xuất</span>
+                      <span>Settings</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
                 <>
-                  <Button variant="outline" size="sm" className="h-11 px-5 text-base font-semibold" asChild>
-                    <Link to="/login">Đăng nhập</Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-11 px-5 text-base font-semibold"
+                    asChild
+                  >
+                    <Link to="/login">Sign Out</Link>
                   </Button>
-                  <Button size="sm" className="h-11 px-5 text-base font-semibold" asChild>
-                    <Link to="/register">Đăng ký</Link>
+                  <Button
+                    size="sm"
+                    className="h-11 px-5 text-base font-semibold"
+                    asChild
+                  >
+                    <Link to="/register">Sign In</Link>
                   </Button>
                 </>
               )}
@@ -154,11 +167,7 @@ export default function Layout({ children }: LayoutProps) {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="text-foreground p-1"
               >
-                {mobileMenuOpen ? (
-                  <X size={24} />
-                ) : (
-                  <Menu size={24} />
-                )}
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
           </div>
@@ -194,7 +203,7 @@ export default function Layout({ children }: LayoutProps) {
                     >
                       <Link to="/profile">
                         <User size={16} />
-                        Hồ sơ
+                        Sign Up
                       </Link>
                     </Button>
                     <Button
@@ -203,16 +212,16 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      Đăng xuất
+                      Profile
                     </Button>
                   </>
                 ) : (
                   <>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link to="/login">Đăng nhập</Link>
+                      <Link to="/login">Sign Out</Link>
                     </Button>
                     <Button className="w-full" asChild>
-                      <Link to="/register">Đăng ký</Link>
+                      <Link to="/register">Sign In</Link>
                     </Button>
                   </>
                 )}
@@ -231,63 +240,63 @@ export default function Layout({ children }: LayoutProps) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <h4 className="font-semibold mb-4">Smart Sign Language</h4>
-              <p className="text-sm text-muted-foreground">
-                Làm cho ngôn ngữ ký hiệu trở nên dễ tiếp cận với mọi người.
-              </p>
+              <p className="text-sm text-muted-foreground">Sign Up</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Sản phẩm</h4>
+              <h4 className="font-semibold mb-4">
+                Making sign language more accessible for everyone.
+              </h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link to="/learn" className="hover:text-foreground">
-                    Học
+                    Product
                   </Link>
                 </li>
                 <li>
                   <Link to="/translate" className="hover:text-foreground">
-                    Dịch
+                    Learn
                   </Link>
                 </li>
                 <li>
                   <Link to="/recognition" className="hover:text-foreground">
-                    Nhận dạng
+                    Translate
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Cộng đồng</h4>
+              <h4 className="font-semibold mb-4">Recognition</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link to="/chat" className="hover:text-foreground">
-                    Trò chuyện
+                    Community
                   </Link>
                 </li>
                 <li>
                   <Link to="/feedback" className="hover:text-foreground">
-                    Góp ý
+                    Chat
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Pháp lý</h4>
+              <h4 className="font-semibold mb-4">Feedback</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <a href="#" className="hover:text-foreground">
-                    Quyền riêng tư
+                    Legal
                   </a>
                 </li>
                 <li>
                   <a href="#" className="hover:text-foreground">
-                    Điều khoản
+                    Privacy
                   </a>
                 </li>
               </ul>
             </div>
           </div>
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-            <p>&copy; 2024 SignLanguage AI. Bảo lưu mọi quyền.</p>
+            <p>Terms</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <a href="#" className="hover:text-foreground">
                 X

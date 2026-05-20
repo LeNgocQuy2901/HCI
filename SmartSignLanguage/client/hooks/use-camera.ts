@@ -1,4 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+export interface CameraOptions {
+  width?: number;
+  height?: number;
+  facingMode?: "user" | "environment";
+}
 
 interface CameraHook {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -11,82 +17,92 @@ interface CameraHook {
   takeScreenshot: () => string | null;
 }
 
-export function useCamera(): CameraHook {
+export function useCamera(options: CameraOptions = {}): CameraHook {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const isMountedRef = useRef(true);
+
+  const { width = 640, height = 480, facingMode = "user" } = options;
 
   const startCamera = async () => {
     try {
-      console.log("🎥 Requesting camera access...");
-      
       if (videoRef.current && streamRef.current && isActive) {
-        console.log("📹 Camera already active");
         return;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          facingMode: "user",
+          width: { ideal: width },
+          height: { ideal: height },
+          facingMode,
         },
         audio: false,
       });
 
-      console.log("✅ Camera stream obtained:", stream);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setHasPermission(true);
-        setError(null);
-
-        console.log("📺 Video element setup...");
-
-        // Wait for video to load and set canvas size
-        await new Promise<void>((resolve) => {
-          const onLoadedMetadata = () => {
-            console.log("✅ Video metadata loaded");
-            if (videoRef.current && canvasRef.current) {
-              const width = videoRef.current.videoWidth;
-              const height = videoRef.current.videoHeight;
-              console.log(`🎬 Setting canvas size: ${width}x${height}`);
-              canvasRef.current.width = width;
-              canvasRef.current.height = height;
-              videoRef.current.play().then(() => {
-                console.log("▶️ Video playing");
-              }).catch(err => console.error("❌ Play error:", err));
-              resolve();
-            }
-          };
-          
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = onLoadedMetadata;
-            // Timeout fallback
-            setTimeout(() => {
-              console.log("⏱️ Metadata timeout - forcing play");
-              if (videoRef.current) {
-                videoRef.current.play().then(() => {
-                  console.log("▶️ Video playing (timeout)");
-                }).catch(err => console.error("❌ Play error (timeout):", err));
-              }
-              resolve();
-            }, 1000);
-          }
-        });
-
-        setIsActive(true);
-        console.log("✅ Camera ready!");
+      if (!videoRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
       }
+
+      videoRef.current.srcObject = stream;
+      streamRef.current = stream;
+      setHasPermission(true);
+      setError(null);
+
+      await new Promise<void>((resolve) => {
+        const video = videoRef.current;
+        if (!video) {
+          resolve();
+          return;
+        }
+
+        let resolved = false;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        const setupVideo = () => {
+          if (resolved) return;
+          resolved = true;
+
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+
+          const currentVideo = videoRef.current;
+          if (
+            isMountedRef.current &&
+            currentVideo &&
+            currentVideo.isConnected &&
+            currentVideo.srcObject &&
+            canvasRef.current
+          ) {
+            canvasRef.current.width = currentVideo.videoWidth || width;
+            canvasRef.current.height = currentVideo.videoHeight || height;
+            currentVideo.play().catch((err) => {
+              if (err instanceof DOMException && err.name === "AbortError") {
+                return;
+              }
+              console.error("Video play error:", err);
+            });
+          }
+          resolve();
+        };
+
+        video.onloadedmetadata = setupVideo;
+        timeoutId = setTimeout(setupVideo, 1000);
+      });
+
+      setIsActive(true);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to access camera";
-      console.error("❌ Camera error:", errorMessage, err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to access camera";
       setError(errorMessage);
       setHasPermission(false);
+      setIsActive(false);
+      console.error("Camera access error:", err);
     }
   };
 
@@ -108,16 +124,32 @@ export function useCamera(): CameraHook {
       const ctx = canvasRef.current.getContext("2d");
       if (!ctx) return null;
 
-      canvasRef.current.width = videoRef.current.videoWidth;
-      canvasRef.current.height = videoRef.current.videoHeight;
+      canvasRef.current.width = videoRef.current.videoWidth || width;
+      canvasRef.current.height = videoRef.current.videoHeight || height;
 
-      ctx.drawImage(videoRef.current, 0, 0);
+      ctx.drawImage(
+        videoRef.current,
+        0,
+        0,
+        canvasRef.current.width,
+        canvasRef.current.height
+      );
+
       return canvasRef.current.toDataURL("image/jpeg");
     } catch (err) {
       console.error("Screenshot error:", err);
       return null;
     }
   };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      stopCamera();
+    };
+  }, []);
 
   return {
     videoRef,

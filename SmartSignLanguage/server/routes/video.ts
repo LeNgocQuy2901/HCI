@@ -18,7 +18,7 @@ const getVideoInfo = (req: Request<{ videoKey: string }>, res: any) => {
   if (video.fileId.includes("PLACEHOLDER")) {
     return res.status(400).json({
       error: "Video ID not configured",
-      message: `File ID for "${videoKey}" chưa được cấu hình.`,
+      message: `File ID for "${videoKey}" is not configured.`,
     });
   }
 
@@ -63,7 +63,7 @@ const streamVideo = (req: Request<{ videoKey: string }>, res: any) => {
       res.status(driveResponse.status);
       res.setHeader(
         "Content-Type",
-        driveResponse.headers.get("content-type") || "video/mp4"
+        driveResponse.headers.get("content-type") || "video/mp4",
       );
       res.setHeader("Accept-Ranges", "bytes");
       res.setHeader("Access-Control-Allow-Origin", "*");
@@ -83,7 +83,9 @@ const streamVideo = (req: Request<{ videoKey: string }>, res: any) => {
       stream.on("error", (err) => {
         console.error("Drive stream error:", err);
         if (!res.headersSent) {
-          res.status(500).json({ error: "Failed to stream video", detail: err.message });
+          res
+            .status(500)
+            .json({ error: "Failed to stream video", detail: err.message });
         } else {
           res.end();
         }

@@ -15,7 +15,7 @@ export default function PlaceholderPage({
   title,
   description,
   icon,
-  ctaText = "Tiếp tục",
+  ctaText = "Continue",
   features = [],
 }: PlaceholderPageProps) {
   return (
@@ -38,7 +38,7 @@ export default function PlaceholderPage({
         {features.length > 0 && (
           <div className="bg-muted/30 rounded-2xl p-8 space-y-3 text-left">
             <p className="text-sm font-semibold text-foreground mb-4">
-              Sắp ra mắt:
+              Coming Soon:
             </p>
             {features.map((feature, i) => (
               <div key={i} className="flex items-center gap-3 text-foreground">
@@ -53,10 +53,10 @@ export default function PlaceholderPage({
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 flex items-start gap-4">
           <Lightbulb size={24} className="text-primary flex-shrink-0" />
           <div className="text-left">
-            <p className="text-sm font-semibold text-foreground mb-1">Gợi ý</p>
+            <p className="text-sm font-semibold text-foreground mb-1">Hint</p>
             <p className="text-sm text-muted-foreground">
-              Đây là trang tạm. Để tùy biến, hãy yêu cầu AI xây dựng trang này
-              với tính năng và thiết kế cụ thể bạn muốn.
+              This is a placeholder page. Ask AI to build this page with the
+              exact features and design you need.
             </p>
           </div>
         </div>

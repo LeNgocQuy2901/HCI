@@ -1,5 +1,12 @@
 // Vocabulary types
-export type Category = "greetings" | "numbers" | "emotions" | "actions" | "family" | "animals" | "colors";
+export type Category =
+  | "greetings"
+  | "numbers"
+  | "emotions"
+  | "actions"
+  | "family"
+  | "animals"
+  | "colors";
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
 import { getDriveVideoName } from "./google-drive";
@@ -80,8 +87,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "greetings",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/greet-hello",
-    description: "Vẫy tay và đưa về phía trước với nụ cười thân thiện",
-    example: "Chào bạn của bạn",
+    description: "Wave your hand forward with a friendly expression.",
+    example: "Say hello to a friend.",
   },
   {
     id: "greet-thank-you",
@@ -89,8 +96,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "greetings",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/greet-thank-you",
-    description: "Đặt tay lên ngực rồi đưa tay ra phía trước theo đường cong",
-    example: "Cảm ơn bạn đã giúp tôi",
+    description: "Move your hand from your chin outward to express thanks.",
+    example: "Thank you for helping me.",
   },
   {
     id: "num-zero",
@@ -98,8 +105,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-0",
-    description: "Giơ hai bàn tay với các ngón tay cong lại thành hình tròn",
-    example: "Số không là số bắt đầu",
+    description: "Form a zero shape with your hand.",
+    example: "Zero is the starting number.",
   },
   {
     id: "num-one",
@@ -107,8 +114,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-1",
-    description: "Giơ ngón trỏ lên",
-    example: "Tôi có một quả táo",
+    description: "Raise your index finger.",
+    example: "I have one apple.",
   },
   {
     id: "num-two",
@@ -116,8 +123,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-2",
-    description: "Giơ ngón trỏ và ngón giữa",
-    example: "Hai con chim đang bay",
+    description: "Raise your index and middle fingers.",
+    example: "Two birds are flying.",
   },
   {
     id: "num-three",
@@ -125,8 +132,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-3",
-    description: "Giơ ngón trỏ, ngón giữa và ngón áp út",
-    example: "Ba con mèo đang chơi",
+    description: "Raise three fingers.",
+    example: "Three people are playing.",
   },
   {
     id: "num-four",
@@ -134,8 +141,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-4",
-    description: "Giơ bốn ngón tay, trừ ngón cái",
-    example: "Con mèo có bốn chân",
+    description: "Raise four fingers with the thumb folded.",
+    example: "A table has four legs.",
   },
   {
     id: "num-five",
@@ -143,8 +150,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-5",
-    description: "Xòe bàn tay và giơ đủ năm ngón",
-    example: "Năm là một nửa của mười",
+    description: "Open your hand with all five fingers visible.",
+    example: "Five is half of ten.",
   },
   {
     id: "num-six",
@@ -152,8 +159,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "numbers",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/num-6",
-    description: "Giơ sáu ngón tay theo tư thế tay đặc biệt",
-    example: "Có sáu quả trứng trong giỏ",
+    description: "Use the standard hand shape for six.",
+    example: "There are six eggs in the basket.",
   },
   {
     id: "emotion-happy",
@@ -161,8 +168,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "emotions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/emotion-happy",
-    description: "Biểu hiện cảm xúc vui",
-    example: "Hôm nay tôi rất vui",
+    description: "Show a happy facial expression and hand movement.",
+    example: "I feel happy today.",
   },
   {
     id: "emotion-sad",
@@ -170,8 +177,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "emotions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/emotion-sad",
-    description: "Biểu hiện cảm xúc buồn",
-    example: "Tôi cảm thấy rất buồn",
+    description: "Show sadness through expression and gesture.",
+    example: "I feel sad.",
   },
   {
     id: "emotion-angry",
@@ -179,8 +186,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "emotions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/emotion-angry",
-    description: "Biểu hiện cảm xúc tức giận",
-    example: "Bạn ấy đang rất tức giận",
+    description: "Show anger through facial expression and gesture.",
+    example: "He is angry.",
   },
   {
     id: "emotion-disappointed",
@@ -188,8 +195,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "emotions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/emotion-disappointed",
-    description: "Biểu hiện cảm xúc thất vọng",
-    example: "Tôi hơi thất vọng",
+    description: "Express disappointment clearly.",
+    example: "I am a little disappointed.",
   },
   {
     id: "emotion-tired",
@@ -197,8 +204,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "emotions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/emotion-tired",
-    description: "Biểu hiện cảm xúc hơi mệt thôi",
-    example: "Không, tôi chỉ hơi mệt thôi",
+    description: "Express that you are tired.",
+    example: "No, I am just tired.",
   },
   {
     id: "action-sleep",
@@ -206,8 +213,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "actions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/action-sleep",
-    description: "Biểu hiện hành động ngủ",
-    example: "Em bé ngủ",
+    description: "Show the action of sleeping.",
+    example: "The baby is sleeping.",
   },
   {
     id: "action-walk",
@@ -215,8 +222,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "actions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/action-walk",
-    description: "Biểu hiện hành động đi",
-    example: "Tôi đi học",
+    description: "Show the action of walking.",
+    example: "I walk to school.",
   },
   {
     id: "action-read",
@@ -224,8 +231,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "actions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/action-read",
-    description: "Biểu hiện hành động đọc sách",
-    example: "Tôi đang đọc sách",
+    description: "Show the action of reading a book.",
+    example: "I am reading a book.",
   },
   {
     id: "action-listen-to-music",
@@ -233,8 +240,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "actions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/action-listen-to-music",
-    description: "Biểu hiện hành động nghe nhạc",
-    example: "Tôi thích nghe nhạc lắm",
+    description: "Show the action of listening to music.",
+    example: "I like listening to music.",
   },
   {
     id: "action-watch-movie",
@@ -242,8 +249,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "actions",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/action-watch-movie",
-    description: "Biểu hiện hành động xem phim",
-    example: "Tối nay tôi xem phim",
+    description: "Show the action of watching a movie.",
+    example: "I will watch a movie tonight.",
   },
   {
     id: "family-anh",
@@ -251,8 +258,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "family",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/family-anh",
-    description: "Biểu hiện từ chỉ anh",
-    example: "Anh tôi đang học",
+    description: "Sign for older brother.",
+    example: "My older brother is studying.",
   },
   {
     id: "family-ong-ngoai",
@@ -260,8 +267,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "family",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/family-ong-ngoai",
-    description: "Biểu hiện từ chỉ ông ngoại",
-    example: "Ông ngoại rất thương tôi",
+    description: "Sign for grandfather.",
+    example: "My grandfather cares about me.",
   },
   {
     id: "family-me",
@@ -269,8 +276,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "family",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/family-me",
-    description: "Biểu hiện từ chỉ mẹ",
-    example: "Mẹ tôi nấu ăn rất ngon",
+    description: "Sign for mother.",
+    example: "My mother cooks well.",
   },
   {
     id: "family-ba",
@@ -278,8 +285,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "family",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/family-ba",
-    description: "Biểu hiện từ chỉ ba",
-    example: "Ba tôi rất nghiêm",
+    description: "Sign for father.",
+    example: "My father is strict.",
   },
   {
     id: "family-chi",
@@ -287,8 +294,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "family",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/family-chi",
-    description: "Biểu hiện từ chỉ chị",
-    example: "Chị tôi rất vui",
+    description: "Sign for older sister.",
+    example: "My older sister is cheerful.",
   },
   {
     id: "animal-cat",
@@ -296,8 +303,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "animals",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/animal-cat",
-    description: "Biểu hiện từ chỉ con mèo",
-    example: "Con mèo đang ngủ",
+    description: "Sign for cat.",
+    example: "The cat is sleeping.",
   },
   {
     id: "animal-bird",
@@ -305,8 +312,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "animals",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/animal-bird",
-    description: "Biểu hiện từ chỉ con chim",
-    example: "Con chim đang bay lượn",
+    description: "Sign for bird.",
+    example: "The bird is flying.",
   },
   {
     id: "animal-fish",
@@ -314,8 +321,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "animals",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/animal-fish",
-    description: "Biểu hiện từ chỉ con cá",
-    example: "Con cá đang bơi dưới nước",
+    description: "Sign for fish.",
+    example: "The fish is swimming.",
   },
   {
     id: "animal-mosquito",
@@ -323,8 +330,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "animals",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/animal-mosquito",
-    description: "Biểu hiện từ chỉ con muỗi",
-    example: "Con muỗi bay quanh đèn",
+    description: "Sign for mosquito.",
+    example: "A mosquito is flying near the light.",
   },
   {
     id: "animal-monkey",
@@ -332,8 +339,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "animals",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/animal-monkey",
-    description: "Biểu hiện từ chỉ con khỉ",
-    example: "Con khỉ leo lên cây",
+    description: "Sign for monkey.",
+    example: "The monkey climbs a tree.",
   },
   {
     id: "color-black",
@@ -341,8 +348,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "colors",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/color-black",
-    description: "Biểu hiện màu đen",
-    example: "Áo màu đen",
+    description: "Sign for black.",
+    example: "The shirt is black.",
   },
   {
     id: "color-red",
@@ -350,8 +357,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "colors",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/color-red",
-    description: "Biểu hiện màu đỏ",
-    example: "Quả táo đỏ",
+    description: "Sign for red.",
+    example: "The apple is red.",
   },
   {
     id: "color-blue",
@@ -359,8 +366,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "colors",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/color-blue",
-    description: "Biểu hiện màu xanh dương",
-    example: "Bầu trời xanh dương",
+    description: "Sign for blue.",
+    example: "The sky is blue.",
   },
   {
     id: "color-yellow",
@@ -368,8 +375,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "colors",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/color-yellow",
-    description: "Biểu hiện màu vàng",
-    example: "Hoa màu vàng",
+    description: "Sign for yellow.",
+    example: "The flower is yellow.",
   },
   {
     id: "color-pink",
@@ -377,8 +384,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "colors",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/color-pink",
-    description: "Biểu hiện màu hồng",
-    example: "Bông hoa hồng",
+    description: "Sign for pink.",
+    example: "The flower is pink.",
   },
   {
     id: "viet-cau-don-ban-khoe-khong",
@@ -386,8 +393,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "greetings",
     difficulty: "beginner",
     videoUrl: "/api/video-stream/greet-how-are-you",
-    description: "Hỏi thăm sức khỏe của người khác - một cách chào hỏi phổ biến trong giao tiếp hàng ngày",
-    example: "Khi gặp bạn, bạn có thể hỏi: Bạn khỏe không?",
+    description: "Ask someone how they are.",
+    example: "When you meet a friend, ask: How are you?",
   },
   {
     id: "viet-cau-phuc-lau-qua-khong-gap",
@@ -395,8 +402,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "greetings",
     difficulty: "intermediate",
     videoUrl: "/api/video-stream/greet-long-time-no-see",
-    description: "Câu chào hỏi khi gặp lại ai đó sau thời gian dài không liên lạc",
-    example: "Gặp một người bạn cũ, bạn nói: Lâu quá không gặp, bạn khỏe không?",
+    description: "Greet someone you have not seen for a long time.",
+    example: "Long time no see. How are you?",
   },
   {
     id: "viet-cau-phuc-lau-qua-khong-gap-2",
@@ -404,8 +411,8 @@ export const vocabularyCards: VocabularyCard[] = [
     category: "greetings",
     difficulty: "intermediate",
     videoUrl: "/api/video-stream/greet-long-time-no-see",
-    description: "Biến thể của câu chào hỏi - luyện tập phát âm và ký hiệu chính xác",
-    example: "Thực hành cách chào khi gặp lại bạn bè hoặc người quen",
+    description: "Practice a variation of the long-time-no-see greeting.",
+    example: "Practice greeting friends and acquaintances.",
   },
 ];
 
@@ -422,36 +429,40 @@ export const categories = [
 export const difficulties = ["beginner", "intermediate", "advanced"] as const;
 
 export const categoryLabels: Record<Category, string> = {
-  greetings: "Chào hỏi",
-  numbers: "Số đếm",
-  emotions: "Cảm xúc",
-  actions: "Hành động",
-  family: "Gia đình",
-  animals: "Động vật",
-  colors: "Màu sắc",
+  greetings: "Greetings",
+  numbers: "Numbers",
+  emotions: "Emotions",
+  actions: "Actions",
+  family: "Family",
+  animals: "Animals",
+  colors: "Colors",
 };
 
 export const difficultyLabels: Record<Difficulty, string> = {
-  beginner: "Cơ bản",
-  intermediate: "Trung cấp",
-  advanced: "Nâng cao",
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
 };
 
 // Helper functions
-export function getVocabulariesByCategory(category: Category): VocabularyCard[] {
+export function getVocabulariesByCategory(
+  category: Category,
+): VocabularyCard[] {
   return vocabularyCards.filter((card) => card.category === category);
 }
 
-export function getVocabulariesByDifficulty(difficulty: Difficulty): VocabularyCard[] {
+export function getVocabulariesByDifficulty(
+  difficulty: Difficulty,
+): VocabularyCard[] {
   return vocabularyCards.filter((card) => card.difficulty === difficulty);
 }
 
 export function getVocabulariesByCategoryAndDifficulty(
   category: Category,
-  difficulty: Difficulty
+  difficulty: Difficulty,
 ): VocabularyCard[] {
   return vocabularyCards.filter(
-    (card) => card.category === category && card.difficulty === difficulty
+    (card) => card.category === category && card.difficulty === difficulty,
   );
 }
 
@@ -459,8 +470,8 @@ export function getVocabulariesByCategoryAndDifficulty(
 export const predefinedAchievements: Achievement[] = [
   {
     id: "first-word",
-    name: "Từ đầu tiên",
-    description: "Học từ ngôn ngữ ký hiệu đầu tiên của bạn",
+    name: "First Word",
+    description: "Learn your first sign language word",
     icon: "🌟",
     type: "milestone",
     requirement: 1,
@@ -468,8 +479,8 @@ export const predefinedAchievements: Achievement[] = [
   },
   {
     id: "ten-words",
-    name: "Bắt đầu",
-    description: "Học 10 từ ngôn ngữ ký hiệu",
+    name: "Getting Started",
+    description: "Learn 10 sign language words",
     icon: "📚",
     type: "milestone",
     requirement: 10,
@@ -477,8 +488,8 @@ export const predefinedAchievements: Achievement[] = [
   },
   {
     id: "fifty-words",
-    name: "Đang tiến bộ",
-    description: "Học 50 từ ngôn ngữ ký hiệu",
+    name: "Making Progress",
+    description: "Learn 50 sign language words",
     icon: "🚀",
     type: "milestone",
     requirement: 50,
@@ -486,8 +497,8 @@ export const predefinedAchievements: Achievement[] = [
   },
   {
     id: "hundred-words",
-    name: "Bậc thầy",
-    description: "Học 100 từ ngôn ngữ ký hiệu",
+    name: "Master",
+    description: "Learn 100 sign language words",
     icon: "🎯",
     type: "milestone",
     requirement: 100,
@@ -495,8 +506,8 @@ export const predefinedAchievements: Achievement[] = [
   },
   {
     id: "quiz-master",
-    name: "Bậc thầy kiểm tra",
-    description: "Đạt 100% trong một bài kiểm tra",
+    name: "Quiz Master",
+    description: "Score 100% on a quiz",
     icon: "👑",
     type: "quiz",
     requirement: 1,
@@ -504,8 +515,8 @@ export const predefinedAchievements: Achievement[] = [
   },
   {
     id: "seven-day-streak",
-    name: "Chuỗi 7 ngày",
-    description: "Học liên tục 7 ngày",
+    name: "7-Day Streak",
+    description: "Study for 7 consecutive days",
     icon: "🔥",
     type: "streak",
     requirement: 7,

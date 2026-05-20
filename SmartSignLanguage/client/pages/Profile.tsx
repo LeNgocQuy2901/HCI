@@ -15,8 +15,8 @@ import { LogOut, Loader2, User as UserIcon } from "lucide-react";
 const profileSchema = z.object({
   fullName: z
     .string()
-    .min(1, "Họ tên là bắt buộc")
-    .max(100, "Họ tên không được vượt quá 100 ký tự"),
+    .min(1, "Full name is required")
+    .max(100, "Full name must be at most 100 characters"),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -76,7 +76,7 @@ export default function Profile() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Không thể cập nhật hồ sơ");
+        throw new Error(error.error || "Unable to update profile");
       }
 
       const result = await response.json();
@@ -84,13 +84,13 @@ export default function Profile() {
       useAuthStore.getState().saveToStorage();
 
       toast({
-        title: "Thành công",
-        description: "Cập nhật hồ sơ thành công",
+        title: "Success",
+        description: "Profile updated successfully",
       });
     } catch (error: any) {
       toast({
-        title: "Lỗi",
-        description: error.message || "Không thể cập nhật hồ sơ",
+        title: "Error",
+        description: error.message || "Unable to update profile",
         variant: "destructive",
       });
     } finally {
@@ -102,8 +102,8 @@ export default function Profile() {
     await logout();
     navigate("/login");
     toast({
-      title: "Thành công",
-      description: "Đăng xuất thành công",
+      title: "Success",
+      description: "Signed out successfully",
     });
   };
 
@@ -133,7 +133,9 @@ export default function Profile() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{user.fullName}</h1>
-                <p className="text-sm text-muted-foreground">@{user.username}</p>
+                <p className="text-sm text-muted-foreground">
+                  @{user.username}
+                </p>
                 <p className="text-xs text-muted-foreground">{user.email}</p>
               </div>
             </div>
@@ -141,7 +143,7 @@ export default function Profile() {
             {/* User Info */}
             <div className="space-y-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Thành viên từ</p>
+                <p className="text-muted-foreground">Member Since</p>
                 <p>
                   {new Date(user.createdAt).toLocaleDateString("vi-VN", {
                     year: "numeric",
@@ -155,12 +157,8 @@ export default function Profile() {
             {/* Edit Profile Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Họ và tên</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  {...register("fullName")}
-                />
+                <Label htmlFor="fullName">Member Since</Label>
+                <Input id="fullName" type="text" {...register("fullName")} />
                 {errors.fullName && (
                   <p className="text-sm text-destructive">
                     {errors.fullName.message}
@@ -168,18 +166,14 @@ export default function Profile() {
                 )}
               </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSaving}
-              >
+              <Button type="submit" className="w-full" disabled={isSaving}>
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang lưu...
+                    Full Name
                   </>
                 ) : (
-                  "Lưu thay đổi"
+                  "Save Changes"
                 )}
               </Button>
             </form>
@@ -191,7 +185,7 @@ export default function Profile() {
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Đăng xuất
+              Saving...
             </Button>
           </div>
         </Card>

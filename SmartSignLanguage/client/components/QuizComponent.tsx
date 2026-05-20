@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { QuizQuestion, VocabularyCard, vocabularyCards } from "@shared/vocabulary";
+import {
+  QuizQuestion,
+  VocabularyCard,
+  vocabularyCards,
+} from "@shared/vocabulary";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,7 +13,11 @@ import { categoryLabels, difficultyLabels } from "@shared/vocabulary";
 
 interface QuizComponentProps {
   questions: QuizQuestion[];
-  onComplete: (results: { score: number; totalQuestions: number; answers: number[] }) => void;
+  onComplete: (results: {
+    score: number;
+    totalQuestions: number;
+    answers: number[];
+  }) => void;
 }
 
 export default function QuizComponent({
@@ -45,7 +53,7 @@ export default function QuizComponent({
     } else {
       // Calculate score
       const correctAnswers = questions.filter(
-        (q, i) => q.correctAnswerIndex === selectedAnswers[i]
+        (q, i) => q.correctAnswerIndex === selectedAnswers[i],
       ).length;
       onComplete({
         score: correctAnswers,
@@ -64,9 +72,9 @@ export default function QuizComponent({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">
-            Câu hỏi {currentIndex + 1} / {questions.length}
+            Question {currentIndex + 1} / {questions.length}
           </h3>
-          <Badge>{Math.round(progress)}% hoàn thành</Badge>
+          <Badge>{Math.round(progress)}% complete</Badge>
         </div>
         <Progress value={progress} className="h-2" />
       </div>
@@ -77,12 +85,14 @@ export default function QuizComponent({
         <div className="flex gap-2">
           <Badge variant="secondary">
             {current.type === "video-to-text"
-              ? "Ký hiệu → văn bản"
+              ? "Sign to Text"
               : current.type === "text-to-video"
-                ? "Văn bản → ký hiệu"
-                : "Trắc nghiệm"}
+                ? "Text to Sign"
+                : "Multiple Choice"}
           </Badge>
-          <Badge variant="outline">{difficultyLabels[current.difficulty]}</Badge>
+          <Badge variant="outline">
+            {difficultyLabels[current.difficulty]}
+          </Badge>
         </div>
 
         {/* Video Preview */}
@@ -99,19 +109,27 @@ export default function QuizComponent({
                 preload="metadata"
                 playsInline
               >
-                <source key={currentCard.videoUrl} src={currentCard.videoUrl} type="video/mp4" />
+                <source
+                  key={currentCard.videoUrl}
+                  src={currentCard.videoUrl}
+                  type="video/mp4"
+                />
                 <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
                   <div className="text-center">
                     <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Không có video</p>
+                    <p className="text-sm">No video</p>
                   </div>
                 </div>
               </video>
             </div>
 
             <div className="text-center space-y-2">
-              <Badge variant="outline">{categoryLabels[currentCard.category]}</Badge>
-              <p className="text-sm text-muted-foreground">{currentCard.description}</p>
+              <Badge variant="outline">
+                {categoryLabels[currentCard.category]}
+              </Badge>
+              <p className="text-sm text-muted-foreground">
+                {currentCard.description}
+              </p>
             </div>
           </div>
         )}
@@ -179,12 +197,12 @@ export default function QuizComponent({
             }`}
           >
             <p className="font-semibold mb-1">
-              {isAnswerCorrect ? "✓ Đúng" : "✗ Sai"}
+              {isAnswerCorrect ? "Correct" : "Incorrect"}
             </p>
             <p className="text-sm">
               {isAnswerCorrect
-                ? "Làm tốt lắm! Bạn đã trả lời đúng."
-                : `Đáp án đúng là: ${current.options[current.correctAnswerIndex]}`}
+                ? "Great job! Your answer is correct."
+                : `The correct answer is: ${current.options[current.correctAnswerIndex]}`}
             </p>
           </div>
         )}
@@ -197,11 +215,13 @@ export default function QuizComponent({
             onClick={handleSubmit}
             disabled={selectedAnswers[currentIndex] === undefined}
           >
-            Gửi đáp án
+            Submit Answer
           </Button>
         ) : (
           <Button onClick={handleNext}>
-            {currentIndex < questions.length - 1 ? "Câu tiếp theo" : "Kết thúc bài kiểm tra"}
+            {currentIndex < questions.length - 1
+              ? "Next Question"
+              : "Finish Quiz"}
           </Button>
         )}
       </div>

@@ -13,10 +13,8 @@ import { useAuthStore } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
-  email: z.string().email("Địa chỉ email không hợp lệ"),
-  password: z
-    .string()
-    .min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -46,14 +44,14 @@ export default function Login() {
     try {
       await login(data.email, data.password);
       toast({
-        title: "Thành công",
-        description: "Đăng nhập thành công",
+        title: "Success",
+        description: "Signed in successfully",
       });
       navigate("/");
     } catch (error: any) {
       toast({
-        title: "Lỗi",
-        description: error.message || "Đăng nhập thất bại",
+        title: "Error",
+        description: error.message || "Sign in failed",
         variant: "destructive",
       });
     } finally {
@@ -67,10 +65,8 @@ export default function Login() {
         <Card className="w-full max-w-md p-6">
           <div className="space-y-6">
             <div className="space-y-2 text-center">
-              <h1 className="text-3xl font-bold">Đăng nhập</h1>
-              <p className="text-muted-foreground">
-                Nhập email và mật khẩu để truy cập tài khoản của bạn
-              </p>
+              <h1 className="text-3xl font-bold">Sign In</h1>
+              <p className="text-muted-foreground">Sign In</p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -92,7 +88,9 @@ export default function Login() {
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">Mật khẩu</Label>
+                <Label htmlFor="password">
+                  Enter your email and password to access your account
+                </Label>
                 <Input
                   id="password"
                   type="password"
@@ -115,19 +113,19 @@ export default function Login() {
                 {isSubmitting || isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang đăng nhập...
+                    Password
                   </>
                 ) : (
-                  "Đăng nhập"
+                  "????????"
                 )}
               </Button>
             </form>
 
             {/* Register Link */}
             <div className="text-center text-sm">
-              <span className="text-muted-foreground">Chưa có tài khoản? </span>
+              <span className="text-muted-foreground">Signing in...</span>
               <Link to="/register" className="text-primary hover:underline">
-                Đăng ký
+                Sign In
               </Link>
             </div>
           </div>

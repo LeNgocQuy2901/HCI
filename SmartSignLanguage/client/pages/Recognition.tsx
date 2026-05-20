@@ -1,55 +1,110 @@
-import Layout from "@/components/Layout";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Layout from "@/components/Layout";
 import { useCamera } from "@/hooks/use-camera";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useHandDetection } from "@/hooks/use-hand-detection";
+import {
+  clearCanvas,
+  drawBoundingBoxes,
+  drawHandLandmarks,
+} from "@/lib/hand-visualization";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Loader2, Camera } from "lucide-react";
+import {
+  AlertCircle,
+  Camera,
+  Clock,
+  Play,
+  RotateCcw,
+  Square,
+  TrendingUp,
+  Zap,
+} from "lucide-react";
 
 interface RecognitionResult {
+  timestamp: number;
   gesture: string;
   confidence: number;
-  timestamp: string;
+  handedness: string;
 }
 
-interface Statistics {
+interface Stats {
   totalRecognitions: number;
   averageConfidence: number;
   uniqueGestures: number;
-  duration: number;
+  sessionDuration: number;
 }
 
+interface HandPoint {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface InferencePrediction {
+  status: string;
+  gesture: string;
+  confidence: number;
+  landmarks: HandPoint[][];
+  handedness: string[];
+  confidence_scores?: number[];
+}
+
+interface HandDetectionOverlay {
+  landmarks: HandPoint[][];
+  handedness: string[];
+  confidence: number[];
+}
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 export default function Recognition() {
-  const { videoRef, canvasRef, isActive, startCamera, stopCamera } = useCamera();
-  const frameCountRef = useRef(0);
-  const [isRecognizing, setIsRecognizing] = useState(false);
+  const { videoRef, canvasRef, isActive, error, startCamera, stopCamera } =
+    useCamera({
+      width: 640,
+      height: 480,
+    });
+  const {
+    isReady: handDetectionReady,
+    error: handDetectionError,
+    detectHands,
+  } = useHandDetection();
+
+  const animationFrameRef = useRef<number | null>(null);
+  const currentFrameRef = useRef(0);
+  const isProcessingRef = useRef(false);
+  const startTimeRef = useRef<number>(Date.now());
+  const latestDetectionRef = useRef<HandDetectionOverlay | null>(null);
+
+  const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<RecognitionResult[]>([]);
-  const [statistics, setStatistics] = useState<Statistics>({
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const [stats, setStats] = useState<Stats>({
     totalRecognitions: 0,
     averageConfidence: 0,
     uniqueGestures: 0,
-    duration: 0,
+    sessionDuration: 0,
   });
+  const [showBoundingBox, setShowBoundingBox] = useState(true);
+  const [showLandmarks, setShowLandmarks] = useState(true);
   const [serverConnected, setServerConnected] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("Initializing...");
-  const startTimeRef = useRef<number | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const isProcessingRef = useRef(false);  // Throttle flag
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  // Check server health
   useEffect(() => {
     const checkServer = async () => {
       try {
-        const response = await fetch("http://localhost:8000/health");
+        const response = await fetch(`${API_BASE_URL}/health`);
         if (response.ok) {
           setServerConnected(true);
-          setStatusMessage("Connected to inference server");
+          setServerError(null);
+          return;
         }
+
+        setServerConnected(false);
+        setServerError("Inference server returned an unhealthy status");
       } catch (err) {
         setServerConnected(false);
-        setStatusMessage("Inference server not available");
+        setServerError("Cannot connect to inference server");
       }
     };
 
@@ -58,78 +113,144 @@ export default function Recognition() {
     return () => clearInterval(interval);
   }, []);
 
-  // Start animation loop when recognizing
-  useEffect(() => {
-    if (!isRecognizing || !videoRef.current || !canvasRef.current) return;
+  const predictGesture = useCallback(
+    async (
+      detection: HandDetectionOverlay,
+    ): Promise<InferencePrediction | null> => {
+      if (!serverConnected || isProcessingRef.current) return null;
 
-    const animate = async () => {
-      frameCountRef.current++;
+      isProcessingRef.current = true;
 
-      const ctx = canvasRef.current?.getContext("2d");
-      if (ctx && videoRef.current?.readyState === videoRef.current?.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(videoRef.current, 0, 0, canvasRef.current!.width, canvasRef.current!.height);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/predict-landmarks`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            landmarks: detection.landmarks,
+            handedness: detection.handedness,
+            confidence: detection.confidence,
+          }),
+        });
 
-        // Send frame for prediction every 30 frames (throttled)
-        if (frameCountRef.current % 30 === 0 && serverConnected && canvasRef.current && !isProcessingRef.current) {
-          isProcessingRef.current = true;  // Lock throttle
-          
-          canvasRef.current.toBlob(async (blob) => {
-            if (!blob) {
-              isProcessingRef.current = false;
-              return;
-            }
-
-            try {
-              const formData = new FormData();
-              formData.append("file", blob, "frame.jpg");
-
-              const response = await fetch("http://localhost:8000/api/predict", {
-                method: "POST",
-                body: formData,
-              });
-
-              if (response.ok) {
-                const prediction = await response.json();
-                const newResult: RecognitionResult = {
-                  gesture: prediction.gesture,
-                  confidence: prediction.confidence,
-                  timestamp: new Date().toLocaleTimeString(),
-                };
-
-                setResults((prev) => {
-                  const updated = [newResult, ...prev].slice(0, 50);
-                  
-                  const totalRecognitions = updated.length;
-                  const averageConfidence =
-                    updated.reduce((sum, r) => sum + r.confidence, 0) / totalRecognitions;
-                  const uniqueGestures = new Set(updated.map((r) => r.gesture)).size;
-                  const duration = startTimeRef.current ? Date.now() - startTimeRef.current : 0;
-
-                  setStatistics({
-                    totalRecognitions,
-                    averageConfidence,
-                    uniqueGestures,
-                    duration: Math.floor(duration / 1000),
-                  });
-
-                  return updated;
-                });
-              }
-            } catch (err) {
-              console.error("❌ Prediction error:", err);
-            } finally {
-              isProcessingRef.current = false;  // Unlock throttle
-            }
-          }, "image/jpeg", 0.8);
+        if (!response.ok) {
+          throw new Error("Prediction failed");
         }
+
+        const data = await response.json();
+        return data.status === "success" ? data : null;
+      } catch (err) {
+        console.error("Prediction error:", err);
+        return null;
+      } finally {
+        isProcessingRef.current = false;
+      }
+    },
+    [serverConnected],
+  );
+
+  const processFrame = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || !handDetectionReady) {
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+      return;
+    }
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx || video.readyState < video.HAVE_CURRENT_DATA) {
+      animationFrameRef.current = requestAnimationFrame(processFrame);
+      return;
+    }
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    const detectionResults = detectHands(video) ?? latestDetectionRef.current;
+    if (detectionResults && detectionResults.landmarks.length > 0) {
+      latestDetectionRef.current = detectionResults;
+
+      if (showBoundingBox) {
+        drawBoundingBoxes(
+          canvas,
+          detectionResults.landmarks,
+          detectionResults.handedness,
+          {
+            lineColor: "#00FF00",
+            lineWidth: 2,
+          },
+        );
       }
 
-      if (isRecognizing) {
-        animationFrameRef.current = requestAnimationFrame(animate);
+      if (showLandmarks) {
+        drawHandLandmarks(
+          canvas,
+          detectionResults.landmarks,
+          detectionResults.handedness,
+          {
+            lineColor: "#00FF00",
+            pointColor: "#FF0000",
+            lineWidth: 2,
+            pointRadius: 4,
+          },
+        );
       }
-    };
+    }
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+    currentFrameRef.current += 1;
+    setCurrentFrame(currentFrameRef.current);
+
+    if (
+      currentFrameRef.current % 15 === 0 &&
+      detectionResults &&
+      detectionResults.landmarks.length > 0
+    ) {
+      predictGesture({
+        landmarks: detectionResults.landmarks,
+        handedness: detectionResults.handedness,
+        confidence: detectionResults.confidence,
+      }).then((prediction) => {
+        if (!prediction) return;
+
+        latestDetectionRef.current = {
+          landmarks: prediction.landmarks,
+          handedness: prediction.handedness,
+          confidence: prediction.confidence_scores ?? [],
+        };
+
+        const newResult: RecognitionResult = {
+          timestamp: Date.now(),
+          gesture: prediction.gesture,
+          confidence: prediction.confidence,
+          handedness: detectionResults?.handedness[0] || "Unknown",
+        };
+
+        setResults((prev) => [newResult, ...prev].slice(0, 50));
+      });
+    }
+
+    animationFrameRef.current = requestAnimationFrame(processFrame);
+  }, [
+    canvasRef,
+    detectHands,
+    handDetectionReady,
+    predictGesture,
+    showBoundingBox,
+    showLandmarks,
+    videoRef,
+  ]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+
+    animationFrameRef.current = requestAnimationFrame(processFrame);
 
     return () => {
       if (animationFrameRef.current) {
@@ -137,225 +258,398 @@ export default function Recognition() {
       }
       isProcessingRef.current = false;
     };
-  }, [isRecognizing, videoRef, canvasRef, serverConnected]);
+  }, [isRunning, processFrame]);
 
-  const handleStartRecognition = async () => {
+  useEffect(() => {
+    const updateStats = () => {
+      const uniqueGestures = new Set(results.map((r) => r.gesture)).size;
+      const averageConfidence =
+        results.length > 0
+          ? results.reduce((sum, r) => sum + r.confidence, 0) / results.length
+          : 0;
+
+      setStats({
+        totalRecognitions: results.length,
+        averageConfidence,
+        uniqueGestures,
+        sessionDuration: Math.floor((Date.now() - startTimeRef.current) / 1000),
+      });
+    };
+
+    updateStats();
+
+    if (!isRunning) return;
+    const interval = setInterval(updateStats, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning, results]);
+
+  const handleStart = async () => {
     try {
-      await startCamera();
+      if (!isActive) {
+        await startCamera();
+      }
+
       startTimeRef.current = Date.now();
-      frameCountRef.current = 0;
-      setResults([]);
-      setIsRecognizing(true);
+      setIsRunning(true);
     } catch (err) {
-      setStatusMessage("Failed to access camera");
+      console.error("Failed to start recognition:", err);
+      setIsRunning(false);
     }
   };
 
-  const handleStopRecognition = () => {
-    setIsRecognizing(false);
+  const handleStop = () => {
+    setIsRunning(false);
     stopCamera();
+    latestDetectionRef.current = null;
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
+    if (canvasRef.current) {
+      clearCanvas(canvasRef.current);
+    }
   };
+
+  const handleReset = () => {
+    setResults([]);
+    latestDetectionRef.current = null;
+    currentFrameRef.current = 0;
+    setCurrentFrame(0);
+    setStats({
+      totalRecognitions: 0,
+      averageConfidence: 0,
+      uniqueGestures: 0,
+      sessionDuration: 0,
+    });
+  };
+
+  const latestResult = results[0];
+
+  if (handDetectionError) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-12 px-4">
+          <Card className="border-red-200 bg-red-50">
+            <div className="flex items-start gap-4 p-6">
+              <AlertCircle className="h-6 w-6 text-red-600 mt-1 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-red-900 mb-1">
+                  Hand Detection Error
+                </h3>
+                <p className="text-red-800">{handDetectionError}</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl font-bold text-foreground mb-2">Nhận dạng Ngôn ngữ Ký hiệu Thời gian thực</h1>
-          <p className="text-muted-foreground mb-6">Phát hiện cử chỉ tay và dịch được cung cấp bởi AI</p>
+      <div className="container mx-auto py-8 px-4">
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold mb-2">Realtime Sign Recognition</h1>
+          <p className="text-lg text-muted-foreground">
+            Use your camera to recognize sign language with AI-powered landmark
+            detection and server inference.
+          </p>
+        </div>
 
-          {/* Status Bar */}
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${isActive ? "bg-green-500" : "bg-red-500"}`} />
-                  <span className="text-sm text-muted-foreground">Camera: {isActive ? "Ready" : "Off"}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${isRecognizing ? "bg-blue-500" : "bg-gray-400"}`} />
-                  <span className="text-sm text-muted-foreground">Nhận dạng: {isRecognizing ? "Active" : "Idle"}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${serverConnected ? "bg-green-500" : "bg-red-500"}`} />
-                  <span className="text-sm text-muted-foreground">Server: {serverConnected ? "Connected" : "Offline"}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground truncate">{statusMessage}</p>
-              </CardContent>
-            </Card>
-          </div>
+        <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6">
+          <section className="space-y-4">
+            <Card className="overflow-hidden bg-black">
+              <div className="relative bg-black">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="hidden"
+                />
+                <canvas
+                  ref={canvasRef}
+                  className="w-full h-auto max-h-[560px]"
+                  style={{ aspectRatio: "640/480" }}
+                />
 
-          {/* Main Content */}
-          <div className="grid grid-cols-3 gap-6 mb-6">
-            <div className="col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Camera className="w-5 h-5" />
-                    Luồng Camera Trực tiếp
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <video ref={videoRef} className="hidden" />
-                    <canvas
-                      ref={canvasRef}
-                      width={640}
-                      height={480}
-                      className="w-full bg-black rounded-lg border border-border"
-                    />
-                    <div className="flex gap-2">
-                      {!isRecognizing ? (
-                        <Button onClick={handleStartRecognition} className="flex-1" size="lg">
-                          <Loader2 className="w-4 h-4 mr-2" />
-                          Start Recognition
-                        </Button>
-                      ) : (
-                        <Button onClick={handleStopRecognition} variant="destructive" className="flex-1" size="lg">
-                          Stop Recognition
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="absolute top-4 left-4">
+                  <Badge
+                    variant={
+                      isRunning ? "default" : isActive ? "outline" : "secondary"
+                    }
+                    className={
+                      isRunning
+                        ? "bg-green-500 text-white"
+                        : isActive
+                          ? "bg-yellow-500 text-white"
+                          : ""
+                    }
+                  >
+                    <Zap className="h-3 w-3 mr-1" />
+                    {isRunning ? "Recognizing" : isActive ? "Ready" : "Standby"}
+                  </Badge>
+                </div>
+
+                <div className="absolute top-4 right-4">
+                  <Badge variant="secondary">Frame: {currentFrame}</Badge>
+                </div>
+              </div>
+            </Card>
+
+            <div className="flex flex-wrap gap-3">
+              {!isRunning ? (
+                <Button
+                  onClick={handleStart}
+                  disabled={!serverConnected || !handDetectionReady}
+                  className="gap-2"
+                  size="lg"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Recognition
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleStop}
+                  variant="destructive"
+                  className="gap-2"
+                  size="lg"
+                >
+                  <Square className="h-4 w-4" />
+                  Stop Recognition
+                </Button>
+              )}
+
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                className="gap-2"
+                size="lg"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Session
+              </Button>
             </div>
 
-            {/* Latest Result */}
-            <div>
-              <Card className="h-full">
-                <CardHeader>
-                  <CardTitle className="text-foreground text-lg">Kết quả Mới nhất</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {results.length > 0 ? (
-                    <div className="space-y-4">
-                      <div>
-                        <p className="text-muted-foreground text-sm">Cử chỉ</p>
-                        <p className="text-2xl font-bold text-foreground">{results[0].gesture}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-sm">Độ tin cậy</p>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-green-500 h-2 rounded-full"
-                              style={{ width: `${results[0].confidence * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-foreground font-semibold">{(results[0].confidence * 100).toFixed(1)}%</span>
-                        </div>
-                      </div>
-                      <p className="text-muted-foreground text-xs">{results[0].timestamp}</p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-40 text-muted-foreground">
-                      <p>Chưa có kết quả</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Tabs for Results and Statistics */}
-          <Tabs defaultValue="results" className="w-full">
-            <TabsList>
-              <TabsTrigger value="results">Kết quả Nhận dạng</TabsTrigger>
-              <TabsTrigger value="statistics">Thống kê</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="results">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-foreground">Lịch sử Nhận dạng (50 mới nhất)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {results.length > 0 ? (
-                      results.map((result, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-muted rounded border border-border">
-                          <span className="text-foreground font-medium">{result.gesture}</span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{(result.confidence * 100).toFixed(1)}%</Badge>
-                            <span className="text-muted-foreground text-sm">{result.timestamp}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-muted-foreground">Chưa có kết quả. Hãy bắt đầu camera để bắt đầu!</p>
-                    )}
+            {error && (
+              <Card className="border-red-200 bg-red-50">
+                <div className="flex items-start gap-3 p-4">
+                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-red-900 text-sm">
+                      Camera Error
+                    </p>
+                    <p className="text-red-800 text-sm">{error}</p>
                   </div>
-                </CardContent>
+                </div>
               </Card>
-            </TabsContent>
+            )}
 
-            <TabsContent value="statistics">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-muted-foreground text-sm mb-2">Tổng số Nhận dạng</p>
-                    <p className="text-3xl font-bold text-foreground">{statistics.totalRecognitions}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-muted-foreground text-sm mb-2">Độ tin cậy Trung bình</p>
-                    <p className="text-3xl font-bold text-foreground">{(statistics.averageConfidence * 100).toFixed(1)}%</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-muted-foreground text-sm mb-2">Cử chỉ Duy nhất</p>
-                    <p className="text-3xl font-bold text-foreground">{statistics.uniqueGestures}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-muted-foreground text-sm mb-2">Thời lượng</p>
-                    <p className="text-3xl font-bold text-foreground">{statistics.duration}s</p>
-                  </CardContent>
-                </Card>
+            {!serverConnected && serverError && (
+              <Card className="border-yellow-200 bg-yellow-50">
+                <div className="flex items-start gap-3 p-4">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-yellow-900 text-sm">
+                      Inference Server
+                    </p>
+                    <p className="text-yellow-800 text-sm">
+                      {serverError}. Make sure the FastAPI server is running.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </section>
+
+          <aside className="space-y-4">
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">Latest Result</h2>
+                <Camera className="h-5 w-5 text-muted-foreground" />
               </div>
 
-              {results.length > 0 && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={results.slice().reverse()}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="timestamp" stroke="#9ca3af" />
-                        <YAxis stroke="#9ca3af" />
-                        <Tooltip contentStyle={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb" }} />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="confidence"
-                          stroke="#7c3aed"
-                          dot={false}
-                          name="Độ tin cậy"
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
+              {latestResult ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Gesture</p>
+                    <p className="text-4xl font-bold tracking-tight">
+                      {latestResult.gesture}
+                    </p>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Confidence</span>
+                      <span className="font-semibold">
+                        {(latestResult.confidence * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all"
+                        style={{ width: `${latestResult.confidence * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Hand</span>
+                    <Badge variant="outline">{latestResult.handedness}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(latestResult.timestamp).toLocaleTimeString()}
+                  </p>
+                </div>
+              ) : (
+                <div className="py-10 text-center text-muted-foreground">
+                  <Camera className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No result yet. Start recognition and show your hand.</p>
+                </div>
               )}
-            </TabsContent>
-          </Tabs>
+            </Card>
+
+            <Card className="p-5">
+              <h3 className="font-semibold mb-3">Status</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Camera</span>
+                  <Badge
+                    variant={isActive ? "default" : "secondary"}
+                    className={isActive ? "bg-green-500" : ""}
+                  >
+                    {isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Hand Detection</span>
+                  <Badge
+                    variant={handDetectionReady ? "default" : "secondary"}
+                    className={handDetectionReady ? "bg-green-500" : ""}
+                  >
+                    {handDetectionReady ? "Ready" : "Loading"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Recognition</span>
+                  <Badge
+                    variant={isRunning ? "default" : "secondary"}
+                    className={isRunning ? "bg-green-500" : ""}
+                  >
+                    {isRunning ? "Active" : "Idle"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Inference Server
+                  </span>
+                  <Badge
+                    variant={serverConnected ? "default" : "secondary"}
+                    className={
+                      serverConnected ? "bg-green-500" : "bg-orange-500"
+                    }
+                  >
+                    {serverConnected ? "Connected" : "Disconnected"}
+                  </Badge>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <h3 className="font-semibold mb-3">Display Options</h3>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showBoundingBox}
+                    onChange={(e) => setShowBoundingBox(e.target.checked)}
+                    className="w-4 h-4 rounded"
+                  />
+                  <span className="text-sm font-medium">
+                    Show Bounding Boxes
+                  </span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showLandmarks}
+                    onChange={(e) => setShowLandmarks(e.target.checked)}
+                    className="w-4 h-4 rounded"
+                  />
+                  <span className="text-sm font-medium">Show Landmarks</span>
+                </label>
+              </div>
+            </Card>
+          </aside>
+        </div>
+
+        <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6 mt-6">
+          <Card className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Recognition History</h2>
+            {results.length === 0 ? (
+              <p className="text-muted-foreground">
+                Recognition results will appear here during the session.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {results.map((result, index) => (
+                  <div
+                    key={`${result.timestamp}-${index}`}
+                    className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <p className="font-semibold">{result.gesture}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {result.handedness} Hand
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="outline">
+                        {(result.confidence * 100).toFixed(1)}%
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(result.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-2xl font-bold mb-4">Session Stats</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Total Recognitions
+                </p>
+                <p className="text-3xl font-bold">{stats.totalRecognitions}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Average Confidence
+                </p>
+                <p className="text-3xl font-bold">
+                  {(stats.averageConfidence * 100).toFixed(1)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Unique Gestures</p>
+                <p className="text-3xl font-bold">{stats.uniqueGestures}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Session Duration
+                </p>
+                <p className="text-3xl font-bold">
+                  {Math.floor(stats.sessionDuration / 60)}m{" "}
+                  {stats.sessionDuration % 60}s
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp className="h-4 w-4" />
+              Results update automatically while recognition is running.
+            </div>
+          </Card>
         </div>
       </div>
     </Layout>

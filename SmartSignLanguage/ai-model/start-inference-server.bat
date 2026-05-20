@@ -9,13 +9,13 @@ echo.
 cd /d "%~dp0"
 
 echo Checking model file...
-if not exist "model\mobilenet_v2_sign_language_224x224_float_n2x_cpu_1.n2x" (
-    echo ^^! Model not found in model folder
+if not exist "model\gesture_model.h5" (
+    echo ^^! Bidirectional gesture_model.h5 not found in model folder
     echo Please ensure model file exists
 )
 
 echo Checking dependencies...
-python -c "import fastapi, uvicorn, cv2, onnxruntime" >nul 2>&1
+python -c "import fastapi, uvicorn, cv2, tensorflow, mediapipe" >nul 2>&1
 if errorlevel 1 (
     echo ^^! Installing dependencies...
     call install-dependencies.bat

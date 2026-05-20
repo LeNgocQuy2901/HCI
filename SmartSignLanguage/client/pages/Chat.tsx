@@ -6,17 +6,17 @@ export default function Chat() {
   return (
     <Layout>
       <PlaceholderPage
-        title="Trò chuyện và giao tiếp"
-        description="Kết nối với những người học và người dùng ngôn ngữ ký hiệu khác. Trò chuyện với hỗ trợ dịch theo thời gian thực và đầu vào ngôn ngữ ký hiệu."
+        title="Chat and Communication"
+        description="Connect with other sign language learners and users with real-time translation support."
         icon={<MessageCircle size={64} className="text-primary" />}
-        ctaText="Quay về trang chủ"
+        ctaText="Back to Home"
         features={[
-          "Nhắn tin thời gian thực với người dùng khác",
-          "Nhập ngôn ngữ ký hiệu qua camera",
-          "Tự động dịch tin nhắn",
-          "Phòng chat theo chủ đề",
-          "Hồ sơ người dùng và hệ thống uy tín",
-          "Lịch sử tin nhắn và tìm kiếm",
+          "Real-time messaging with other users",
+          "Camera-based sign input",
+          "Automatic message translation",
+          "Topic-based chat rooms",
+          "User profiles and reputation",
+          "Message history and search",
         ]}
       />
     </Layout>

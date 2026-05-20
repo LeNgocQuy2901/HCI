@@ -38,15 +38,12 @@ export default function Learn() {
   const learningStore = useLearningStore();
 
   const [activeTab, setActiveTab] = useState<Tab>("learn");
-  const [selectedCategory, setSelectedCategory] = useState<Category>(
-    "greetings"
-  );
-  const [selectedQuizCategory, setSelectedQuizCategory] = useState<Category>(
-    "greetings"
-  );
-  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(
-    "beginner"
-  );
+  const [selectedCategory, setSelectedCategory] =
+    useState<Category>("greetings");
+  const [selectedQuizCategory, setSelectedQuizCategory] =
+    useState<Category>("greetings");
+  const [selectedDifficulty, setSelectedDifficulty] =
+    useState<Difficulty>("beginner");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [cards, setCards] = useState<VocabType[]>([]);
   const [quizMode, setQuizMode] = useState(false);
@@ -60,7 +57,7 @@ export default function Learn() {
     if (selectedCategory) {
       const categoryCards = learningStore.getCardsByCategory(
         selectedCategory,
-        userId
+        userId,
       );
       setCards(categoryCards);
       setCurrentCardIndex(0);
@@ -90,7 +87,7 @@ export default function Learn() {
     }
     learningStore.markCardUnderstood(currentCard.id, userId);
     learningStore.updateProgress(currentCard.id, userId, 3); // keep card in review flow
-    toast({ description: "Tuyệt! Bạn làm đúng rồi!" });
+    toast({ description: "Great job! You got it right." });
     handleNextCard();
   };
 
@@ -102,7 +99,7 @@ export default function Learn() {
     }
     learningStore.unmarkCardUnderstood(currentCard.id, userId);
     learningStore.updateProgress(currentCard.id, userId, 2); // 2/5 quality
-    toast({ description: "Không sao, lần sau bạn sẽ làm được!" });
+    toast({ description: "No problem. Try again next time." });
     handleNextCard();
   };
 
@@ -110,14 +107,14 @@ export default function Learn() {
     if (currentCardIndex < cards.length - 1) {
       setCurrentCardIndex(currentCardIndex + 1);
     } else {
-      toast({ description: "Bạn đã hoàn thành chủ đề này!" });
+      toast({ description: "You completed this topic." });
       setCurrentCardIndex(0);
     }
   };
 
   const generateQuiz = () => {
     const topicCards = vocabularyCards.filter(
-      (card) => card.category === selectedQuizCategory
+      (card) => card.category === selectedQuizCategory,
     );
     const quizCards = topicCards.slice(0, 10);
 
@@ -141,9 +138,12 @@ export default function Learn() {
 
       return {
         id: `quiz-${index}`,
-        type: questionType as "video-to-text" | "text-to-video" | "multiple-choice",
+        type: questionType as
+          | "video-to-text"
+          | "text-to-video"
+          | "multiple-choice",
         cardId: card.id,
-        question: "Kí hiệu trên là gì?",
+        question: "What does this sign mean?",
         options: shuffledOptions,
         correctAnswerIndex,
         difficulty: card.difficulty,
@@ -161,8 +161,8 @@ export default function Learn() {
   }) => {
     const percentage = (results.score / results.totalQuestions) * 100;
     toast({
-      title: "Hoàn thành bài kiểm tra!",
-      description: `Bạn đạt ${results.score}/${results.totalQuestions} (${Math.round(percentage)}%)`,
+      title: "Quiz complete!",
+      description: `You scored ${results.score}/${results.totalQuestions} (${Math.round(percentage)}%)`,
     });
     setQuizMode(false);
     setQuizQuestions([]);
@@ -177,7 +177,7 @@ export default function Learn() {
             onClick={() => setQuizMode(false)}
             className="mb-6"
           >
-            ← Quay lại học
+            Back to Learning
           </Button>
           <QuizComponent
             questions={quizQuestions}
@@ -195,11 +195,11 @@ export default function Learn() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <BookOpen className="h-8 w-8" />
-            <h1 className="text-4xl font-bold">Học ngôn ngữ ký hiệu</h1>
+            <h1 className="text-4xl font-bold">Learn Sign Language</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Làm chủ ngôn ngữ ký hiệu với thẻ học tương tác, bài kiểm tra và ôn
-            tập lặp lại ngắt quãng
+            Master sign language with interactive flashcards, quizzes, and
+            spaced repetition.
           </p>
         </div>
 
@@ -211,19 +211,19 @@ export default function Learn() {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="learn" className="gap-2">
               <BookOpen className="h-4 w-4" />
-              Học
+              Learn
             </TabsTrigger>
             <TabsTrigger value="review" className="gap-2">
               <Zap className="h-4 w-4" />
-              Ôn tập
+              Review
             </TabsTrigger>
             <TabsTrigger value="quiz" className="gap-2">
               <HelpCircle className="h-4 w-4" />
-              Kiểm tra
+              Quiz
             </TabsTrigger>
             <TabsTrigger value="stats" className="gap-2">
               <BarChart3 className="h-4 w-4" />
-              Thống kê
+              Stats
             </TabsTrigger>
           </TabsList>
 
@@ -233,13 +233,11 @@ export default function Learn() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <label className="text-sm font-semibold mb-2 block">
-                    Chủ đề
+                    Topic
                   </label>
                   <Select
                     value={selectedCategory}
-                    onValueChange={(v) =>
-                      setSelectedCategory(v as Category)
-                    }
+                    onValueChange={(v) => setSelectedCategory(v as Category)}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -255,7 +253,7 @@ export default function Learn() {
                 </div>
                 <div>
                   <label className="text-sm font-semibold mb-2 block">
-                    Độ khó
+                    Difficulty
                   </label>
                   <Select
                     value={selectedDifficulty}
@@ -284,12 +282,12 @@ export default function Learn() {
                       {currentCardIndex + 1} / {cards.length}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
-                      Lật thẻ để xem ký hiệu
+                      Flip the card to view the sign
                     </p>
                   </div>
 
                   <VocabularyCardFlip
-                      key={currentCard.id}
+                    key={currentCard.id}
                     card={currentCard}
                     onMarkCorrect={handleMarkCorrect}
                     onMarkWrong={handleMarkWrong}
@@ -306,7 +304,7 @@ export default function Learn() {
               <Card className="p-6">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <Zap className="h-5 w-5 text-yellow-500" />
-                  Cần ôn tập ({understoodCards.length})
+                  Due for Review ({understoodCards.length})
                 </h3>
                 <div className="space-y-2">
                   {understoodCards.length > 0 ? (
@@ -316,10 +314,10 @@ export default function Learn() {
                         className="p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80"
                         onClick={() => {
                           const categoryCards = vocabularyCards.filter(
-                            (c) => c.category === card.category
+                            (c) => c.category === card.category,
                           );
                           const idx = categoryCards.findIndex(
-                            (c) => c.id === card.id
+                            (c) => c.id === card.id,
                           );
                           if (idx !== -1) {
                             setSelectedCategory(card.category);
@@ -336,7 +334,7 @@ export default function Learn() {
                     ))
                   ) : (
                     <p className="text-muted-foreground">
-                      Chưa có thẻ nào được đánh dấu Đã hiểu
+                      No cards have been marked as understood yet
                     </p>
                   )}
                 </div>
@@ -346,7 +344,7 @@ export default function Learn() {
               <Card className="p-6">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <BookOpen className="h-5 w-5 text-blue-500" />
-                  Thẻ mới ({newCards.length})
+                  New Cards ({newCards.length})
                 </h3>
                 <div className="space-y-2">
                   {newCards.length > 0 ? (
@@ -357,7 +355,7 @@ export default function Learn() {
                         onClick={() => {
                           setSelectedCategory(card.category as Category);
                           const idx = vocabularyCards.findIndex(
-                            (c) => c.id === card.id
+                            (c) => c.id === card.id,
                           );
                           if (idx !== -1) {
                             setCurrentCardIndex(idx);
@@ -372,9 +370,7 @@ export default function Learn() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-muted-foreground">
-                      Không có thẻ mới
-                    </p>
+                    <p className="text-muted-foreground">No new cards</p>
                   )}
                 </div>
               </Card>
@@ -386,16 +382,15 @@ export default function Learn() {
             <Card className="p-6 text-center space-y-4">
               <HelpCircle className="h-16 w-16 mx-auto text-blue-500" />
               <div>
-                <h3 className="text-2xl font-bold mb-2">Kiểm tra kiến thức của bạn</h3>
+                <h3 className="text-2xl font-bold mb-2">Test Your Knowledge</h3>
                 <p className="text-muted-foreground mb-6">
-                  Làm bài kiểm tra để đánh giá những gì bạn đã học và củng cố
-                  trí nhớ
+                  Take a quiz to evaluate what you learned and reinforce memory.
                 </p>
               </div>
 
               <div className="max-w-sm mx-auto text-left space-y-2">
                 <label className="text-sm font-semibold block">
-                  Chọn chủ đề làm bài
+                  Choose a quiz topic
                 </label>
                 <Select
                   value={selectedQuizCategory}
@@ -417,18 +412,20 @@ export default function Learn() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <Card className="p-4 bg-muted">
                   <p className="text-3xl font-bold text-blue-500">
-                    {vocabularyCards.filter(
-                      (card) => card.category === selectedQuizCategory
-                    ).length}
+                    {
+                      vocabularyCards.filter(
+                        (card) => card.category === selectedQuizCategory,
+                      ).length
+                    }
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Có sẵn trong {categoryLabels[selectedQuizCategory]}
+                    Available in {categoryLabels[selectedQuizCategory]}
                   </p>
                 </Card>
                 <Card className="p-4 bg-muted">
                   <p className="text-3xl font-bold text-green-500">10</p>
                   <p className="text-sm text-muted-foreground">
-                    Câu hỏi mỗi bài
+                    Questions per quiz
                   </p>
                 </Card>
                 <Card className="p-4 bg-muted">
@@ -436,14 +433,14 @@ export default function Learn() {
                     {stats.totalReviewsToday}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Đã luyện tập hôm nay
+                    Practiced today
                   </p>
                 </Card>
               </div>
 
               <Button onClick={generateQuiz} size="lg" className="gap-2">
                 <HelpCircle className="h-5 w-5" />
-                Bắt đầu kiểm tra chủ đề {categoryLabels[selectedQuizCategory]}
+                Start quiz for {categoryLabels[selectedQuizCategory]}
               </Button>
             </Card>
           </TabsContent>

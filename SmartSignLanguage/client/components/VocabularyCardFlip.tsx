@@ -46,7 +46,7 @@ export default function VocabularyCardComponent({
             </div>
 
             <div className="text-center text-sm text-muted-foreground mt-8">
-              <p>Nhấp để xem minh họa ký hiệu</p>
+              <p>Click to view the sign demo</p>
             </div>
 
             <div className="flex gap-2">
@@ -73,7 +73,7 @@ export default function VocabularyCardComponent({
                 <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
                   <div className="text-center">
                     <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Không có video</p>
+                    <p className="text-sm">No video</p>
                   </div>
                 </div>
               </video>
@@ -100,7 +100,7 @@ export default function VocabularyCardComponent({
             }}
           >
             <Check className="h-4 w-4" />
-            Đã hiểu
+            Got It
           </Button>
           <Button
             variant="outline"
@@ -111,7 +111,7 @@ export default function VocabularyCardComponent({
             }}
           >
             <X className="h-4 w-4" />
-            Xem lại
+            Review Again
           </Button>
           <Button
             variant="ghost"
