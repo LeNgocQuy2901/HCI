@@ -8,8 +8,9 @@
 #
 # `/kaggle/input/.../dataset/SL/<word>/<number>.mp4`
 #
-# Default words:
-# `a, a lot, abdomen, able, about, above, accent, accept, accident, accomplish`
+# Configuration:
+# - Set `WORDS` environment variable to train on specific words (e.g., "hello,thank you,ok")
+# - Leave `WORDS` empty to train on ALL words in the dataset (no constraint)
 
 # %% Cell 1 - Install and import packages
 import json
@@ -95,7 +96,7 @@ SELECTED_WORDS = [
     word.strip().lower()
     for word in os.environ.get(
         "WORDS",
-        "a,a lot,abdomen,able,about,above,accent,accept,accident,accomplish",
+        "",  # Empty = train on ALL words in dataset
     ).split(",")
     if word.strip()
 ]
@@ -107,7 +108,10 @@ USE_HANDS = os.environ.get("USE_HANDS", "1") != "0"
 
 KEYS = ["pose", "left_hand", "right_hand", "face"]
 
-print("WORDS:", SELECTED_WORDS)
+if SELECTED_WORDS:
+    print(f"Mode: SELECTIVE - Training on {len(SELECTED_WORDS)} specified words: {SELECTED_WORDS}")
+else:
+    print("Mode: ALL WORDS - Will train on ALL words found in dataset (NO CONSTRAINT)")
 print("MAX_VIDEOS_PER_WORD:", MAX_VIDEOS_PER_WORD)
 print("TARGET_FRAMES:", TARGET_FRAMES)
 
@@ -145,14 +149,23 @@ def find_dataset_root() -> Path:
 
 dataset_root = find_dataset_root()
 word_dirs = sorted([path for path in dataset_root.iterdir() if path.is_dir()], key=lambda p: p.name)
-word_dirs = [path for path in word_dirs if normalize_label(path.name) in set(SELECTED_WORDS)]
+
+# If no specific words selected, use ALL words in dataset
+if SELECTED_WORDS:
+    word_dirs = [path for path in word_dirs if normalize_label(path.name) in set(SELECTED_WORDS)]
+# else: keep all word_dirs (train on everything)
 
 found = {normalize_label(path.name) for path in word_dirs}
 missing = [word for word in SELECTED_WORDS if word not in found]
 
 print("Dataset root:", dataset_root)
 print("Found folders:", [path.name for path in word_dirs])
-print("Missing folders:", missing)
+if missing:
+    print("Missing folders:", missing)
+if SELECTED_WORDS:
+    print(f"Selected words mode: training on {len(SELECTED_WORDS)} specified words")
+else:
+    print(f"All words mode: training on ALL {len(word_dirs)} words found in dataset")
 
 if not word_dirs:
     raise RuntimeError("No selected word folders found. Check DATASET_ROOT or WORDS.")
