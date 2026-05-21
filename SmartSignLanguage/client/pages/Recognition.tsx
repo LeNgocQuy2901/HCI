@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Layout from "@/components/Layout";
 import { useCamera } from "@/hooks/use-camera";
-import { useHandDetection } from "@/hooks/use-hand-detection";
 import {
   clearCanvas,
   drawBoundingBoxes,
@@ -48,6 +47,8 @@ interface InferencePrediction {
   landmarks: HandPoint[][];
   handedness: string[];
   confidence_scores?: number[];
+  bbox?: number[] | null;
+  model?: string;
 }
 
 interface HandDetectionOverlay {
@@ -57,6 +58,55 @@ interface HandDetectionOverlay {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const PREDICTION_INTERVAL_MS = 120;
+const MIN_ACCEPTED_CONFIDENCE = 0.15;
+const STABILITY_WINDOW_SIZE = 5;
+const STABILITY_MIN_VOTES = 2;
+const DUPLICATE_RESULT_COOLDOWN_MS = 1200;
+const LIVE_RESULT_TTL_MS = 2500;
+const HAND_LOST_GRACE_MS = 3000;
+const HAND_LOST_MISSES = 10;
+
+function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", 0.72);
+  });
+}
+
+function normalizeGestureLabel(value: string) {
+  return value.replace(/_/g, " ").replace(/\bthankyou\b/i, "thank you");
+}
+
+function mostVotedGesture(
+  predictions: RecognitionResult[],
+): RecognitionResult | null {
+  const votes = new Map<string, { count: number; best: RecognitionResult }>();
+
+  predictions.forEach((prediction) => {
+    const current = votes.get(prediction.gesture);
+    if (!current) {
+      votes.set(prediction.gesture, { count: 1, best: prediction });
+      return;
+    }
+
+    votes.set(prediction.gesture, {
+      count: current.count + 1,
+      best:
+        prediction.confidence > current.best.confidence
+          ? prediction
+          : current.best,
+    });
+  });
+
+  let winner: { count: number; best: RecognitionResult } | null = null;
+  votes.forEach((entry) => {
+    if (!winner || entry.count > winner.count) {
+      winner = entry;
+    }
+  });
+
+  return winner && winner.count >= STABILITY_MIN_VOTES ? winner.best : null;
+}
 
 export default function Recognition() {
   const { videoRef, canvasRef, isActive, error, startCamera, stopCamera } =
@@ -64,20 +114,21 @@ export default function Recognition() {
       width: 640,
       height: 480,
     });
-  const {
-    isReady: handDetectionReady,
-    error: handDetectionError,
-    detectHands,
-  } = useHandDetection();
 
   const animationFrameRef = useRef<number | null>(null);
   const currentFrameRef = useRef(0);
   const isProcessingRef = useRef(false);
   const startTimeRef = useRef<number>(Date.now());
   const latestDetectionRef = useRef<HandDetectionOverlay | null>(null);
+  const lastHandSeenAtRef = useRef(0);
+  const lastPredictionRequestedAtRef = useRef(0);
+  const missedHandFramesRef = useRef(0);
+  const predictionWindowRef = useRef<RecognitionResult[]>([]);
+  const lastAcceptedRef = useRef<RecognitionResult | null>(null);
 
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<RecognitionResult[]>([]);
+  const [liveResult, setLiveResult] = useState<RecognitionResult | null>(null);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [stats, setStats] = useState<Stats>({
     totalRecognitions: 0,
@@ -102,9 +153,15 @@ export default function Recognition() {
 
         setServerConnected(false);
         setServerError("Inference server returned an unhealthy status");
+        setLiveResult(null);
+        latestDetectionRef.current = null;
+        missedHandFramesRef.current = 0;
       } catch (err) {
         setServerConnected(false);
         setServerError("Cannot connect to inference server");
+        setLiveResult(null);
+        latestDetectionRef.current = null;
+        missedHandFramesRef.current = 0;
       }
     };
 
@@ -113,33 +170,31 @@ export default function Recognition() {
     return () => clearInterval(interval);
   }, []);
 
-  const predictGesture = useCallback(
-    async (
-      detection: HandDetectionOverlay,
-    ): Promise<InferencePrediction | null> => {
+  const predictFrame = useCallback(
+    async (canvas: HTMLCanvasElement): Promise<InferencePrediction | null> => {
       if (!serverConnected || isProcessingRef.current) return null;
 
       isProcessingRef.current = true;
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/predict-landmarks`, {
+        const blob = await canvasToJpegBlob(canvas);
+        if (!blob) return null;
+
+        const formData = new FormData();
+        formData.append("file", blob, "frame.jpg");
+
+        const response = await fetch(`${API_BASE_URL}/api/predict`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            landmarks: detection.landmarks,
-            handedness: detection.handedness,
-            confidence: detection.confidence,
-          }),
+          body: formData,
         });
 
         if (!response.ok) {
-          throw new Error("Prediction failed");
+          const errorText = await response.text();
+          throw new Error(`Prediction failed: ${errorText}`);
         }
 
         const data = await response.json();
-        return data.status === "success" ? data : null;
+        return data;
       } catch (err) {
         console.error("Prediction error:", err);
         return null;
@@ -154,7 +209,7 @@ export default function Recognition() {
     const video = videoRef.current;
     const canvas = canvasRef.current;
 
-    if (!video || !canvas || !handDetectionReady) {
+    if (!video || !canvas) {
       animationFrameRef.current = requestAnimationFrame(processFrame);
       return;
     }
@@ -173,10 +228,13 @@ export default function Recognition() {
     ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
     ctx.restore();
 
-    const detectionResults = detectHands(video) ?? latestDetectionRef.current;
-    if (detectionResults && detectionResults.landmarks.length > 0) {
-      latestDetectionRef.current = detectionResults;
+    const detectionResults =
+      latestDetectionRef.current &&
+      Date.now() - lastHandSeenAtRef.current < HAND_LOST_GRACE_MS
+        ? latestDetectionRef.current
+        : null;
 
+    if (detectionResults && detectionResults.landmarks.length > 0) {
       if (showBoundingBox) {
         drawBoundingBoxes(
           canvas,
@@ -205,20 +263,32 @@ export default function Recognition() {
     }
 
     currentFrameRef.current += 1;
-    setCurrentFrame(currentFrameRef.current);
+    if (currentFrameRef.current % 10 === 0) {
+      setCurrentFrame(currentFrameRef.current);
+    }
 
+    const now = Date.now();
     if (
-      currentFrameRef.current % 15 === 0 &&
-      detectionResults &&
-      detectionResults.landmarks.length > 0
+      serverConnected &&
+      now - lastPredictionRequestedAtRef.current >= PREDICTION_INTERVAL_MS
     ) {
-      predictGesture({
-        landmarks: detectionResults.landmarks,
-        handedness: detectionResults.handedness,
-        confidence: detectionResults.confidence,
-      }).then((prediction) => {
-        if (!prediction) return;
+      lastPredictionRequestedAtRef.current = now;
+      predictFrame(canvas).then((prediction) => {
+        if (!prediction || prediction.status !== "success") {
+          missedHandFramesRef.current += 1;
 
+          if (
+            missedHandFramesRef.current >= HAND_LOST_MISSES &&
+            Date.now() - lastHandSeenAtRef.current >= HAND_LOST_GRACE_MS
+          ) {
+            latestDetectionRef.current = null;
+            setLiveResult(null);
+          }
+          return;
+        }
+
+        missedHandFramesRef.current = 0;
+        lastHandSeenAtRef.current = Date.now();
         latestDetectionRef.current = {
           landmarks: prediction.landmarks,
           handedness: prediction.handedness,
@@ -227,21 +297,43 @@ export default function Recognition() {
 
         const newResult: RecognitionResult = {
           timestamp: Date.now(),
-          gesture: prediction.gesture,
+          gesture: normalizeGestureLabel(prediction.gesture),
           confidence: prediction.confidence,
-          handedness: detectionResults?.handedness[0] || "Unknown",
+          handedness: prediction.handedness[0] || "Unknown",
         };
 
-        setResults((prev) => [newResult, ...prev].slice(0, 50));
+        setLiveResult(newResult);
+
+        if (prediction.confidence < MIN_ACCEPTED_CONFIDENCE) {
+          return;
+        }
+
+        predictionWindowRef.current = [
+          ...predictionWindowRef.current,
+          newResult,
+        ].slice(-STABILITY_WINDOW_SIZE);
+
+        const stableResult = mostVotedGesture(predictionWindowRef.current);
+        if (!stableResult) return;
+
+        const lastAccepted = lastAcceptedRef.current;
+        const isDuplicate =
+          lastAccepted?.gesture === stableResult.gesture &&
+          stableResult.timestamp - lastAccepted.timestamp <
+            DUPLICATE_RESULT_COOLDOWN_MS;
+
+        if (isDuplicate) return;
+
+        lastAcceptedRef.current = stableResult;
+        setResults((prev) => [stableResult, ...prev].slice(0, 50));
       });
     }
 
     animationFrameRef.current = requestAnimationFrame(processFrame);
   }, [
     canvasRef,
-    detectHands,
-    handDetectionReady,
-    predictGesture,
+    predictFrame,
+    serverConnected,
     showBoundingBox,
     showLandmarks,
     videoRef,
@@ -259,6 +351,20 @@ export default function Recognition() {
       isProcessingRef.current = false;
     };
   }, [isRunning, processFrame]);
+
+  useEffect(() => {
+    if (!liveResult) return;
+
+    const timeout = setTimeout(() => {
+      setLiveResult((current) =>
+        current && Date.now() - current.timestamp >= LIVE_RESULT_TTL_MS
+          ? null
+          : current,
+      );
+    }, LIVE_RESULT_TTL_MS);
+
+    return () => clearTimeout(timeout);
+  }, [liveResult]);
 
   useEffect(() => {
     const updateStats = () => {
@@ -301,6 +407,12 @@ export default function Recognition() {
     setIsRunning(false);
     stopCamera();
     latestDetectionRef.current = null;
+    lastHandSeenAtRef.current = 0;
+    lastPredictionRequestedAtRef.current = 0;
+    missedHandFramesRef.current = 0;
+    setLiveResult(null);
+    predictionWindowRef.current = [];
+    lastAcceptedRef.current = null;
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
@@ -312,6 +424,12 @@ export default function Recognition() {
   const handleReset = () => {
     setResults([]);
     latestDetectionRef.current = null;
+    lastHandSeenAtRef.current = 0;
+    lastPredictionRequestedAtRef.current = 0;
+    missedHandFramesRef.current = 0;
+    setLiveResult(null);
+    predictionWindowRef.current = [];
+    lastAcceptedRef.current = null;
     currentFrameRef.current = 0;
     setCurrentFrame(0);
     setStats({
@@ -322,27 +440,10 @@ export default function Recognition() {
     });
   };
 
-  const latestResult = results[0];
-
-  if (handDetectionError) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-12 px-4">
-          <Card className="border-red-200 bg-red-50">
-            <div className="flex items-start gap-4 p-6">
-              <AlertCircle className="h-6 w-6 text-red-600 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-semibold text-red-900 mb-1">
-                  Hand Detection Error
-                </h3>
-                <p className="text-red-800">{handDetectionError}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </Layout>
-    );
-  }
+  const latestResult =
+    liveResult && Date.now() - liveResult.timestamp < LIVE_RESULT_TTL_MS
+      ? liveResult
+      : null;
 
   return (
     <Layout>
@@ -350,8 +451,8 @@ export default function Recognition() {
         <div className="mb-6">
           <h1 className="text-4xl font-bold mb-2">Realtime Sign Recognition</h1>
           <p className="text-lg text-muted-foreground">
-            Use your camera to recognize sign language with AI-powered landmark
-            detection and server inference.
+            Uses the legacy Sign-to-Text converter pipeline: mirrored camera
+            frame, server-side MediaPipe landmarks, and the Keras gesture model.
           </p>
         </div>
 
@@ -400,7 +501,7 @@ export default function Recognition() {
               {!isRunning ? (
                 <Button
                   onClick={handleStart}
-                  disabled={!serverConnected || !handDetectionReady}
+                  disabled={!serverConnected}
                   className="gap-2"
                   size="lg"
                 >
@@ -450,7 +551,7 @@ export default function Recognition() {
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-yellow-900 text-sm">
-                      Inference Server
+                      Legacy Server
                     </p>
                     <p className="text-yellow-800 text-sm">
                       {serverError}. Make sure the FastAPI server is running.
@@ -519,12 +620,12 @@ export default function Recognition() {
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Hand Detection</span>
+                  <span className="text-muted-foreground">Landmark Pipeline</span>
                   <Badge
-                    variant={handDetectionReady ? "default" : "secondary"}
-                    className={handDetectionReady ? "bg-green-500" : ""}
+                    variant={serverConnected ? "default" : "secondary"}
+                    className={serverConnected ? "bg-green-500" : ""}
                   >
-                    {handDetectionReady ? "Ready" : "Loading"}
+                    Server-side
                   </Badge>
                 </div>
                 <div className="flex justify-between">
@@ -538,7 +639,7 @@ export default function Recognition() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    Inference Server
+                    Legacy Server
                   </span>
                   <Badge
                     variant={serverConnected ? "default" : "secondary"}

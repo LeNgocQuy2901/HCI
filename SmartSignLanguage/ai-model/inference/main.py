@@ -1,20 +1,16 @@
 """
-FastAPI inference server for sign language recognition.
+FastAPI server for realtime sign recognition using only the legacy
+Sign-to-Text converter pipeline.
 
-Primary backend:
-  - Bidirectional-Sign-Language-Converter Keras model
-  - MediaPipe Hands landmark extraction
-
-Fallback backend:
-  - Existing DeGirum/ONNX image classifier when the landmark model dependencies
-    or files are not available.
+Pipeline:
+  camera frame -> MediaPipe Hands -> 21 * (x, y, z) landmarks -> gesture_model.h5
 """
 
 import base64
 import io
 import json
 import logging
-import random
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -31,50 +27,161 @@ except Exception:
     mp = None
 
 try:
-    from tensorflow.keras.models import load_model as load_keras_model
+    from mediapipe.tasks import python as mp_tasks_python
+    from mediapipe.tasks.python import vision as mp_tasks_vision
 except Exception:
-    load_keras_model = None
+    mp_tasks_python = None
+    mp_tasks_vision = None
 
 try:
-    import onnxruntime
+    from tensorflow.keras.models import load_model
 except Exception:
-    onnxruntime = None
-
-try:
-    import torch
-except Exception:
-    torch = None
+    load_model = None
 
 import uvicorn
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+HAND_LANDMARKER_URL = (
+    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/"
+    "hand_landmarker/float16/1/hand_landmarker.task"
+)
 
-def softmax(values: np.ndarray) -> np.ndarray:
-    values = values.astype(np.float32)
-    exp_values = np.exp(values - np.max(values))
-    return exp_values / np.sum(exp_values)
+
+def legacy_dir() -> Path:
+    return Path(__file__).resolve().parents[2] / "legacy-converters" / "Sign-to-Text-Convertor"
 
 
-def load_label_file(labels_path: Path, fallback_count: int) -> list[str]:
+def model_dir() -> Path:
+    return Path(__file__).resolve().parents[1] / "model"
+
+
+def ensure_hand_landmarker_task() -> Path:
+    path = model_dir() / "hand_landmarker.task"
+    if path.exists():
+        return path
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    logger.info("Downloading MediaPipe hand landmarker task to %s", path)
     try:
-        with labels_path.open("r", encoding="utf-8") as file:
-            data = json.load(file)
-            if isinstance(data, dict):
-                return [data[str(index)] for index in range(len(data))]
-            if isinstance(data, list):
-                return [str(item) for item in data]
+        urllib.request.urlretrieve(HAND_LANDMARKER_URL, path)
     except Exception as exc:
-        logger.warning("Could not load labels from %s: %s", labels_path, exc)
+        raise RuntimeError(
+            "MediaPipe Tasks is installed without the legacy mp.solutions API, "
+            f"and the hand landmarker model is missing. Download {HAND_LANDMARKER_URL} "
+            f"to {path} or install a MediaPipe build that provides mp.solutions."
+        ) from exc
 
-    return [f"Gesture_{index}" for index in range(fallback_count)]
+    return path
+
+
+class HandLandmarkExtractor:
+    def __init__(self):
+        if mp is None:
+            raise RuntimeError("mediapipe is not installed")
+
+        self.backend = ""
+        self.solutions_hands = None
+        self.tasks_landmarker = None
+
+        if hasattr(mp, "solutions") and hasattr(mp.solutions, "hands"):
+            self.backend = "mediapipe-solutions"
+            self.solutions_hands = mp.solutions.hands.Hands(
+                static_image_mode=False,
+                max_num_hands=1,
+                min_detection_confidence=0.25,
+                min_tracking_confidence=0.25,
+            )
+            return
+
+        if mp_tasks_python is None or mp_tasks_vision is None:
+            raise RuntimeError(
+                "mediapipe is installed, but neither mp.solutions nor mediapipe.tasks is available"
+            )
+
+        self.backend = "mediapipe-tasks"
+        task_path = ensure_hand_landmarker_task()
+        options = mp_tasks_vision.HandLandmarkerOptions(
+            base_options=mp_tasks_python.BaseOptions(model_asset_path=str(task_path)),
+            running_mode=mp_tasks_vision.RunningMode.IMAGE,
+            num_hands=1,
+            min_hand_detection_confidence=0.25,
+            min_hand_presence_confidence=0.25,
+        )
+        self.tasks_landmarker = mp_tasks_vision.HandLandmarker.create_from_options(options)
+
+    def process(self, image_rgb: np.ndarray) -> Optional[dict[str, Any]]:
+        if self.solutions_hands is not None:
+            results = self.solutions_hands.process(image_rgb)
+            if not results.multi_hand_landmarks:
+                return None
+
+            hand_landmarks = results.multi_hand_landmarks[0]
+            landmarks = [
+                {"x": landmark.x, "y": landmark.y, "z": landmark.z}
+                for landmark in hand_landmarks.landmark
+            ]
+            handedness = "Unknown"
+            hand_confidence = 0.0
+
+            if results.multi_handedness:
+                classification = results.multi_handedness[0].classification[0]
+                handedness = classification.label
+                hand_confidence = float(classification.score)
+
+            return {
+                "landmarks": landmarks,
+                "handedness": handedness,
+                "hand_confidence": hand_confidence,
+            }
+
+        if self.tasks_landmarker is None:
+            return None
+
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
+        results = self.tasks_landmarker.detect(mp_image)
+        if not results.hand_landmarks:
+            return None
+
+        hand_landmarks = results.hand_landmarks[0]
+        landmarks = [
+            {"x": landmark.x, "y": landmark.y, "z": landmark.z}
+            for landmark in hand_landmarks
+        ]
+        handedness = "Unknown"
+        hand_confidence = 0.0
+
+        if results.handedness:
+            category = results.handedness[0][0]
+            handedness = category.category_name
+            hand_confidence = float(category.score)
+
+        return {
+            "landmarks": landmarks,
+            "handedness": handedness,
+            "hand_confidence": hand_confidence,
+        }
+
+
+def load_label_mapping(labels_path: Path) -> list[str]:
+    with labels_path.open("r", encoding="utf-8") as file:
+        data = json.load(file)
+
+    if isinstance(data, dict):
+        return [str(data[str(index)]) for index in range(len(data))]
+    if isinstance(data, list):
+        return [str(label) for label in data]
+
+    raise ValueError(f"Unsupported label mapping format: {labels_path}")
 
 
 def image_bytes_to_bgr(contents: bytes) -> np.ndarray:
-    image_pil = Image.open(io.BytesIO(contents)).convert("RGB")
-    image_np = np.array(image_pil)
-    return cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+    if not contents:
+        raise ValueError("No image bytes provided")
+
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
 
 def bbox_from_landmarks(
@@ -91,239 +198,119 @@ def bbox_from_landmarks(
     return [x1, y1, x2, y2]
 
 
-class BidirectionalLandmarkModel:
-    """Gesture classifier from Bidirectional-Sign-Language-Converter."""
+def response(
+    status: str,
+    gesture: str,
+    confidence: float = 0.0,
+    class_id: int = -1,
+    landmarks: Optional[list[list[dict[str, float]]]] = None,
+    handedness: Optional[list[str]] = None,
+    confidence_scores: Optional[list[float]] = None,
+    top_predictions: Optional[list[dict[str, Any]]] = None,
+    bbox: Optional[list[int]] = None,
+    model_name: str = "Legacy Sign-to-Text Keras",
+) -> dict[str, Any]:
+    return {
+        "status": status,
+        "gesture": gesture,
+        "confidence": confidence,
+        "class_id": class_id,
+        "landmarks": landmarks or [],
+        "handedness": handedness or [],
+        "confidence_scores": confidence_scores or [],
+        "top_predictions": top_predictions or [],
+        "bbox": bbox,
+        "model": model_name,
+        "timestamp": str(datetime.now()),
+    }
 
-    name = "Bidirectional Landmark Keras"
+
+class LegacySignToTextModel:
+    name = "Legacy Sign-to-Text Keras"
 
     def __init__(self, model_path: Path, labels_path: Path):
-        if load_keras_model is None:
+        if load_model is None:
             raise RuntimeError("tensorflow is not installed")
         if not model_path.exists():
             raise FileNotFoundError(model_path)
+        if not labels_path.exists():
+            raise FileNotFoundError(labels_path)
 
         self.model_path = model_path
         self.labels_path = labels_path
-        self.labels = load_label_file(labels_path, fallback_count=25)
-        self.model = load_keras_model(str(model_path))
-        self.hands = None
-        if mp is not None and hasattr(mp, "solutions"):
-            self.hands = mp.solutions.hands.Hands(
-                static_image_mode=True,
-                max_num_hands=1,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-            )
+        self.labels = load_label_mapping(labels_path)
+        self.model = load_model(str(model_path))
+        self.extractor = HandLandmarkExtractor()
+
         logger.info(
-            "Loaded %s model from %s with %d gestures",
+            "Loaded %s from %s with labels %s using %s",
             self.name,
-            model_path,
-            len(self.labels),
+            self.model_path,
+            self.labels_path,
+            self.extractor.backend,
         )
 
-    def _extract_landmarks(self, image_bgr: np.ndarray) -> Optional[dict[str, Any]]:
-        if self.hands is None:
-            raise RuntimeError(
-                "Server-side MediaPipe Hands is unavailable. Use /api/predict-landmarks."
-            )
-
+    def extract_landmarks(self, image_bgr: np.ndarray) -> Optional[dict[str, Any]]:
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(image_rgb)
-
-        if not results.multi_hand_landmarks:
+        extracted = self.extractor.process(image_rgb)
+        if extracted is None:
             return None
 
-        hand_landmarks = results.multi_hand_landmarks[0]
-        landmarks = [
-            {"x": point.x, "y": point.y, "z": point.z}
-            for point in hand_landmarks.landmark
-        ]
-        handedness = "Unknown"
-        hand_confidence = 0.0
-
-        if results.multi_handedness:
-            classification = results.multi_handedness[0].classification[0]
-            handedness = classification.label
-            hand_confidence = float(classification.score)
-
-        return {
-            "features": np.array(
-                [[point["x"], point["y"], point["z"]] for point in landmarks],
-                dtype=np.float32,
-            ).flatten(),
-            "landmarks": landmarks,
-            "handedness": handedness,
-            "hand_confidence": hand_confidence,
-            "bbox": bbox_from_landmarks(
-                landmarks, image_bgr.shape[1], image_bgr.shape[0]
-            ),
-        }
-
-    def predict_landmarks(
-        self,
-        landmarks: list[list[dict[str, float]]] | list[dict[str, float]],
-        handedness: Optional[list[str]] = None,
-        confidence_scores: Optional[list[float]] = None,
-    ) -> dict[str, Any]:
-        if landmarks and isinstance(landmarks[0], dict):
-            hand_landmarks = landmarks
-            normalized_landmarks = [landmarks]
-        else:
-            hand_landmarks = landmarks[0] if landmarks else []
-            normalized_landmarks = landmarks
-
-        if len(hand_landmarks) != 21:
-            return {
-                "status": "no_hand",
-                "gesture": "No hand detected",
-                "confidence": 0.0,
-                "class_id": -1,
-                "landmarks": [],
-                "handedness": [],
-                "confidence_scores": [],
-                "bbox": None,
-                "model": self.name,
-            }
-
+        landmarks = extracted["landmarks"]
         features = np.array(
-            [[point["x"], point["y"], point["z"]] for point in hand_landmarks],
+            [[point["x"], point["y"], point["z"]] for point in landmarks],
             dtype=np.float32,
         ).flatten()
-        predictions = self.model.predict(np.array([features]), verbose=0)[0]
-        class_id = int(np.argmax(predictions))
-        confidence = float(predictions[class_id])
 
         return {
-            "status": "success",
-            "gesture": self.labels[class_id]
-            if class_id < len(self.labels)
-            else f"Gesture_{class_id}",
-            "confidence": confidence,
-            "class_id": class_id,
-            "landmarks": normalized_landmarks,
-            "handedness": handedness or ["Unknown"],
-            "confidence_scores": confidence_scores or [],
-            "bbox": None,
-            "model": self.name,
+            "features": features,
+            "landmarks": landmarks,
+            "handedness": extracted["handedness"],
+            "hand_confidence": extracted["hand_confidence"],
+            "bbox": bbox_from_landmarks(landmarks, image_bgr.shape[1], image_bgr.shape[0]),
         }
 
     def predict(self, image_bgr: np.ndarray) -> dict[str, Any]:
-        extracted = self._extract_landmarks(image_bgr)
+        extracted = self.extract_landmarks(image_bgr)
         if extracted is None:
-            return {
-                "status": "no_hand",
-                "gesture": "No hand detected",
-                "confidence": 0.0,
-                "class_id": -1,
-                "landmarks": [],
-                "handedness": [],
-                "confidence_scores": [],
-                "bbox": None,
-                "model": self.name,
-            }
+            return response("no_hand", "No hand detected", model_name=self.name)
 
-        predictions = self.model.predict(
+        prediction = self.model.predict(
             np.array([extracted["features"]], dtype=np.float32), verbose=0
         )[0]
-        class_id = int(np.argmax(predictions))
-        confidence = float(predictions[class_id])
-
-        return {
-            "status": "success",
-            "gesture": self.labels[class_id]
-            if class_id < len(self.labels)
-            else f"Gesture_{class_id}",
-            "confidence": confidence,
-            "class_id": class_id,
-            "landmarks": [extracted["landmarks"]],
-            "handedness": [extracted["handedness"]],
-            "confidence_scores": [extracted["hand_confidence"]],
-            "bbox": extracted["bbox"],
-            "model": self.name,
-        }
-
-
-class LegacyImageModel:
-    """Existing image classifier retained as a fallback."""
-
-    name = "Legacy Image Classifier"
-
-    def __init__(self, model_path: Path, labels_path: Path):
-        self.model_path = model_path
-        self.labels_path = labels_path
-        self.labels = load_label_file(labels_path, fallback_count=29)
-        self.model = None
-        self.use_onnx = False
-        self.device = (
-            "cuda" if torch is not None and torch.cuda.is_available() else "cpu"
-        )
-        self.load_model()
-
-    def load_model(self) -> None:
-        if self.model_path.exists() and onnxruntime is not None:
-            try:
-                self.model = onnxruntime.InferenceSession(
-                    str(self.model_path),
-                    providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
-                )
-                self.use_onnx = True
-                logger.info("Loaded legacy ONNX model from %s", self.model_path)
-                return
-            except Exception as exc:
-                logger.warning("Legacy ONNX loading failed: %s", exc)
-
-        logger.warning("Legacy model unavailable, using demo predictions")
-        self.model = None
-
-    def preprocess(self, image_bgr: np.ndarray) -> np.ndarray:
-        image = cv2.resize(image_bgr, (224, 224))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = image.astype(np.float32) / 255.0
-        image = np.transpose(image, (2, 0, 1))
-        return np.expand_dims(image, axis=0)
-
-    def predict(self, image_bgr: np.ndarray) -> dict[str, Any]:
-        if self.model is None:
-            class_id = random.randint(0, max(len(self.labels) - 1, 0))
-            confidence = random.uniform(0.5, 0.7)
-            return {
-                "status": "demo",
-                "gesture": self.labels[class_id],
-                "confidence": confidence,
-                "class_id": class_id,
-                "landmarks": [],
-                "handedness": [],
-                "confidence_scores": [],
-                "bbox": None,
-                "model": self.name,
+        class_id = int(np.argmax(prediction))
+        confidence = float(prediction[class_id])
+        gesture = self.labels[class_id] if class_id < len(self.labels) else f"Gesture_{class_id}"
+        top_indices = np.argsort(prediction)[-5:][::-1]
+        top_predictions = [
+            {
+                "class_id": int(index),
+                "gesture": self.labels[int(index)]
+                if int(index) < len(self.labels)
+                else f"Gesture_{int(index)}",
+                "confidence": float(prediction[int(index)]),
             }
+            for index in top_indices
+        ]
 
-        image = self.preprocess(image_bgr)
-        input_name = self.model.get_inputs()[0].name
-        output_name = self.model.get_outputs()[0].name
-        logits = self.model.run([output_name], {input_name: image})[0][0]
-        scores = softmax(logits)
-        class_id = int(np.argmax(scores))
-
-        return {
-            "status": "success",
-            "gesture": self.labels[class_id]
-            if class_id < len(self.labels)
-            else f"Gesture_{class_id}",
-            "confidence": float(scores[class_id]),
-            "class_id": class_id,
-            "landmarks": [],
-            "handedness": [],
-            "confidence_scores": [],
-            "bbox": None,
-            "model": self.name,
-        }
+        return response(
+            "success",
+            gesture,
+            confidence=confidence,
+            class_id=class_id,
+            landmarks=[extracted["landmarks"]],
+            handedness=[extracted["handedness"]],
+            confidence_scores=[extracted["hand_confidence"]],
+            top_predictions=top_predictions,
+            bbox=extracted["bbox"],
+            model_name=self.name,
+        )
 
 
 app = FastAPI(
-    title="Sign Language Recognition API",
-    description="Real-time gesture prediction with landmark and image backends",
-    version="2.0.0",
+    title="Legacy Sign-to-Text Recognition API",
+    description="Realtime sign recognition using legacy Sign-to-Text-Convertor",
+    version="3.0.0",
 )
 
 app.add_middleware(
@@ -334,46 +321,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-model: Optional[BidirectionalLandmarkModel | LegacyImageModel] = None
-
-
-def load_model_on_startup() -> None:
-    global model
-
-    model_dir = Path(__file__).parent.parent / "model"
-    bidirectional_model_path = model_dir / "gesture_model.h5"
-    bidirectional_labels_path = model_dir / "gesture_mapping_bidirectional.json"
-    legacy_model_path = model_dir / "mobilenet_v2_sign_language_224x224_float_n2x_cpu_1.n2x"
-    legacy_labels_path = model_dir / "labels_sign_language.json"
-
-    try:
-        model = BidirectionalLandmarkModel(
-            bidirectional_model_path, bidirectional_labels_path
-        )
-        return
-    except Exception as exc:
-        logger.warning("Bidirectional landmark model unavailable: %s", exc)
-
-    model = LegacyImageModel(legacy_model_path, legacy_labels_path)
+model: Optional[LegacySignToTextModel] = None
 
 
 @app.on_event("startup")
 def startup_event() -> None:
-    load_model_on_startup()
+    global model
+
+    source_dir = legacy_dir()
+    model = LegacySignToTextModel(
+        source_dir / "gesture_model.h5",
+        source_dir / "gesture_mapping.json",
+    )
 
 
 @app.get("/health")
 def health_check() -> dict[str, Any]:
     return {
-        "status": "healthy",
-        "model_loaded": model is not None and getattr(model, "model", None) is not None,
+        "status": "healthy" if model is not None else "unhealthy",
+        "backend": "legacy-sign-to-text",
+        "model_loaded": model is not None,
         "model": model.name if model else "none",
-        "backend": "landmarks"
-        if isinstance(model, BidirectionalLandmarkModel)
-        else "image",
+        "model_path": str(model.model_path) if model else "",
+        "labels_path": str(model.labels_path) if model else "",
         "num_gestures": len(model.labels) if model else 0,
-        "tensorflow_available": load_keras_model is not None,
+        "tensorflow_available": load_model is not None,
         "mediapipe_available": mp is not None,
+        "mediapipe_backend": model.extractor.backend if model else "",
         "timestamp": str(datetime.now()),
     }
 
@@ -381,46 +355,20 @@ def health_check() -> dict[str, Any]:
 @app.post("/api/predict")
 async def predict(file: UploadFile = File(...)) -> dict[str, Any]:
     if model is None:
-        raise HTTPException(status_code=503, detail="Model not initialized")
+        raise HTTPException(status_code=503, detail="Legacy Sign-to-Text model is not initialized")
 
     try:
-        contents = await file.read()
-        image_bgr = image_bytes_to_bgr(contents)
-        result = model.predict(image_bgr)
-        result["timestamp"] = str(datetime.now())
-        return result
+        image_bgr = image_bytes_to_bgr(await file.read())
+        return model.predict(image_bgr)
     except Exception as exc:
         logger.error("Prediction error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=400, detail=f"Prediction failed: {exc}")
-
-
-@app.post("/api/predict-landmarks")
-async def predict_landmarks(data: dict[str, Any]) -> dict[str, Any]:
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model not initialized")
-    if not isinstance(model, BidirectionalLandmarkModel):
-        raise HTTPException(
-            status_code=503,
-            detail="Landmark classifier is not available; check TensorFlow/model files",
-        )
-
-    try:
-        result = model.predict_landmarks(
-            landmarks=data.get("landmarks") or [],
-            handedness=data.get("handedness"),
-            confidence_scores=data.get("confidence"),
-        )
-        result["timestamp"] = str(datetime.now())
-        return result
-    except Exception as exc:
-        logger.error("Landmark prediction error: %s", exc, exc_info=True)
-        raise HTTPException(status_code=400, detail=f"Prediction failed: {exc}")
+        return response("error", f"Prediction failed: {exc}")
 
 
 @app.post("/api/predict-base64")
 async def predict_base64(data: dict[str, Any]) -> dict[str, Any]:
     if model is None:
-        raise HTTPException(status_code=503, detail="Model not initialized")
+        raise HTTPException(status_code=503, detail="Legacy Sign-to-Text model is not initialized")
 
     try:
         base64_str = data.get("image")
@@ -430,23 +378,21 @@ async def predict_base64(data: dict[str, Any]) -> dict[str, Any]:
             base64_str = base64_str.split(",", 1)[1]
 
         image_bgr = image_bytes_to_bgr(base64.b64decode(base64_str))
-        result = model.predict(image_bgr)
-        result["timestamp"] = str(datetime.now())
-        return result
+        return model.predict(image_bgr)
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+        logger.error("Base64 prediction error: %s", exc, exc_info=True)
+        return response("error", f"Prediction failed: {exc}")
 
 
 @app.post("/api/batch-predict")
 async def batch_predict(files: list[UploadFile] = File(...)) -> dict[str, Any]:
     if model is None:
-        raise HTTPException(status_code=503, detail="Model not initialized")
+        raise HTTPException(status_code=503, detail="Legacy Sign-to-Text model is not initialized")
 
     results = []
     for file in files:
         try:
-            image_bgr = image_bytes_to_bgr(await file.read())
-            prediction = model.predict(image_bgr)
+            prediction = model.predict(image_bytes_to_bgr(await file.read()))
             prediction["file"] = file.filename
             results.append(prediction)
         except Exception as exc:
@@ -458,7 +404,7 @@ async def batch_predict(files: list[UploadFile] = File(...)) -> dict[str, Any]:
 @app.get("/api/gestures")
 def list_gestures() -> dict[str, Any]:
     if model is None:
-        raise HTTPException(status_code=503, detail="Model not initialized")
+        raise HTTPException(status_code=503, detail="Legacy Sign-to-Text model is not initialized")
 
     return {
         "gestures": model.labels,
@@ -470,16 +416,16 @@ def list_gestures() -> dict[str, Any]:
 @app.get("/api/info")
 def get_info() -> dict[str, Any]:
     return {
-        "name": "Sign Language Recognition API",
-        "version": "2.0.0",
-        "model_loaded": model is not None and getattr(model, "model", None) is not None,
+        "name": "Legacy Sign-to-Text Recognition API",
+        "version": "3.0.0",
+        "backend": "legacy-sign-to-text",
+        "model_loaded": model is not None,
         "model": model.name if model else "none",
         "num_gestures": len(model.labels) if model else 0,
         "supported_formats": ["image/jpeg", "image/png"],
         "endpoints": [
             "/health",
             "/api/predict",
-            "/api/predict-landmarks",
             "/api/predict-base64",
             "/api/batch-predict",
             "/api/gestures",
