@@ -49,9 +49,14 @@ Useful files include:
 Sign-to-Text-Convertor/
   model.ipynb
   predict.ipynb
+  sign_to_text_pipeline.py
   gesture_model.h5
   gesture_mapping.json
 ```
+
+`sign_to_text_pipeline.py` is the runtime version of the notebook logic. The
+FastAPI inference server imports this file directly, while `gesture_model.h5`
+and `gesture_mapping.json` can be replaced by newly trained Kaggle outputs.
 
 ## Notes
 

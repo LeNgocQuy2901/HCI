@@ -44,11 +44,17 @@ interface InferencePrediction {
   status: string;
   gesture: string;
   confidence: number;
+  raw_confidence?: number;
+  confidence_temperature?: number;
   landmarks: HandPoint[][];
   handedness: string[];
   confidence_scores?: number[];
   bbox?: number[] | null;
   model?: string;
+  training_metadata?: {
+    frames_ready?: number;
+    frames_per_video?: number;
+  };
 }
 
 interface HandDetectionOverlay {
@@ -67,6 +73,14 @@ const LIVE_RESULT_TTL_MS = 2500;
 const HAND_LOST_GRACE_MS = 3000;
 const HAND_LOST_MISSES = 10;
 
+async function resetServerSequence() {
+  try {
+    await fetch(`${API_BASE_URL}/api/reset-sequence`, { method: "POST" });
+  } catch (err) {
+    console.warn("Could not reset inference sequence:", err);
+  }
+}
+
 function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   return new Promise((resolve) => {
     canvas.toBlob(resolve, "image/jpeg", 0.72);
@@ -75,6 +89,15 @@ function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
 
 function normalizeGestureLabel(value: string) {
   return value.replace(/_/g, " ").replace(/\bthankyou\b/i, "thank you");
+}
+
+function formatDetectedHands(handedness: string[], landmarkCount = handedness.length) {
+  if (landmarkCount >= 2) {
+    const uniqueHands = Array.from(new Set(handedness.filter(Boolean)));
+    return uniqueHands.length > 0 ? uniqueHands.join(" + ") : "Two hands";
+  }
+
+  return handedness[0] || "Unknown";
 }
 
 function mostVotedGesture(
@@ -274,7 +297,49 @@ export default function Recognition() {
     ) {
       lastPredictionRequestedAtRef.current = now;
       predictFrame(canvas).then((prediction) => {
-        if (!prediction || prediction.status !== "success") {
+        if (!prediction) {
+          missedHandFramesRef.current += 1;
+
+          if (
+            missedHandFramesRef.current >= HAND_LOST_MISSES &&
+            Date.now() - lastHandSeenAtRef.current >= HAND_LOST_GRACE_MS
+          ) {
+            latestDetectionRef.current = null;
+            setLiveResult(null);
+          }
+          return;
+        }
+
+        if (
+          prediction.status === "warming_up" &&
+          prediction.landmarks.length > 0
+        ) {
+          missedHandFramesRef.current = 0;
+          lastHandSeenAtRef.current = Date.now();
+          latestDetectionRef.current = {
+            landmarks: prediction.landmarks,
+            handedness: prediction.handedness,
+            confidence: prediction.confidence_scores ?? [],
+          };
+
+          const framesReady =
+            prediction.training_metadata?.frames_ready ?? 0;
+          const framesRequired =
+            prediction.training_metadata?.frames_per_video ?? 20;
+
+          setLiveResult({
+            timestamp: Date.now(),
+            gesture: `Collecting frames ${framesReady}/${framesRequired}`,
+            confidence: 0,
+            handedness: formatDetectedHands(
+              prediction.handedness,
+              prediction.landmarks.length,
+            ),
+          });
+          return;
+        }
+
+        if (prediction.status !== "success") {
           missedHandFramesRef.current += 1;
 
           if (
@@ -299,7 +364,10 @@ export default function Recognition() {
           timestamp: Date.now(),
           gesture: normalizeGestureLabel(prediction.gesture),
           confidence: prediction.confidence,
-          handedness: prediction.handedness[0] || "Unknown",
+          handedness: formatDetectedHands(
+            prediction.handedness,
+            prediction.landmarks.length,
+          ),
         };
 
         setLiveResult(newResult);
@@ -395,6 +463,7 @@ export default function Recognition() {
         await startCamera();
       }
 
+      await resetServerSequence();
       startTimeRef.current = Date.now();
       setIsRunning(true);
     } catch (err) {
@@ -405,6 +474,7 @@ export default function Recognition() {
 
   const handleStop = () => {
     setIsRunning(false);
+    resetServerSequence();
     stopCamera();
     latestDetectionRef.current = null;
     lastHandSeenAtRef.current = 0;
@@ -422,6 +492,7 @@ export default function Recognition() {
   };
 
   const handleReset = () => {
+    resetServerSequence();
     setResults([]);
     latestDetectionRef.current = null;
     lastHandSeenAtRef.current = 0;
@@ -451,8 +522,9 @@ export default function Recognition() {
         <div className="mb-6">
           <h1 className="text-4xl font-bold mb-2">Realtime Sign Recognition</h1>
           <p className="text-lg text-muted-foreground">
-            Uses the legacy Sign-to-Text converter pipeline: mirrored camera
-            frame, server-side MediaPipe landmarks, and the Keras gesture model.
+            Uses the WLASL 10-word model: mirrored camera frames, server-side
+            MediaPipe hands and pose landmarks, and a rolling 20-frame Keras
+            sequence classifier.
           </p>
         </div>
 
@@ -551,7 +623,7 @@ export default function Recognition() {
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-yellow-900 text-sm">
-                      Legacy Server
+                      WLASL Recognition Server
                     </p>
                     <p className="text-yellow-800 text-sm">
                       {serverError}. Make sure the FastAPI server is running.
@@ -592,7 +664,7 @@ export default function Recognition() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Hand</span>
+                    <span className="text-muted-foreground">Hands</span>
                     <Badge variant="outline">{latestResult.handedness}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -639,7 +711,7 @@ export default function Recognition() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
-                    Legacy Server
+                    WLASL Server
                   </span>
                   <Badge
                     variant={serverConnected ? "default" : "secondary"}
@@ -698,7 +770,7 @@ export default function Recognition() {
                     <div className="flex-1">
                       <p className="font-semibold">{result.gesture}</p>
                       <p className="text-sm text-muted-foreground">
-                        {result.handedness} Hand
+                        {result.handedness}
                       </p>
                     </div>
                     <div className="text-right">
