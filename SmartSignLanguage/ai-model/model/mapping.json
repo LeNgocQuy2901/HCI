@@ -1,0 +1,43 @@
+{
+  "word_to_index": {
+    "book": 0,
+    "finish": 1,
+    "go": 2,
+    "good": 3,
+    "help": 4,
+    "like": 5,
+    "mother": 6,
+    "what": 7,
+    "who": 8,
+    "yes": 9
+  },
+  "index_to_word": {
+    "0": "book",
+    "1": "finish",
+    "2": "go",
+    "3": "good",
+    "4": "help",
+    "5": "like",
+    "6": "mother",
+    "7": "what",
+    "8": "who",
+    "9": "yes"
+  },
+  "selected_words": [
+    "book",
+    "finish",
+    "go",
+    "good",
+    "help",
+    "like",
+    "mother",
+    "what",
+    "who",
+    "yes"
+  ],
+  "num_classes": 10,
+  "seq_len": 20,
+  "feature_dim": 225,
+  "normalized": true,
+  "architecture": "wlasl_8sources_10words"
+}

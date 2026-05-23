@@ -6,13 +6,21 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Pause, Play, RotateCcw, Sparkles } from "lucide-react";
 
-type Point = { x: number; y: number };
+type Point = { x: number; y: number; z?: number; v?: number };
 type SignFrame = {
   label: string;
   pose: Point[];
   left_hand: Point[];
   right_hand: Point[];
 };
+type RawSignFrame = Partial<Record<"pose" | "left_hand" | "right_hand", Point[]>>;
+type LandmarkData = Record<string, RawSignFrame[]>;
+
+const LANDMARK_DATA_URL = "/data/combined_avg_landmarks.json";
+const FRAME_INTERVAL_MS = 55;
+const CANVAS_WIDTH = 960;
+const CANVAS_HEIGHT = 640;
+const RIGHT_HAND_ONLY_SIGNS = new Set(["thank", "thank you"]);
 
 const POSE_CONNECTIONS = [
   [11, 13],
@@ -240,30 +248,74 @@ function makeFrame(label: string, phase: number): SignFrame {
   };
 }
 
-function buildAnimation(text: string) {
-  const words = normalizeText(text)
-    .split(" ")
-    .filter((word) => word && !stopWords.has(word));
+function maxPhraseLength(data: LandmarkData) {
+  return Math.max(
+    1,
+    ...Object.keys(data).map((key) => key.trim().split(/\s+/).length),
+  );
+}
+
+function buildAnimation(text: string, data: LandmarkData | null) {
+  const tokens = normalizeText(text).split(" ").filter(Boolean);
   const frames: SignFrame[] = [];
+  const words: string[] = [];
   const unsupported: string[] = [];
 
-  words.forEach((word) => {
-    const normalizedWord = word.replace(/^number$/, "");
-    const label = supportedWords.includes(normalizedWord)
-      ? normalizedWord
-      : null;
-    const labels = label ? [label] : normalizedWord.split("");
+  if (!data) {
+    return { frames, unsupported, words };
+  }
 
-    if (!label) {
-      unsupported.push(word);
+  const appendLabel = (label: string) => {
+    const sequence = data[label];
+    if (!Array.isArray(sequence) || sequence.length === 0) {
+      return false;
     }
 
-    labels.forEach((item) => {
-      for (let frame = 0; frame < 18; frame += 1) {
-        frames.push(makeFrame(item, frame / 18));
-      }
+    sequence.forEach((frame) => {
+      frames.push({
+        label,
+        pose: frame.pose ?? [],
+        left_hand: frame.left_hand ?? [],
+        right_hand: frame.right_hand ?? [],
+      });
     });
-  });
+    words.push(label);
+    return true;
+  };
+
+  const phraseLimit = maxPhraseLength(data);
+  let index = 0;
+
+  while (index < tokens.length) {
+    let matched = false;
+
+    for (
+      let size = Math.min(phraseLimit, tokens.length - index);
+      size > 0;
+      size -= 1
+    ) {
+      const phrase = tokens.slice(index, index + size).join(" ");
+      if (appendLabel(phrase)) {
+        index += size;
+        matched = true;
+        break;
+      }
+    }
+
+    if (matched) {
+      continue;
+    }
+
+    const word = tokens[index];
+    index += 1;
+
+    if (stopWords.has(word)) {
+      continue;
+    }
+
+    unsupported.push(word);
+    word.split("").forEach((letter) => appendLabel(letter));
+  }
 
   return { frames, unsupported, words };
 }
@@ -315,6 +367,10 @@ function drawFrame(canvas: HTMLCanvasElement, frame?: SignFrame) {
     return;
   }
 
+  const label = frame.label.toLowerCase();
+  const drawLeftHand = !RIGHT_HAND_ONLY_SIGNS.has(label);
+  const drawRightHand = true;
+
   drawConnections(
     context,
     frame.pose,
@@ -323,22 +379,26 @@ function drawFrame(canvas: HTMLCanvasElement, frame?: SignFrame) {
     height,
     "#22c55e",
   );
-  drawConnections(
-    context,
-    frame.left_hand,
-    HAND_CONNECTIONS,
-    width,
-    height,
-    "#38bdf8",
-  );
-  drawConnections(
-    context,
-    frame.right_hand,
-    HAND_CONNECTIONS,
-    width,
-    height,
-    "#f97316",
-  );
+  if (drawLeftHand) {
+    drawConnections(
+      context,
+      frame.left_hand,
+      HAND_CONNECTIONS,
+      width,
+      height,
+      "#38bdf8",
+    );
+  }
+  if (drawRightHand) {
+    drawConnections(
+      context,
+      frame.right_hand,
+      HAND_CONNECTIONS,
+      width,
+      height,
+      "#f97316",
+    );
+  }
 
   context.fillStyle = "#ffffff";
   context.font = "26px sans-serif";
@@ -350,12 +410,48 @@ export default function Translate() {
   const [input, setInput] = useState("hello thank you");
   const [isPlaying, setIsPlaying] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
+  const [landmarkData, setLandmarkData] = useState<LandmarkData | null>(null);
+  const [loadError, setLoadError] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>();
   const lastTickRef = useRef(0);
 
-  const animation = useMemo(() => buildAnimation(input), [input]);
+  const animation = useMemo(
+    () => buildAnimation(input, landmarkData),
+    [input, landmarkData],
+  );
   const activeFrame = animation.frames[frameIndex];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLandmarks() {
+      try {
+        setLoadError("");
+        const response = await fetch(LANDMARK_DATA_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const json = (await response.json()) as LandmarkData;
+        if (!cancelled) {
+          setLandmarkData(json);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(
+            `Unable to load landmark data from ${LANDMARK_DATA_URL}.`,
+          );
+          setLandmarkData(null);
+        }
+      }
+    }
+
+    loadLandmarks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setFrameIndex(0);
@@ -372,7 +468,7 @@ export default function Translate() {
     if (!isPlaying || animation.frames.length === 0) return;
 
     const tick = (time: number) => {
-      if (time - lastTickRef.current > 55) {
+      if (time - lastTickRef.current > FRAME_INTERVAL_MS) {
         setFrameIndex((current) => (current + 1) % animation.frames.length);
         lastTickRef.current = time;
       }
@@ -408,8 +504,8 @@ export default function Translate() {
             <Card className="overflow-hidden bg-black">
               <canvas
                 ref={canvasRef}
-                width={960}
-                height={640}
+                width={CANVAS_WIDTH}
+                height={CANVAS_HEIGHT}
                 className="block w-full aspect-[3/2]"
               />
             </Card>
@@ -417,7 +513,7 @@ export default function Translate() {
             <div className="flex flex-wrap gap-3">
               <Button
                 onClick={() => setIsPlaying((current) => !current)}
-                disabled={animation.frames.length === 0}
+                disabled={!landmarkData || animation.frames.length === 0}
               >
                 {isPlaying ? <Pause /> : <Play />}
                 {isPlaying ? "Pause" : "Play"}
@@ -428,13 +524,18 @@ export default function Translate() {
                   setFrameIndex(0);
                   setIsPlaying(false);
                 }}
-                disabled={animation.frames.length === 0}
+                disabled={!landmarkData || animation.frames.length === 0}
               >
                 <RotateCcw />
                 Reset
               </Button>
               <Badge variant="outline" className="h-10 px-4 text-sm">
                 {animation.frames.length} frames
+              </Badge>
+              <Badge variant="secondary" className="h-10 px-4 text-sm">
+                {landmarkData
+                  ? `${Object.keys(landmarkData).length} signs loaded`
+                  : "Loading signs"}
               </Badge>
               <Badge variant="secondary" className="h-10 px-4 text-sm">
                 {progress}% played
@@ -447,9 +548,13 @@ export default function Translate() {
               <div>
                 <h2 className="text-xl font-semibold">Input Text</h2>
                 <p className="text-sm text-muted-foreground">
-                  Stop words are filtered, unsupported words fall back to
-                  fingerspelling.
+                  Landmark data is loaded from the Text-to-Sign converter JSON.
+                  Unsupported words fall back to fingerspelling when letter
+                  signs exist.
                 </p>
+                {loadError && (
+                  <p className="text-sm text-destructive mt-2">{loadError}</p>
+                )}
               </div>
               <Textarea
                 value={input}
