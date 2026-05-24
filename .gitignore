@@ -77,8 +77,16 @@ ml-service/models/
 ml-service/data/
 *.h5
 !SmartSignLanguage/ai-model/model/gesture_model.h5
+!SmartSignLanguage/legacy-converters/Sign-to-Text-Convertor/gesture_model.h5
 *.pkl
+!SmartSignLanguage/ai-model/model/model_weights.pkl
 *.joblib
+
+# Project data assets that should be versioned
+!SmartSignLanguage/public/data/
+!SmartSignLanguage/public/data/**
+!SmartSignLanguage/legacy-converters/Text-to-Sign-Convertor/data/
+!SmartSignLanguage/legacy-converters/Text-to-Sign-Convertor/data/**
 
 # ===== OS SPECIFIC =====
 .DS_Store
@@ -89,3 +97,5 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+"service-account-key.json" 

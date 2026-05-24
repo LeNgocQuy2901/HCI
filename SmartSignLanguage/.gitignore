@@ -31,6 +31,12 @@ data/
 .env
 .env.local
 
+# Project data assets that should be versioned
+!public/data/
+!public/data/**
+!legacy-converters/Text-to-Sign-Convertor/data/
+!legacy-converters/Text-to-Sign-Convertor/data/**
+
 # Ignore local environments
 venv/
 VieSign-Web-main/
