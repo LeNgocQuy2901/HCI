@@ -1,0 +1,5 @@
+Requirement already satisfied: onnx in c:\users\hiep\appdata\local\programs\python\python310\lib\site-packages (1.21.0)
+Requirement already satisfied: numpy>=1.23.2 in c:\users\hiep\appdata\local\programs\python\python310\lib\site-packages (from onnx) (2.2.6)
+Requirement already satisfied: protobuf>=4.25.1 in c:\users\hiep\appdata\local\programs\python\python310\lib\site-packages (from onnx) (7.35.0)
+Requirement already satisfied: typing_extensions>=4.7.1 in c:\users\hiep\appdata\local\programs\python\python310\lib\site-packages (from onnx) (4.15.0)
+Requirement already satisfied: ml_dtypes>=0.5.0 in c:\users\hiep\appdata\local\programs\python\python310\lib\site-packages (from onnx) (0.5.4)
