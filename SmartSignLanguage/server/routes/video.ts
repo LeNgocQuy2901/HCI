@@ -1,8 +1,28 @@
 import { Request, RequestHandler, Router } from "express";
-import { Readable } from "stream";
+import { google } from "googleapis";
 import { driveVideoMap } from "../../shared/google-drive";
-
+import path from "path";
 const router = Router();
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+let _auth: InstanceType<typeof google.auth.GoogleAuth> | null = null;
+
+function getAuth() {
+  if (_auth) return _auth;
+
+  
+
+
+  _auth = new google.auth.GoogleAuth({
+    keyFile: path.join(process.cwd(), "service-account-key.json"),
+    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+  });
+
+  return _auth;
+}
+
+// ── Handlers ─────────────────────────────────────────────────────────────────
 
 const getVideoInfo = (req: Request<{ videoKey: string }>, res: any) => {
   const { videoKey } = req.params;
@@ -38,69 +58,70 @@ const streamVideo = (req: Request<{ videoKey: string }>, res: any) => {
     return res.status(404).json({ error: "Video not found or not configured" });
   }
 
-  const driveUrl = `https://drive.usercontent.google.com/download?id=${video.fileId}&export=download&authuser=0&confirm=t`;
-  const range = req.headers.range;
-
   void (async () => {
     try {
-      const driveResponse = await fetch(driveUrl, {
-        method: "GET",
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          ...(range ? { Range: range } : {}),
-        },
-        redirect: "follow",
+      const auth = getAuth();
+      const drive = google.drive({ version: "v3", auth });
+
+      // Fetch file metadata to get size and mime type
+      const meta = await drive.files.get({
+        fileId: video.fileId,
+        fields: "mimeType,size",
       });
 
-      if (!driveResponse.ok || !driveResponse.body) {
-        return res.status(driveResponse.status || 502).json({
-          error: "Failed to fetch video from Google Drive",
-          status: driveResponse.status,
-        });
+      const mimeType = meta.data.mimeType ?? "video/mp4";
+      const fileSize = Number(meta.data.size ?? 0);
+      const rangeHeader = req.headers.range;
+
+      const driveReqHeaders: Record<string, string> = {};
+      let statusCode = 200;
+
+      if (rangeHeader && fileSize > 0) {
+        const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
+        const start = parseInt(startStr, 10);
+        const end = endStr ? parseInt(endStr, 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
+
+        driveReqHeaders["Range"] = `bytes=${start}-${end}`;
+        statusCode = 206;
+
+        res.setHeader("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+        res.setHeader("Content-Length", chunkSize);
+      } else if (fileSize > 0) {
+        res.setHeader("Content-Length", fileSize);
       }
 
-      res.status(driveResponse.status);
-      res.setHeader(
-        "Content-Type",
-        driveResponse.headers.get("content-type") || "video/mp4",
-      );
+      res.setHeader("Content-Type", mimeType);
       res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Cache-Control", "private, max-age=3600");
       res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Cache-Control", "public, max-age=3600");
 
-      const contentLength = driveResponse.headers.get("content-length");
-      if (contentLength) {
-        res.setHeader("Content-Length", contentLength);
-      }
+      const driveRes = await drive.files.get(
+        { fileId: video.fileId, alt: "media" },
+        { responseType: "stream", headers: driveReqHeaders },
+      );
 
-      const contentRange = driveResponse.headers.get("content-range");
-      if (contentRange) {
-        res.setHeader("Content-Range", contentRange);
-      }
+      res.status(statusCode);
+      (driveRes.data as NodeJS.ReadableStream)
+        .on("error", (err) => {
+          console.error("[video-stream] stream error:", err.message);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Stream error", detail: err.message });
+          } else {
+            res.end();
+          }
+        })
+        .pipe(res);
+    } catch (err: any) {
+      console.error("[video-stream] error:", err?.message ?? err);
+      if (res.headersSent) return;
 
-      const stream = Readable.fromWeb(driveResponse.body as any);
-      stream.on("error", (err) => {
-        console.error("Drive stream error:", err);
-        if (!res.headersSent) {
-          res
-            .status(500)
-            .json({ error: "Failed to stream video", detail: err.message });
-        } else {
-          res.end();
-        }
-      });
+      const status =
+        err?.code === 404 || err?.status === 404 ? 404
+        : err?.code === 403 || err?.status === 403 ? 403
+        : 500;
 
-      stream.pipe(res);
-    } catch (err) {
-      const error = err as Error;
-      console.error("Proxy error:", error);
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: "Failed to fetch video",
-          detail: error.message,
-        });
-      }
+      res.status(status).json({ error: err?.message ?? "Internal server error" });
     }
   })();
 };
@@ -119,6 +140,8 @@ const listVideos: RequestHandler = (_req, res) => {
     videos,
   });
 };
+
+// ── Routes ───────────────────────────────────────────────────────────────────
 
 router.get("/video/:videoKey", getVideoInfo);
 router.get("/video-stream/:videoKey", streamVideo);

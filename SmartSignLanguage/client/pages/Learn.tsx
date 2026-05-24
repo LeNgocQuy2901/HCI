@@ -39,9 +39,9 @@ export default function Learn() {
 
   const [activeTab, setActiveTab] = useState<Tab>("learn");
   const [selectedCategory, setSelectedCategory] =
-    useState<Category>("greetings");
+    useState<Category>("greeting");
   const [selectedQuizCategory, setSelectedQuizCategory] =
-    useState<Category>("greetings");
+    useState<Category>("greeting");
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<Difficulty>("beginner");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
