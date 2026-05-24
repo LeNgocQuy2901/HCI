@@ -109,6 +109,20 @@ function formatDetectedHands(handedness: string[], landmarkCount = handedness.le
   return handedness[0] || "Unknown";
 }
 
+function mirrorOverlayLandmarks(
+  detection: HandDetectionOverlay,
+): HandDetectionOverlay {
+  return {
+    ...detection,
+    landmarks: detection.landmarks.map((hand) =>
+      hand.map((point) => ({
+        ...point,
+        x: 1 - point.x,
+      })),
+    ),
+  };
+}
+
 function mostVotedGesture(
   predictions: RecognitionResult[],
 ): RecognitionResult | null {
@@ -282,11 +296,13 @@ export default function Recognition() {
           : null;
 
     if (detectionResults && detectionResults.landmarks.length > 0) {
+      const displayDetection = mirrorOverlayLandmarks(detectionResults);
+
       if (showBoundingBox) {
         drawBoundingBoxes(
           canvas,
-          detectionResults.landmarks,
-          detectionResults.handedness,
+          displayDetection.landmarks,
+          displayDetection.handedness,
           {
             lineColor: "#00FF00",
             lineWidth: 2,
@@ -297,8 +313,8 @@ export default function Recognition() {
       if (showLandmarks) {
         drawHandLandmarks(
           canvas,
-          detectionResults.landmarks,
-          detectionResults.handedness,
+          displayDetection.landmarks,
+          displayDetection.handedness,
           {
             lineColor: "#00FF00",
             pointColor: "#FF0000",

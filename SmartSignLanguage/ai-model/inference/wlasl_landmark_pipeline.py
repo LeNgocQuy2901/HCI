@@ -151,9 +151,9 @@ class HolisticLandmarkExtractor:
             mp_vision.HandLandmarkerOptions(
                 base_options=mp_python.BaseOptions(model_asset_path=str(hand_task_path)),
                 num_hands=2,
-                min_hand_detection_confidence=0.2,
-                min_hand_presence_confidence=0.2,
-                min_tracking_confidence=0.2,
+                min_hand_detection_confidence=0.3,
+                min_hand_presence_confidence=0.3,
+                min_tracking_confidence=0.3,
                 running_mode=mp_vision.RunningMode.IMAGE,
             )
         )
@@ -191,16 +191,10 @@ class HolisticLandmarkExtractor:
                 dtype=np.float32,
             ).flatten()
 
-            if hand_label == "Left" and not left_hand_set:
+            if hand_label == "Left":
                 left_hand = flat_points
                 left_hand_set = True
-            elif hand_label == "Right" and not right_hand_set:
-                right_hand = flat_points
-                right_hand_set = True
-            elif not left_hand_set:
-                left_hand = flat_points
-                left_hand_set = True
-            elif not right_hand_set:
+            else:
                 right_hand = flat_points
                 right_hand_set = True
 
