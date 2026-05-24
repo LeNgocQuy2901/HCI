@@ -98,4 +98,4 @@ Thumbs.db
 .env.local
 .env.*.local
 
-"service-account-key.json" 
+service-account-key.json

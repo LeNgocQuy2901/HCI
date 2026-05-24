@@ -16,9 +16,7 @@ if not exist "model\mapping.json" (
     echo ! mapping.json not found in ai-model\model
 )
 if not exist "model\hand_landmarker.task" (
-    if not exist "model\hand_landmarker (1).task" (
-        echo ! hand_landmarker.task not found in ai-model\model
-    )
+    echo ! hand_landmarker.task not found in ai-model\model
 )
 if not exist "model\pose_landmarker.task" (
     echo ! pose_landmarker.task not found in ai-model\model

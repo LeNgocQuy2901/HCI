@@ -48,7 +48,7 @@ export function useHandDetection() {
             delegate: "GPU",
           },
           runningMode: "VIDEO",
-          numHands: 1,
+          numHands: 2,
         });
 
         setHandLandmarker(landmarker);

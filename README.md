@@ -7,7 +7,7 @@ SmartSignLanguage là ứng dụng học và nhận diện ngôn ngữ ký hiệ
 - Học từ vựng ngôn ngữ ký hiệu qua bài học và video mẫu.
 - Nhận diện ký hiệu realtime từ webcam.
 - AI inference server dùng MediaPipe Hands + Pose và model Keras.
-- Hỗ trợ model WLASL 10 từ: `book`, `finish`, `go`, `good`, `help`, `like`, `mother`, `what`, `who`, `yes`.
+- Hỗ trợ model landmarks sequence từ `model_landmarks.keras` và `mapping.json`.
 - Có đăng nhập, đăng ký, hồ sơ người dùng, phản hồi và các trang học tập.
 
 ## Công Nghệ
@@ -104,15 +104,7 @@ hand_landmarker.task
 pose_landmarker.task
 ```
 
-File `model_weights.pkl` có thể giữ lại để tham khảo, nhưng server hiện tại không dùng file này vì `model_landmarks.keras` đã chứa kiến trúc và weights.
-
-Nếu file hand landmarker của bạn đang có tên `hand_landmarker (1).task`, nên đổi tên thành:
-
-```text
-hand_landmarker.task
-```
-
-Server vẫn có fallback đọc `hand_landmarker (1).task`, nhưng tên chuẩn giúp tránh nhầm lẫn.
+File `model_weights.pkl` không cần cho runtime vì `model_landmarks.keras` đã chứa kiến trúc và weights.
 
 ## Chạy Project
 
@@ -342,4 +334,3 @@ npm start
 ```
 
 Lưu ý: production web server không tự chạy AI backend. Nếu cần nhận diện realtime, vẫn phải chạy FastAPI server riêng ở port 8000 hoặc cấu hình lại `VITE_API_URL`.
-

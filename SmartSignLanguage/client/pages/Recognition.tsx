@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Layout from "@/components/Layout";
 import { useCamera } from "@/hooks/use-camera";
+import { useHandDetection } from "@/hooks/use-hand-detection";
 import {
   clearCanvas,
   drawBoundingBoxes,
@@ -65,13 +66,14 @@ interface HandDetectionOverlay {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PREDICTION_INTERVAL_MS = 120;
-const MIN_ACCEPTED_CONFIDENCE = 0.15;
+const MIN_ACCEPTED_CONFIDENCE = 0.45;
 const STABILITY_WINDOW_SIZE = 5;
 const STABILITY_MIN_VOTES = 2;
 const DUPLICATE_RESULT_COOLDOWN_MS = 1200;
 const LIVE_RESULT_TTL_MS = 2500;
 const HAND_LOST_GRACE_MS = 3000;
 const HAND_LOST_MISSES = 10;
+const SERVER_SEQUENCE_RESET_COOLDOWN_MS = 1200;
 
 async function resetServerSequence() {
   try {
@@ -81,9 +83,16 @@ async function resetServerSequence() {
   }
 }
 
-function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+function videoToJpegBlob(video: HTMLVideoElement): Promise<Blob | null> {
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  const context = canvas.getContext("2d");
+  if (!context) return Promise.resolve(null);
+
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
   return new Promise((resolve) => {
-    canvas.toBlob(resolve, "image/jpeg", 0.72);
+    canvas.toBlob(resolve, "image/jpeg", 0.82);
   });
 }
 
@@ -137,6 +146,11 @@ export default function Recognition() {
       width: 640,
       height: 480,
     });
+  const {
+    isReady: handDetectionReady,
+    error: handDetectionError,
+    detectHands,
+  } = useHandDetection();
 
   const animationFrameRef = useRef<number | null>(null);
   const currentFrameRef = useRef(0);
@@ -148,6 +162,7 @@ export default function Recognition() {
   const missedHandFramesRef = useRef(0);
   const predictionWindowRef = useRef<RecognitionResult[]>([]);
   const lastAcceptedRef = useRef<RecognitionResult | null>(null);
+  const lastServerResetAtRef = useRef(0);
 
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<RecognitionResult[]>([]);
@@ -194,13 +209,13 @@ export default function Recognition() {
   }, []);
 
   const predictFrame = useCallback(
-    async (canvas: HTMLCanvasElement): Promise<InferencePrediction | null> => {
+    async (video: HTMLVideoElement): Promise<InferencePrediction | null> => {
       if (!serverConnected || isProcessingRef.current) return null;
 
       isProcessingRef.current = true;
 
       try {
-        const blob = await canvasToJpegBlob(canvas);
+        const blob = await videoToJpegBlob(video);
         if (!blob) return null;
 
         const formData = new FormData();
@@ -251,11 +266,20 @@ export default function Recognition() {
     ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
     ctx.restore();
 
+    const clientDetection = detectHands(video);
+    if (clientDetection && clientDetection.landmarks.length > 0) {
+      latestDetectionRef.current = clientDetection;
+      lastHandSeenAtRef.current = Date.now();
+      missedHandFramesRef.current = 0;
+    }
+
     const detectionResults =
-      latestDetectionRef.current &&
-      Date.now() - lastHandSeenAtRef.current < HAND_LOST_GRACE_MS
-        ? latestDetectionRef.current
-        : null;
+      clientDetection && clientDetection.landmarks.length > 0
+        ? clientDetection
+        : latestDetectionRef.current &&
+            Date.now() - lastHandSeenAtRef.current < HAND_LOST_GRACE_MS
+          ? latestDetectionRef.current
+          : null;
 
     if (detectionResults && detectionResults.landmarks.length > 0) {
       if (showBoundingBox) {
@@ -296,7 +320,7 @@ export default function Recognition() {
       now - lastPredictionRequestedAtRef.current >= PREDICTION_INTERVAL_MS
     ) {
       lastPredictionRequestedAtRef.current = now;
-      predictFrame(canvas).then((prediction) => {
+      predictFrame(video).then((prediction) => {
         if (!prediction) {
           missedHandFramesRef.current += 1;
 
@@ -306,6 +330,15 @@ export default function Recognition() {
           ) {
             latestDetectionRef.current = null;
             setLiveResult(null);
+            predictionWindowRef.current = [];
+            const now = Date.now();
+            if (
+              now - lastServerResetAtRef.current >=
+              SERVER_SEQUENCE_RESET_COOLDOWN_MS
+            ) {
+              lastServerResetAtRef.current = now;
+              resetServerSequence();
+            }
           }
           return;
         }
@@ -348,6 +381,15 @@ export default function Recognition() {
           ) {
             latestDetectionRef.current = null;
             setLiveResult(null);
+            predictionWindowRef.current = [];
+            const now = Date.now();
+            if (
+              now - lastServerResetAtRef.current >=
+              SERVER_SEQUENCE_RESET_COOLDOWN_MS
+            ) {
+              lastServerResetAtRef.current = now;
+              resetServerSequence();
+            }
           }
           return;
         }
@@ -373,6 +415,7 @@ export default function Recognition() {
         setLiveResult(newResult);
 
         if (prediction.confidence < MIN_ACCEPTED_CONFIDENCE) {
+          predictionWindowRef.current = [];
           return;
         }
 
@@ -400,6 +443,7 @@ export default function Recognition() {
     animationFrameRef.current = requestAnimationFrame(processFrame);
   }, [
     canvasRef,
+    detectHands,
     predictFrame,
     serverConnected,
     showBoundingBox,
@@ -483,6 +527,7 @@ export default function Recognition() {
     setLiveResult(null);
     predictionWindowRef.current = [];
     lastAcceptedRef.current = null;
+    lastServerResetAtRef.current = Date.now();
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
@@ -501,6 +546,7 @@ export default function Recognition() {
     setLiveResult(null);
     predictionWindowRef.current = [];
     lastAcceptedRef.current = null;
+    lastServerResetAtRef.current = Date.now();
     currentFrameRef.current = 0;
     setCurrentFrame(0);
     setStats({
@@ -632,6 +678,23 @@ export default function Recognition() {
                 </div>
               </Card>
             )}
+
+            {handDetectionError && (
+              <Card className="border-yellow-200 bg-yellow-50">
+                <div className="flex items-start gap-3 p-4">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-yellow-900 text-sm">
+                      Hand Overlay
+                    </p>
+                    <p className="text-yellow-800 text-sm">
+                      Client-side hand overlay is unavailable, so landmarks may
+                      update less smoothly from server responses.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
           </section>
 
           <aside className="space-y-4">
@@ -692,7 +755,16 @@ export default function Recognition() {
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Landmark Pipeline</span>
+                  <span className="text-muted-foreground">Hand Overlay</span>
+                  <Badge
+                    variant={handDetectionReady ? "default" : "secondary"}
+                    className={handDetectionReady ? "bg-green-500" : ""}
+                  >
+                    {handDetectionReady ? "Client-side" : "Loading"}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Landmark Model</span>
                   <Badge
                     variant={serverConnected ? "default" : "secondary"}
                     className={serverConnected ? "bg-green-500" : ""}

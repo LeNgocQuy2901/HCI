@@ -36,10 +36,7 @@ def model_dir() -> Path:
 
 
 def hand_landmarker_path() -> Path:
-    preferred = model_dir() / "hand_landmarker.task"
-    if preferred.exists():
-        return preferred
-    return model_dir() / "hand_landmarker (1).task"
+    return model_dir() / "hand_landmarker.task"
 
 
 app = FastAPI(
