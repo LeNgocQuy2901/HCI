@@ -237,7 +237,8 @@ class WlaslLandmarkSequenceModel:
         mapping_path: Path,
         hand_task_path: Path,
         pose_task_path: Path,
-        sequence_length: int = SEQ_LEN,
+        sequence_length: Optional[int] = None,
+        name: str = "WLASL 8-source 10-word Landmark Keras",
     ):
         if load_model is None:
             raise RuntimeError("tensorflow is not installed")
@@ -251,8 +252,9 @@ class WlaslLandmarkSequenceModel:
         self.mapping_path = mapping_path
         self.hand_task_path = hand_task_path
         self.pose_task_path = pose_task_path
-        self.sequence_length = sequence_length
+        self.name = name
         self.labels, self.mapping = load_mapping(mapping_path)
+        self.sequence_length = int(sequence_length or self.mapping.get("seq_len") or SEQ_LEN)
         self.model = load_model(str(model_path), compile=False)
         self.extractor = HolisticLandmarkExtractor(hand_task_path, pose_task_path)
         self.sequence: deque[np.ndarray] = deque(maxlen=sequence_length)

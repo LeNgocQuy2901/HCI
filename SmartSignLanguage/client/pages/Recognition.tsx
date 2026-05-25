@@ -64,9 +64,12 @@ interface HandDetectionOverlay {
   confidence: number[];
 }
 
+type RecognitionMode = "words" | "alnum";
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PREDICTION_INTERVAL_MS = 120;
 const MIN_ACCEPTED_CONFIDENCE = 0.45;
+const ALNUM_MIN_ACCEPTED_CONFIDENCE = 0.55;
 const STABILITY_WINDOW_SIZE = 5;
 const STABILITY_MIN_VOTES = 2;
 const DUPLICATE_RESULT_COOLDOWN_MS = 1200;
@@ -75,9 +78,28 @@ const HAND_LOST_GRACE_MS = 3000;
 const HAND_LOST_MISSES = 10;
 const SERVER_SEQUENCE_RESET_COOLDOWN_MS = 1200;
 
-async function resetServerSequence() {
+const RECOGNITION_MODES: Array<{
+  value: RecognitionMode;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "words",
+    label: "Words",
+    description: "10 words + full 46-class model",
+  },
+  {
+    value: "alnum",
+    label: "Alphabet/Number",
+    description: "Fast A-Z and 0-9 model",
+  },
+];
+
+async function resetServerSequence(mode: RecognitionMode) {
   try {
-    await fetch(`${API_BASE_URL}/api/reset-sequence`, { method: "POST" });
+    await fetch(`${API_BASE_URL}/api/reset-sequence?mode=${mode}`, {
+      method: "POST",
+    });
   } catch (err) {
     console.warn("Could not reset inference sequence:", err);
   }
@@ -192,6 +214,8 @@ export default function Recognition() {
   const [showLandmarks, setShowLandmarks] = useState(true);
   const [serverConnected, setServerConnected] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [recognitionMode, setRecognitionMode] =
+    useState<RecognitionMode>("words");
 
   useEffect(() => {
     const checkServer = async () => {
@@ -235,10 +259,13 @@ export default function Recognition() {
         const formData = new FormData();
         formData.append("file", blob, "frame.jpg");
 
-        const response = await fetch(`${API_BASE_URL}/api/predict`, {
-          method: "POST",
-          body: formData,
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/api/predict?mode=${recognitionMode}`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -254,7 +281,7 @@ export default function Recognition() {
         isProcessingRef.current = false;
       }
     },
-    [serverConnected],
+    [recognitionMode, serverConnected],
   );
 
   const processFrame = useCallback(() => {
@@ -353,7 +380,7 @@ export default function Recognition() {
               SERVER_SEQUENCE_RESET_COOLDOWN_MS
             ) {
               lastServerResetAtRef.current = now;
-              resetServerSequence();
+              resetServerSequence(recognitionMode);
             }
           }
           return;
@@ -404,7 +431,7 @@ export default function Recognition() {
               SERVER_SEQUENCE_RESET_COOLDOWN_MS
             ) {
               lastServerResetAtRef.current = now;
-              resetServerSequence();
+              resetServerSequence(recognitionMode);
             }
           }
           return;
@@ -430,7 +457,12 @@ export default function Recognition() {
 
         setLiveResult(newResult);
 
-        if (prediction.confidence < MIN_ACCEPTED_CONFIDENCE) {
+        const minAcceptedConfidence =
+          recognitionMode === "alnum"
+            ? ALNUM_MIN_ACCEPTED_CONFIDENCE
+            : MIN_ACCEPTED_CONFIDENCE;
+
+        if (prediction.confidence < minAcceptedConfidence) {
           predictionWindowRef.current = [];
           return;
         }
@@ -461,6 +493,7 @@ export default function Recognition() {
     canvasRef,
     detectHands,
     predictFrame,
+    recognitionMode,
     serverConnected,
     showBoundingBox,
     showLandmarks,
@@ -523,7 +556,7 @@ export default function Recognition() {
         await startCamera();
       }
 
-      await resetServerSequence();
+      await resetServerSequence(recognitionMode);
       startTimeRef.current = Date.now();
       setIsRunning(true);
     } catch (err) {
@@ -534,7 +567,7 @@ export default function Recognition() {
 
   const handleStop = () => {
     setIsRunning(false);
-    resetServerSequence();
+    resetServerSequence(recognitionMode);
     stopCamera();
     latestDetectionRef.current = null;
     lastHandSeenAtRef.current = 0;
@@ -553,7 +586,7 @@ export default function Recognition() {
   };
 
   const handleReset = () => {
-    resetServerSequence();
+    resetServerSequence(recognitionMode);
     setResults([]);
     latestDetectionRef.current = null;
     lastHandSeenAtRef.current = 0;
@@ -573,6 +606,23 @@ export default function Recognition() {
     });
   };
 
+  const handleModeChange = (mode: RecognitionMode) => {
+    if (mode === recognitionMode) return;
+    setRecognitionMode(mode);
+    resetServerSequence(mode);
+    setResults([]);
+    latestDetectionRef.current = null;
+    lastHandSeenAtRef.current = 0;
+    lastPredictionRequestedAtRef.current = 0;
+    missedHandFramesRef.current = 0;
+    setLiveResult(null);
+    predictionWindowRef.current = [];
+    lastAcceptedRef.current = null;
+    lastServerResetAtRef.current = Date.now();
+    currentFrameRef.current = 0;
+    setCurrentFrame(0);
+  };
+
   const latestResult =
     liveResult && Date.now() - liveResult.timestamp < LIVE_RESULT_TTL_MS
       ? liveResult
@@ -584,9 +634,8 @@ export default function Recognition() {
         <div className="mb-6">
           <h1 className="text-4xl font-bold mb-2">Realtime Sign Recognition</h1>
           <p className="text-lg text-muted-foreground">
-            Uses the WLASL 10-word model: mirrored camera frames, server-side
-            MediaPipe hands and pose landmarks, and a rolling 20-frame Keras
-            sequence classifier.
+            Choose the word model for sign vocabulary, or the fast
+            alphabet/number model for A-Z and 0-9.
           </p>
         </div>
 
@@ -629,6 +678,32 @@ export default function Recognition() {
                   <Badge variant="secondary">Frame: {currentFrame}</Badge>
                 </div>
               </div>
+            </Card>
+
+            <Card className="p-4">
+              <div className="flex flex-wrap gap-2">
+                {RECOGNITION_MODES.map((mode) => {
+                  const isSelected = recognitionMode === mode.value;
+                  return (
+                    <Button
+                      key={mode.value}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      onClick={() => handleModeChange(mode.value)}
+                      className="flex-1 min-w-[180px]"
+                    >
+                      {mode.label}
+                    </Button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {
+                  RECOGNITION_MODES.find(
+                    (mode) => mode.value === recognitionMode,
+                  )?.description
+                }
+              </p>
             </Card>
 
             <div className="flex flex-wrap gap-3">
@@ -786,6 +861,12 @@ export default function Recognition() {
                     className={serverConnected ? "bg-green-500" : ""}
                   >
                     Server-side
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Mode</span>
+                  <Badge variant="outline">
+                    {recognitionMode === "alnum" ? "Alphabet/Number" : "Words"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
