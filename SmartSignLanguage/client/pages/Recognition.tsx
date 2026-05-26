@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { useCamera } from "@/hooks/use-camera";
 import { useHandDetection } from "@/hooks/use-hand-detection";
+import { useAuthStore } from "@/hooks/use-auth";
+import { useLearningStore } from "@/hooks/use-learning-store";
+import { vocabularyCards } from "@shared/vocabulary";
+import { buildRecognitionSuggestion } from "@shared/sign-metadata";
 import {
   clearCanvas,
   drawBoundingBoxes,
@@ -14,6 +19,7 @@ import {
   AlertCircle,
   Camera,
   Clock,
+  Eye,
   Play,
   RotateCcw,
   Square,
@@ -65,11 +71,20 @@ interface HandDetectionOverlay {
 }
 
 type RecognitionMode = "words" | "alnum";
+type LessonPracticeState = {
+  mode?: "lesson-practice";
+  lessonId?: string;
+  cardId?: string;
+  expectedWord?: string;
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PREDICTION_INTERVAL_MS = 120;
 const MIN_ACCEPTED_CONFIDENCE = 0.45;
 const ALNUM_MIN_ACCEPTED_CONFIDENCE = 0.55;
+const LESSON_PRACTICE_CONFIDENCE = 0.75;
+const PRACTICE_REQUIRED_CORRECT = 2;
+const PRACTICE_MAX_ATTEMPTS = 3;
 const STABILITY_WINDOW_SIZE = 5;
 const STABILITY_MIN_VOTES = 2;
 const DUPLICATE_RESULT_COOLDOWN_MS = 1200;
@@ -120,6 +135,10 @@ function videoToJpegBlob(video: HTMLVideoElement): Promise<Blob | null> {
 
 function normalizeGestureLabel(value: string) {
   return value.replace(/_/g, " ").replace(/\bthankyou\b/i, "thank you");
+}
+
+function comparableGestureLabel(value: string) {
+  return normalizeGestureLabel(value).toLowerCase().trim();
 }
 
 function formatDetectedHands(handedness: string[], landmarkCount = handedness.length) {
@@ -176,7 +195,29 @@ function mostVotedGesture(
   return winner && winner.count >= STABILITY_MIN_VOTES ? winner.best : null;
 }
 
+function calculateStability(predictions: RecognitionResult[], gesture: string) {
+  if (predictions.length === 0) return 0;
+  const comparableGesture = comparableGestureLabel(gesture);
+  const matching = predictions.filter(
+    (prediction) =>
+      comparableGestureLabel(prediction.gesture) === comparableGesture,
+  ).length;
+  return Math.round((matching / predictions.length) * 100) / 100;
+}
+
 export default function Recognition() {
+  const location = useLocation();
+  const practiceState = (location.state || {}) as LessonPracticeState;
+  const isLessonPractice =
+    practiceState.mode === "lesson-practice" &&
+    Boolean(
+      practiceState.lessonId &&
+        practiceState.cardId &&
+        practiceState.expectedWord,
+    );
+  const { user } = useAuthStore();
+  const userId = user?.id || "guest";
+  const learningStore = useLearningStore();
   const { videoRef, canvasRef, isActive, error, startCamera, stopCamera } =
     useCamera({
       width: 640,
@@ -199,6 +240,8 @@ export default function Recognition() {
   const predictionWindowRef = useRef<RecognitionResult[]>([]);
   const lastAcceptedRef = useRef<RecognitionResult | null>(null);
   const lastServerResetAtRef = useRef(0);
+  const practiceSavedRef = useRef(false);
+  const practiceStartedAtRef = useRef(Date.now());
 
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<RecognitionResult[]>([]);
@@ -216,6 +259,16 @@ export default function Recognition() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [recognitionMode, setRecognitionMode] =
     useState<RecognitionMode>("words");
+  const [practiceFeedback, setPracticeFeedback] = useState<string | null>(null);
+  const [practiceAttempts, setPracticeAttempts] = useState<
+    Array<{
+      predictedWord: string;
+      isCorrect: boolean;
+      confidence: number;
+      stabilityScore: number;
+      suggestion: string;
+    }>
+  >([]);
 
   useEffect(() => {
     const checkServer = async () => {
@@ -462,6 +515,85 @@ export default function Recognition() {
             ? ALNUM_MIN_ACCEPTED_CONFIDENCE
             : MIN_ACCEPTED_CONFIDENCE;
 
+        if (
+          isLessonPractice &&
+          practiceState.lessonId &&
+          practiceState.cardId &&
+          practiceState.expectedWord &&
+          !practiceSavedRef.current
+        ) {
+          const expected = comparableGestureLabel(practiceState.expectedWord);
+          const predicted = comparableGestureLabel(newResult.gesture);
+          const stabilityScore = calculateStability(
+            predictionWindowRef.current,
+            newResult.gesture,
+          );
+          const passedThreshold =
+            prediction.confidence >= LESSON_PRACTICE_CONFIDENCE &&
+            stabilityScore >= 0.6;
+          const isCorrect =
+            expected === predicted && passedThreshold;
+
+          if (isCorrect || prediction.confidence >= minAcceptedConfidence) {
+            const targetCard = vocabularyCards.find(
+              (card) => card.id === practiceState.cardId,
+            );
+            let issue: "confused" | "low-confidence" | "unstable" | "correct" =
+              "correct";
+            if (expected !== predicted) {
+              issue = "confused";
+            } else if (prediction.confidence < LESSON_PRACTICE_CONFIDENCE) {
+              issue = "low-confidence";
+            } else if (stabilityScore < 0.6) {
+              issue = "unstable";
+            }
+            const suggestion = buildRecognitionSuggestion(
+              targetCard,
+              issue,
+              newResult.gesture,
+            );
+
+            setPracticeFeedback(suggestion);
+
+            const nextAttempts = [
+              ...practiceAttempts,
+              {
+                predictedWord: newResult.gesture,
+                isCorrect,
+                confidence: prediction.confidence,
+                stabilityScore,
+                suggestion,
+              },
+            ].slice(-PRACTICE_MAX_ATTEMPTS);
+            setPracticeAttempts(nextAttempts);
+
+            const correctCount = nextAttempts.filter(
+              (attempt) => attempt.isCorrect,
+            ).length;
+            const practicePassed = correctCount >= PRACTICE_REQUIRED_CORRECT;
+
+            if (practicePassed || nextAttempts.length >= PRACTICE_MAX_ATTEMPTS) {
+              practiceSavedRef.current = true;
+            }
+
+            void learningStore.saveRecognitionPracticeResult(userId, {
+              lessonId: practiceState.lessonId,
+              cardId: practiceState.cardId,
+              expectedWord: practiceState.expectedWord,
+              predictedWord: newResult.gesture,
+              isCorrect: practicePassed,
+              confidence: prediction.confidence,
+              confusedWith: isCorrect ? undefined : newResult.gesture,
+              suggestion,
+              attemptCount: nextAttempts.length,
+              durationMs: Date.now() - practiceStartedAtRef.current,
+              stabilityScore,
+              passedThreshold,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+
         if (prediction.confidence < minAcceptedConfidence) {
           predictionWindowRef.current = [];
           return;
@@ -492,12 +624,18 @@ export default function Recognition() {
   }, [
     canvasRef,
     detectHands,
+    isLessonPractice,
+    learningStore,
     predictFrame,
+    practiceState.cardId,
+    practiceState.expectedWord,
+    practiceState.lessonId,
     recognitionMode,
     serverConnected,
     showBoundingBox,
     showLandmarks,
     videoRef,
+    userId,
   ]);
 
   useEffect(() => {
@@ -558,6 +696,7 @@ export default function Recognition() {
 
       await resetServerSequence(recognitionMode);
       startTimeRef.current = Date.now();
+      practiceStartedAtRef.current = Date.now();
       setIsRunning(true);
     } catch (err) {
       console.error("Failed to start recognition:", err);
@@ -577,6 +716,10 @@ export default function Recognition() {
     predictionWindowRef.current = [];
     lastAcceptedRef.current = null;
     lastServerResetAtRef.current = Date.now();
+    practiceSavedRef.current = false;
+    practiceStartedAtRef.current = Date.now();
+    setPracticeFeedback(null);
+    setPracticeAttempts([]);
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
@@ -596,6 +739,10 @@ export default function Recognition() {
     predictionWindowRef.current = [];
     lastAcceptedRef.current = null;
     lastServerResetAtRef.current = Date.now();
+    practiceSavedRef.current = false;
+    practiceStartedAtRef.current = Date.now();
+    setPracticeFeedback(null);
+    setPracticeAttempts([]);
     currentFrameRef.current = 0;
     setCurrentFrame(0);
     setStats({
@@ -619,6 +766,10 @@ export default function Recognition() {
     predictionWindowRef.current = [];
     lastAcceptedRef.current = null;
     lastServerResetAtRef.current = Date.now();
+    practiceSavedRef.current = false;
+    practiceStartedAtRef.current = Date.now();
+    setPracticeFeedback(null);
+    setPracticeAttempts([]);
     currentFrameRef.current = 0;
     setCurrentFrame(0);
   };
@@ -638,6 +789,66 @@ export default function Recognition() {
             alphabet/number model for A-Z and 0-9.
           </p>
         </div>
+
+        {isLessonPractice && practiceState.expectedWord && (
+          <Card className="mb-6 p-5 border-primary/30 bg-primary/5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <Badge variant="outline" className="mb-2">
+                  Practice Lesson Sign
+                </Badge>
+                <h2 className="text-2xl font-bold">
+                  Target sign: {practiceState.expectedWord}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Result is saved when the AI detects the target with at least{" "}
+                  {Math.round(LESSON_PRACTICE_CONFIDENCE * 100)}% confidence.
+                </p>
+                {practiceFeedback && (
+                  <p className="mt-3 text-sm font-medium">{practiceFeedback}</p>
+                )}
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                  <Badge variant="secondary">
+                    Attempts: {practiceAttempts.length}/{PRACTICE_MAX_ATTEMPTS}
+                  </Badge>
+                  <Badge variant="secondary">
+                    Correct:{" "}
+                    {
+                      practiceAttempts.filter((attempt) => attempt.isCorrect)
+                        .length
+                    }
+                    /{PRACTICE_REQUIRED_CORRECT}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" asChild>
+                  <Link to="/learn">Watch Demo Again</Link>
+                </Button>
+                <Button variant="outline" onClick={handleReset}>
+                  Retry
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    if (practiceState.lessonId) {
+                      learningStore.recordLessonRecognition(
+                        practiceState.lessonId,
+                        userId,
+                        false,
+                      );
+                      setPracticeFeedback(
+                        "Marked for review. This sign will stay in your practice queue.",
+                      );
+                    }
+                  }}
+                >
+                  Mark for Review
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6">
           <section className="space-y-4">

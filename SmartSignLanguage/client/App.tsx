@@ -8,27 +8,44 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useAuthStore } from "@/hooks/use-auth";
+import { useLearningStore } from "@/hooks/use-learning-store";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Learn from "./pages/Learn";
 import Translate from "./pages/Translate";
 import Recognition from "./pages/Recognition";
-import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
+import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Feedback from "./pages/Feedback";
+import AdminContent from "./pages/AdminContent";
+import AdminAnalytics from "./pages/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
-  const { loadFromStorage } = useAuthStore();
+  const { loadFromStorage, getCurrentUser, token, user, isAuthenticated } =
+    useAuthStore();
+  const { syncFromServer } = useLearningStore();
 
   useEffect(() => {
     // Load auth state from localStorage on app start (once on mount)
     loadFromStorage();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      void syncFromServer(user.id);
+    }
+  }, [isAuthenticated, user?.id, syncFromServer]);
+
+  useEffect(() => {
+    if (token) {
+      void getCurrentUser();
+    }
+  }, [token, getCurrentUser]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -46,11 +63,13 @@ function AppContent() {
             <Route path="/learn" element={<Learn />} />
             <Route path="/translate" element={<Translate />} />
             <Route path="/recognition" element={<Recognition />} />
-            <Route path="/chat" element={<Chat />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/feedback" element={<Feedback />} />
+            <Route path="/admin/content" element={<AdminContent />} />
+            <Route path="/admin/analytics" element={<AdminAnalytics />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -182,6 +182,10 @@ DATABASE_PATH=./data/app.db
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 JWT_EXPIRES_IN=7d
 
+# Admin bootstrap
+# Comma-separated emails that should be promoted to admin at register/login.
+ADMIN_EMAILS=admin@example.com
+
 # Server
 PORT=8080
 HOST=localhost

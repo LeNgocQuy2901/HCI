@@ -5,9 +5,8 @@ import {
   BookOpen,
   Zap,
   Tv,
-  Users,
+  BarChart3,
   Video,
-  MessageCircle,
   Star,
   ArrowRight,
   CheckCircle2,
@@ -37,11 +36,11 @@ export default function Index() {
       href: "/recognition",
     },
     {
-      icon: Users,
-      title: "Chat and Connect",
+      icon: BarChart3,
+      title: "Learning Dashboard",
       description:
-        "Connect with other sign language learners with real-time translation support.",
-      href: "/chat",
+        "Track progress, weak topics, quiz accuracy, and recognition improvement.",
+      href: "/dashboard",
     },
   ];
 
@@ -56,7 +55,7 @@ export default function Index() {
     "Works on every device",
     "Offline learning mode",
     "Track progress and achievements",
-    "Supportive community",
+    "Structured learning analytics",
     "Frequent updates and new content",
   ];
 
@@ -85,7 +84,7 @@ export default function Index() {
                 <p className="text-xl text-muted-foreground leading-relaxed">
                   Break communication barriers with an AI-powered sign language
                   platform. Learn vocabulary, translate in real time, and
-                  connect with a supportive community.
+                  track your progress with clear learning analytics.
                 </p>
               </div>
 
@@ -276,7 +275,7 @@ export default function Index() {
               className="border-white/50 text-white hover:bg-white/10 rounded-full px-8"
               asChild
             >
-              <Link to="/chat">Join the Community</Link>
+              <Link to="/learn">Start Learning</Link>
             </Button>
           </div>
 

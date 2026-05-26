@@ -19,6 +19,7 @@ export interface User {
   email: string;
   username: string;
   fullName: string;
+  role: "user" | "admin";
   createdAt: string;
   updatedAt: string;
 }

@@ -11,6 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { Play, CheckCircle2, XCircle } from "lucide-react";
 import { categoryLabels, difficultyLabels } from "@shared/vocabulary";
 
+const quizTypeLabels: Record<string, string> = {
+  "video-to-text": "Sign to Text",
+  "text-to-video": "Text to Sign",
+  "multiple-choice": "Multiple Choice",
+  meaning_quiz: "Meaning Quiz",
+  video_to_word: "Video to Word",
+  word_to_sign: "Word to Sign",
+  common_mistake: "Common Mistake",
+};
+
 interface QuizComponentProps {
   questions: QuizQuestion[];
   onComplete: (results: {
@@ -84,11 +94,7 @@ export default function QuizComponent({
         {/* Question Type Badge */}
         <div className="flex gap-2">
           <Badge variant="secondary">
-            {current.type === "video-to-text"
-              ? "Sign to Text"
-              : current.type === "text-to-video"
-                ? "Text to Sign"
-                : "Multiple Choice"}
+            {quizTypeLabels[current.type] || "Quiz"}
           </Badge>
           <Badge variant="outline">
             {difficultyLabels[current.difficulty]}
@@ -201,9 +207,12 @@ export default function QuizComponent({
             </p>
             <p className="text-sm">
               {isAnswerCorrect
-                ? "Great job! Your answer is correct."
+                ? current.explanation || "Great job! Your answer is correct."
                 : `The correct answer is: ${current.options[current.correctAnswerIndex]}`}
             </p>
+            {!isAnswerCorrect && current.explanation && (
+              <p className="text-sm mt-2">{current.explanation}</p>
+            )}
           </div>
         )}
       </Card>

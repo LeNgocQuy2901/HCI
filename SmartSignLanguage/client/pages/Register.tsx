@@ -81,14 +81,13 @@ export default function Register() {
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-bold">Create Account</h1>
               <p className="text-muted-foreground">
-                Sign up to start learning sign language today
+                Sign up to start learning sign language today.
               </p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Full Name */}
               <div className="space-y-2">
-                <Label htmlFor="fullName">Create Account</Label>
+                <Label htmlFor="fullName">Full Name</Label>
                 <Input
                   id="fullName"
                   type="text"
@@ -102,7 +101,6 @@ export default function Register() {
                 )}
               </div>
 
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -118,11 +116,8 @@ export default function Register() {
                 )}
               </div>
 
-              {/* Username */}
               <div className="space-y-2">
-                <Label htmlFor="username">
-                  Sign up to start learning sign language today
-                </Label>
+                <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
                   type="text"
@@ -136,13 +131,12 @@ export default function Register() {
                 )}
               </div>
 
-              {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password">Full Name</Label>
+                <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   {...formRegister("password")}
                 />
                 {errors.password && (
@@ -152,13 +146,12 @@ export default function Register() {
                 )}
               </div>
 
-              {/* Confirm Password */}
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Username</Label>
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   {...formRegister("confirmPassword")}
                 />
                 {errors.confirmPassword && (
@@ -168,7 +161,6 @@ export default function Register() {
                 )}
               </div>
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full"
@@ -177,19 +169,20 @@ export default function Register() {
                 {isSubmitting || isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Password
+                    Creating account...
                   </>
                 ) : (
-                  "????????"
+                  "Create Account"
                 )}
               </Button>
             </form>
 
-            {/* Login Link */}
             <div className="text-center text-sm">
-              <span className="text-muted-foreground">Confirm Password</span>
+              <span className="text-muted-foreground">
+                Already have an account?{" "}
+              </span>
               <Link to="/login" className="text-primary hover:underline">
-                Creating account...
+                Sign in
               </Link>
             </div>
           </div>

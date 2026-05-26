@@ -10,6 +10,7 @@ interface VocabularyCardProps {
   card: VocabType;
   onMarkCorrect?: () => void;
   onMarkWrong?: () => void;
+  onVideoWatched?: () => void;
   showActions?: boolean;
 }
 
@@ -17,9 +18,17 @@ export default function VocabularyCardComponent({
   card,
   onMarkCorrect,
   onMarkWrong,
+  onVideoWatched,
   showActions = true,
 }: VocabularyCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const [trackedVideo, setTrackedVideo] = useState(false);
+
+  const handleVideoPlay = () => {
+    if (trackedVideo) return;
+    setTrackedVideo(true);
+    onVideoWatched?.();
+  };
 
   return (
     <div className="w-full perspective">
@@ -68,6 +77,7 @@ export default function VocabularyCardComponent({
                 autoPlay
                 loop
                 muted
+                onPlay={handleVideoPlay}
               >
                 <source src={card.videoUrl} type="video/mp4" />
                 <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">

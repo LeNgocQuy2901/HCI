@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
-import { LogOut, Loader2, User as UserIcon } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  LogOut,
+  Loader2,
+  User as UserIcon,
+} from "lucide-react";
 
 const profileSchema = z.object({
   fullName: z
@@ -126,7 +132,6 @@ export default function Profile() {
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md p-6">
           <div className="space-y-6">
-            {/* Profile Header */}
             <div className="flex items-center space-x-4 pb-6 border-b">
               <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
                 <UserIcon className="h-8 w-8 text-white" />
@@ -140,24 +145,35 @@ export default function Profile() {
               </div>
             </div>
 
-            {/* User Info */}
-            <div className="space-y-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Member Since</p>
-                <p>
-                  {new Date(user.createdAt).toLocaleDateString("vi-VN", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
-              </div>
+            <div className="space-y-1 text-sm">
+              <p className="text-muted-foreground">Member Since</p>
+              <p>
+                {new Date(user.createdAt).toLocaleDateString("vi-VN", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </p>
             </div>
 
-            {/* Edit Profile Form */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" asChild>
+                <Link to="/learn" className="gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Learn
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/dashboard" className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  Dashboard
+                </Link>
+              </Button>
+            </div>
+
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Member Since</Label>
+                <Label htmlFor="fullName">Full Name</Label>
                 <Input id="fullName" type="text" {...register("fullName")} />
                 {errors.fullName && (
                   <p className="text-sm text-destructive">
@@ -170,7 +186,7 @@ export default function Profile() {
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Full Name
+                    Saving changes...
                   </>
                 ) : (
                   "Save Changes"
@@ -178,14 +194,13 @@ export default function Profile() {
               </Button>
             </form>
 
-            {/* Logout Button */}
             <Button
               variant="destructive"
               className="w-full"
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              Saving...
+              Sign Out
             </Button>
           </div>
         </Card>

@@ -57,12 +57,20 @@ export interface LearningProgress {
 // Quiz types
 export interface QuizQuestion {
   id: string;
-  type: "video-to-text" | "text-to-video" | "multiple-choice";
+  type:
+    | "video-to-text"
+    | "text-to-video"
+    | "multiple-choice"
+    | "meaning_quiz"
+    | "video_to_word"
+    | "word_to_sign"
+    | "common_mistake";
   cardId: string;
   question: string;
   options: string[];
   correctAnswerIndex: number;
   difficulty: Difficulty;
+  explanation?: string;
 }
 
 export interface QuizResult {

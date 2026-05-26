@@ -28,6 +28,7 @@ export interface User {
   email: string;
   username: string;
   fullName: string;
+  role: "user" | "admin";
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +39,21 @@ export interface UserWithPassword extends User {
 
 export class UserService {
   private db = getDatabase();
+
+  private getConfiguredAdminEmails(): Set<string> {
+    return new Set(
+      (process.env.ADMIN_EMAILS || "")
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
+    );
+  }
+
+  private resolveInitialRole(email: string): "user" | "admin" {
+    return this.getConfiguredAdminEmails().has(email.toLowerCase())
+      ? "admin"
+      : "user";
+  }
 
   generateId(): string {
     return "user_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
@@ -70,18 +86,21 @@ export class UserService {
     const hashedPassword = await this.hashPassword(password);
     const now = new Date().toISOString();
 
+    const role = this.resolveInitialRole(email);
+
     const stmt = this.db.prepare(`
-      INSERT INTO users (id, email, username, password, fullName, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, email, username, password, fullName, role, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(id, email, username, hashedPassword, fullName, now, now);
+    stmt.run(id, email, username, hashedPassword, fullName, role, now, now);
 
     return {
       id,
       email,
       username,
       fullName,
+      role,
       createdAt: now,
       updatedAt: now,
     };
@@ -92,13 +111,20 @@ export class UserService {
       .prepare("SELECT * FROM users WHERE email = ?")
       .get(email) as UserWithPassword | undefined;
 
+    if (user && this.getConfiguredAdminEmails().has(user.email.toLowerCase()) && user.role !== "admin") {
+      this.db
+        .prepare("UPDATE users SET role = 'admin', updatedAt = ? WHERE id = ?")
+        .run(new Date().toISOString(), user.id);
+      user.role = "admin";
+    }
+
     return user || null;
   }
 
   async getUserById(id: string): Promise<User | null> {
     const user = this.db
       .prepare(
-        "SELECT id, email, username, fullName, createdAt, updatedAt FROM users WHERE id = ?"
+        "SELECT id, email, username, fullName, role, createdAt, updatedAt FROM users WHERE id = ?"
       )
       .get(id) as User | undefined;
 

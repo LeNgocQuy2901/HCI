@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Menu, X, LogOut, Settings, User } from "lucide-react";
+import { BarChart3, Menu, X, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -28,12 +28,17 @@ export default function Layout({ children }: LayoutProps) {
     { href: "/learn", label: "Learn" },
     { href: "/translate", label: "Translate" },
     { href: "/recognition", label: "Recognition" },
-    { href: "/chat", label: "Chat" },
+    { href: "/dashboard", label: "Dashboard" },
   ];
 
   // Add Profile link only if authenticated
   if (isAuthenticated) {
     navLinks.push({ href: "/profile", label: "Profile" });
+  }
+
+  if (isAuthenticated && user?.role === "admin") {
+    navLinks.push({ href: "/admin/content", label: "Content" });
+    navLinks.push({ href: "/admin/analytics", label: "Analytics" });
   }
 
   // Get user initials for avatar
@@ -119,9 +124,11 @@ export default function Layout({ children }: LayoutProps) {
                         <span>Profile</span>
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2">
-                      <Settings size={16} />
-                      <span>Profile</span>
+                    <DropdownMenuItem className="gap-2" asChild>
+                      <Link to="/dashboard">
+                        <BarChart3 size={16} />
+                        <span>Dashboard</span>
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
@@ -129,7 +136,7 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      <span>Settings</span>
+                      <span>Sign Out</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -141,14 +148,14 @@ export default function Layout({ children }: LayoutProps) {
                     className="h-11 px-5 text-base font-semibold"
                     asChild
                   >
-                    <Link to="/login">Sign Out</Link>
+                    <Link to="/login">Sign In</Link>
                   </Button>
                   <Button
                     size="sm"
                     className="h-11 px-5 text-base font-semibold"
                     asChild
                   >
-                    <Link to="/register">Sign In</Link>
+                    <Link to="/register">Sign Up</Link>
                   </Button>
                 </>
               )}
@@ -203,7 +210,17 @@ export default function Layout({ children }: LayoutProps) {
                     >
                       <Link to="/profile">
                         <User size={16} />
-                        Sign Up
+                        Profile
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start gap-2"
+                      asChild
+                    >
+                      <Link to="/dashboard">
+                        <BarChart3 size={16} />
+                        Dashboard
                       </Link>
                     </Button>
                     <Button
@@ -212,16 +229,16 @@ export default function Layout({ children }: LayoutProps) {
                       onClick={handleLogout}
                     >
                       <LogOut size={16} />
-                      Profile
+                      Sign Out
                     </Button>
                   </>
                 ) : (
                   <>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link to="/login">Sign Out</Link>
+                      <Link to="/login">Sign In</Link>
                     </Button>
                     <Button className="w-full" asChild>
-                      <Link to="/register">Sign In</Link>
+                      <Link to="/register">Sign Up</Link>
                     </Button>
                   </>
                 )}
@@ -240,41 +257,41 @@ export default function Layout({ children }: LayoutProps) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
               <h4 className="font-semibold mb-4">Smart Sign Language</h4>
-              <p className="text-sm text-muted-foreground">Sign Up</p>
+              <p className="text-sm text-muted-foreground">
+                Making sign language more accessible for everyone.
+              </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">
-                Making sign language more accessible for everyone.
-              </h4>
+              <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
                   <Link to="/learn" className="hover:text-foreground">
-                    Product
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/translate" className="hover:text-foreground">
                     Learn
                   </Link>
                 </li>
                 <li>
-                  <Link to="/recognition" className="hover:text-foreground">
+                  <Link to="/translate" className="hover:text-foreground">
                     Translate
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/recognition" className="hover:text-foreground">
+                    Recognition
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard" className="hover:text-foreground">
+                    Dashboard
                   </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Recognition</h4>
+              <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <Link to="/chat" className="hover:text-foreground">
-                    Community
-                  </Link>
-                </li>
-                <li>
                   <Link to="/feedback" className="hover:text-foreground">
-                    Chat
+                    Feedback
                   </Link>
                 </li>
               </ul>
@@ -296,7 +313,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </div>
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-            <p>Terms</p>
+            <p>© Smart Sign Language</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <a href="#" className="hover:text-foreground">
                 X

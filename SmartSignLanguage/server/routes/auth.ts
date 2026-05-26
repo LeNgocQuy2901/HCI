@@ -23,7 +23,11 @@ router.post("/register", async (req: Request, res: Response) => {
       data.fullName
     );
 
-    const token = generateToken({ userId: user.id, email: user.email });
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
     return res.status(201).json({
       message: "User registered successfully",
@@ -68,13 +72,18 @@ router.post("/login", async (req: Request, res: Response) => {
         .json({ error: "Invalid email or password" });
     }
 
-    const token = generateToken({ userId: user.id, email: user.email });
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
     const userResponse: User = {
       id: user.id,
       email: user.email,
       username: user.username,
       fullName: user.fullName,
+      role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

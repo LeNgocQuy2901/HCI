@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken, extractToken, TokenPayload } from "../auth";
+import { getDatabase } from "../db";
 
 declare global {
   namespace Express {
@@ -45,4 +46,38 @@ export function optionalAuthMiddleware(
   }
 
   next();
+}
+
+export function requireAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  return authMiddleware(req, res, next);
+}
+
+export function requireAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  if (!req.user) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const db = getDatabase();
+  try {
+    const user = db
+      .prepare("SELECT role FROM users WHERE id = ?")
+      .get(req.user.userId) as { role?: string } | undefined;
+
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    req.user.role = "admin";
+    next();
+  } finally {
+    db.close();
+  }
 }
