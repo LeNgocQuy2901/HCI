@@ -12,6 +12,7 @@ import { useLearningStore } from "@/hooks/use-learning-store";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Learn from "./pages/Learn";
+import Lookup from "./pages/Lookup";
 import Translate from "./pages/Translate";
 import Recognition from "./pages/Recognition";
 import Profile from "./pages/Profile";
@@ -61,6 +62,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/learn" element={<Learn />} />
+            <Route path="/lookup" element={<Lookup />} />
             <Route path="/translate" element={<Translate />} />
             <Route path="/recognition" element={<Recognition />} />
             <Route path="/dashboard" element={<Dashboard />} />

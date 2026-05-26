@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { Link, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { useCamera } from "@/hooks/use-camera";
@@ -20,10 +26,12 @@ import {
   Camera,
   Clock,
   Eye,
+  FileVideo,
   Play,
   RotateCcw,
   Square,
   TrendingUp,
+  Upload,
   Zap,
 } from "lucide-react";
 
@@ -71,6 +79,7 @@ interface HandDetectionOverlay {
 }
 
 type RecognitionMode = "words" | "alnum";
+type RecognitionSource = "camera" | "upload";
 type LessonPracticeState = {
   mode?: "lesson-practice";
   lessonId?: string;
@@ -141,7 +150,10 @@ function comparableGestureLabel(value: string) {
   return normalizeGestureLabel(value).toLowerCase().trim();
 }
 
-function formatDetectedHands(handedness: string[], landmarkCount = handedness.length) {
+function formatDetectedHands(
+  handedness: string[],
+  landmarkCount = handedness.length,
+) {
   if (landmarkCount >= 2) {
     const uniqueHands = Array.from(new Set(handedness.filter(Boolean)));
     return uniqueHands.length > 0 ? uniqueHands.join(" + ") : "Two hands";
@@ -212,8 +224,8 @@ export default function Recognition() {
     practiceState.mode === "lesson-practice" &&
     Boolean(
       practiceState.lessonId &&
-        practiceState.cardId &&
-        practiceState.expectedWord,
+      practiceState.cardId &&
+      practiceState.expectedWord,
     );
   const { user } = useAuthStore();
   const userId = user?.id || "guest";
@@ -242,8 +254,18 @@ export default function Recognition() {
   const lastServerResetAtRef = useRef(0);
   const practiceSavedRef = useRef(false);
   const practiceStartedAtRef = useRef(Date.now());
+  const uploadedVideoUrlRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isRunning, setIsRunning] = useState(false);
+  const [recognitionSource, setRecognitionSource] =
+    useState<RecognitionSource>("camera");
+  const [uploadedVideoName, setUploadedVideoName] = useState<string | null>(
+    null,
+  );
+  const [uploadedVideoError, setUploadedVideoError] = useState<string | null>(
+    null,
+  );
   const [results, setResults] = useState<RecognitionResult[]>([]);
   const [liveResult, setLiveResult] = useState<RecognitionResult | null>(null);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -297,6 +319,14 @@ export default function Recognition() {
     checkServer();
     const interval = setInterval(checkServer, 5000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (uploadedVideoUrlRef.current) {
+        URL.revokeObjectURL(uploadedVideoUrlRef.current);
+      }
+    };
   }, []);
 
   const predictFrame = useCallback(
@@ -355,10 +385,14 @@ export default function Recognition() {
     canvas.width = video.videoWidth || 640;
     canvas.height = video.videoHeight || 480;
 
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-    ctx.restore();
+    if (recognitionSource === "camera") {
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
 
     const clientDetection = detectHands(video);
     if (clientDetection && clientDetection.landmarks.length > 0) {
@@ -376,7 +410,10 @@ export default function Recognition() {
           : null;
 
     if (detectionResults && detectionResults.landmarks.length > 0) {
-      const displayDetection = mirrorOverlayLandmarks(detectionResults);
+      const displayDetection =
+        recognitionSource === "camera"
+          ? mirrorOverlayLandmarks(detectionResults)
+          : detectionResults;
 
       if (showBoundingBox) {
         drawBoundingBoxes(
@@ -451,8 +488,7 @@ export default function Recognition() {
             confidence: prediction.confidence_scores ?? [],
           };
 
-          const framesReady =
-            prediction.training_metadata?.frames_ready ?? 0;
+          const framesReady = prediction.training_metadata?.frames_ready ?? 0;
           const framesRequired =
             prediction.training_metadata?.frames_per_video ?? 20;
 
@@ -531,8 +567,7 @@ export default function Recognition() {
           const passedThreshold =
             prediction.confidence >= LESSON_PRACTICE_CONFIDENCE &&
             stabilityScore >= 0.6;
-          const isCorrect =
-            expected === predicted && passedThreshold;
+          const isCorrect = expected === predicted && passedThreshold;
 
           if (isCorrect || prediction.confidence >= minAcceptedConfidence) {
             const targetCard = vocabularyCards.find(
@@ -572,7 +607,10 @@ export default function Recognition() {
             ).length;
             const practicePassed = correctCount >= PRACTICE_REQUIRED_CORRECT;
 
-            if (practicePassed || nextAttempts.length >= PRACTICE_MAX_ATTEMPTS) {
+            if (
+              practicePassed ||
+              nextAttempts.length >= PRACTICE_MAX_ATTEMPTS
+            ) {
               practiceSavedRef.current = true;
             }
 
@@ -620,6 +658,13 @@ export default function Recognition() {
       });
     }
 
+    if (recognitionSource === "upload" && video.ended) {
+      setIsRunning(false);
+      resetServerSequence(recognitionMode);
+      animationFrameRef.current = null;
+      return;
+    }
+
     animationFrameRef.current = requestAnimationFrame(processFrame);
   }, [
     canvasRef,
@@ -631,6 +676,7 @@ export default function Recognition() {
     practiceState.expectedWord,
     practiceState.lessonId,
     recognitionMode,
+    recognitionSource,
     serverConnected,
     showBoundingBox,
     showLandmarks,
@@ -688,10 +734,122 @@ export default function Recognition() {
     return () => clearInterval(interval);
   }, [isRunning, results]);
 
+  const prepareUploadedVideo = async () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !uploadedVideoUrlRef.current) {
+      setUploadedVideoError("Please choose a video file before starting.");
+      return false;
+    }
+
+    video.srcObject = null;
+    video.src = uploadedVideoUrlRef.current;
+    video.muted = true;
+    video.playsInline = true;
+
+    if (video.readyState < video.HAVE_METADATA) {
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => resolve();
+      });
+    }
+
+    if (canvas) {
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+    }
+
+    video.currentTime = 0;
+    await video.play();
+    return true;
+  };
+
+  const handleVideoUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("video/")) {
+      setUploadedVideoError("Please select a valid video file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (uploadedVideoUrlRef.current) {
+      URL.revokeObjectURL(uploadedVideoUrlRef.current);
+    }
+
+    const nextUrl = URL.createObjectURL(file);
+    uploadedVideoUrlRef.current = nextUrl;
+    setUploadedVideoName(file.name);
+    setUploadedVideoError(null);
+    setRecognitionSource("upload");
+    setIsRunning(false);
+    stopCamera();
+    resetServerSequence(recognitionMode);
+
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.srcObject = null;
+      video.src = nextUrl;
+      video.load();
+    }
+
+    latestDetectionRef.current = null;
+    setLiveResult(null);
+    predictionWindowRef.current = [];
+    currentFrameRef.current = 0;
+    setCurrentFrame(0);
+    if (canvasRef.current) {
+      clearCanvas(canvasRef.current);
+    }
+  };
+
+  const handleSourceChange = (source: RecognitionSource) => {
+    if (source === recognitionSource) return;
+
+    setIsRunning(false);
+    resetServerSequence(recognitionMode);
+    latestDetectionRef.current = null;
+    setLiveResult(null);
+    predictionWindowRef.current = [];
+    currentFrameRef.current = 0;
+    setCurrentFrame(0);
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    const video = videoRef.current;
+    if (source === "camera") {
+      stopCamera();
+      if (video) {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      }
+    } else {
+      stopCamera();
+      if (video && uploadedVideoUrlRef.current) {
+        video.pause();
+        video.srcObject = null;
+        video.src = uploadedVideoUrlRef.current;
+        video.load();
+      }
+    }
+
+    setRecognitionSource(source);
+  };
+
   const handleStart = async () => {
     try {
-      if (!isActive) {
+      if (recognitionSource === "camera" && !isActive) {
         await startCamera();
+      }
+
+      if (recognitionSource === "upload") {
+        const isVideoReady = await prepareUploadedVideo();
+        if (!isVideoReady) return;
       }
 
       await resetServerSequence(recognitionMode);
@@ -707,7 +865,11 @@ export default function Recognition() {
   const handleStop = () => {
     setIsRunning(false);
     resetServerSequence(recognitionMode);
-    stopCamera();
+    if (recognitionSource === "camera") {
+      stopCamera();
+    } else {
+      videoRef.current?.pause();
+    }
     latestDetectionRef.current = null;
     lastHandSeenAtRef.current = 0;
     lastPredictionRequestedAtRef.current = 0;
@@ -745,6 +907,10 @@ export default function Recognition() {
     setPracticeAttempts([]);
     currentFrameRef.current = 0;
     setCurrentFrame(0);
+    if (recognitionSource === "upload" && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
     setStats({
       totalRecognitions: 0,
       averageConfidence: 0,
@@ -785,8 +951,8 @@ export default function Recognition() {
         <div className="mb-6">
           <h1 className="text-4xl font-bold mb-2">Realtime Sign Recognition</h1>
           <p className="text-lg text-muted-foreground">
-            Choose the word model for sign vocabulary, or the fast
-            alphabet/number model for A-Z and 0-9.
+            Recognize signs from your camera or upload a video file for
+            recognition.
           </p>
         </div>
 
@@ -870,18 +1036,26 @@ export default function Recognition() {
                 <div className="absolute top-4 left-4">
                   <Badge
                     variant={
-                      isRunning ? "default" : isActive ? "outline" : "secondary"
+                      isRunning
+                        ? "default"
+                        : isActive || uploadedVideoName
+                          ? "outline"
+                          : "secondary"
                     }
                     className={
                       isRunning
                         ? "bg-green-500 text-white"
-                        : isActive
+                        : isActive || uploadedVideoName
                           ? "bg-yellow-500 text-white"
                           : ""
                     }
                   >
                     <Zap className="h-3 w-3 mr-1" />
-                    {isRunning ? "Recognizing" : isActive ? "Ready" : "Standby"}
+                    {isRunning
+                      ? "Recognizing"
+                      : isActive || uploadedVideoName
+                        ? "Ready"
+                        : "Standby"}
                   </Badge>
                 </div>
 
@@ -892,6 +1066,66 @@ export default function Recognition() {
             </Card>
 
             <Card className="p-4">
+              <div className="mb-4 grid gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant={
+                    recognitionSource === "camera" ? "default" : "outline"
+                  }
+                  onClick={() => handleSourceChange("camera")}
+                  className="gap-2"
+                >
+                  <Camera className="h-4 w-4" />
+                  Camera
+                </Button>
+                <Button
+                  type="button"
+                  variant={
+                    recognitionSource === "upload" ? "default" : "outline"
+                  }
+                  onClick={() => handleSourceChange("upload")}
+                  className="gap-2"
+                >
+                  <FileVideo className="h-4 w-4" />
+                  Tải video lên
+                </Button>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={handleVideoUpload}
+              />
+
+              {recognitionSource === "upload" && (
+                <div className="mb-4 flex flex-col gap-3 rounded-md border border-dashed p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {uploadedVideoName || "Chưa chọn video"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Chọn video MP4/WebM/MOV rồi bấm Start Recognition.
+                    </p>
+                    {uploadedVideoError && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {uploadedVideoError}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Chọn video
+                  </Button>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 {RECOGNITION_MODES.map((mode) => {
                   const isSelected = recognitionMode === mode.value;
@@ -918,10 +1152,24 @@ export default function Recognition() {
             </Card>
 
             <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant={recognitionSource === "upload" ? "default" : "outline"}
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+                size="lg"
+              >
+                <Upload className="h-4 w-4" />
+                Tải video lên
+              </Button>
+
               {!isRunning ? (
                 <Button
                   onClick={handleStart}
-                  disabled={!serverConnected}
+                  disabled={
+                    !serverConnected ||
+                    (recognitionSource === "upload" && !uploadedVideoName)
+                  }
                   className="gap-2"
                   size="lg"
                 >
@@ -1048,12 +1296,22 @@ export default function Recognition() {
               <h3 className="font-semibold mb-3">Status</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Camera</span>
+                  <span className="text-muted-foreground">Source</span>
                   <Badge
-                    variant={isActive ? "default" : "secondary"}
-                    className={isActive ? "bg-green-500" : ""}
+                    variant={
+                      isActive || uploadedVideoName ? "default" : "secondary"
+                    }
+                    className={
+                      isActive || uploadedVideoName ? "bg-green-500" : ""
+                    }
                   >
-                    {isActive ? "Active" : "Inactive"}
+                    {recognitionSource === "camera"
+                      ? isActive
+                        ? "Camera"
+                        : "Camera idle"
+                      : uploadedVideoName
+                        ? "Uploaded video"
+                        : "No video"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
@@ -1090,9 +1348,7 @@ export default function Recognition() {
                   </Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    WLASL Server
-                  </span>
+                  <span className="text-muted-foreground">WLASL Server</span>
                   <Badge
                     variant={serverConnected ? "default" : "secondary"}
                     className={

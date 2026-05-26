@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,9 @@ type SignFrame = {
   left_hand: Point[];
   right_hand: Point[];
 };
-type RawSignFrame = Partial<Record<"pose" | "left_hand" | "right_hand", Point[]>>;
+type RawSignFrame = Partial<
+  Record<"pose" | "left_hand" | "right_hand", Point[]>
+>;
 type LandmarkData = Record<string, RawSignFrame[]>;
 
 const LANDMARK_DATA_URL = "/data/combined_avg_landmarks.json";
@@ -94,48 +96,6 @@ const stopWords = new Set([
   "was",
   "were",
 ]);
-
-const supportedWords = [
-  "hello",
-  "thank",
-  "you",
-  "how",
-  "happy",
-  "sad",
-  "angry",
-  "tired",
-  "sleep",
-  "walk",
-  "read",
-  "music",
-  "movie",
-  "father",
-  "mother",
-  "brother",
-  "sister",
-  "cat",
-  "bird",
-  "fish",
-  "black",
-  "red",
-  "blue",
-  "yellow",
-  "pink",
-  "zero",
-  "one",
-  "two",
-  "three",
-  "four",
-  "five",
-  "six",
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-];
 
 const samples = [
   "hello thank you",
