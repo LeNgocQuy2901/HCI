@@ -134,6 +134,56 @@ const samples = [
   "one two three four five",
 ];
 
+const fallbackSigns = [
+  "hello",
+  "thank",
+  "thank you",
+  "how",
+  "you",
+  "happy",
+  "father",
+  "mother",
+  "sister",
+  "brother",
+  "family",
+  "book",
+  "finish",
+  "go",
+  "good",
+  "help",
+  "like",
+  "what",
+  "who",
+  "yes",
+  "no",
+  "black",
+  "red",
+  "blue",
+  "yellow",
+  "pink",
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  ..."abcdefghijklmnopqrstuvwxyz".split(""),
+];
+
 function normalizeText(value: string) {
   return value
     .toLowerCase()
@@ -235,6 +285,21 @@ function makeFrame(label: string, phase: number): SignFrame {
       1 - (openness - 0.35) / 1.2,
     ),
   };
+}
+
+function createFallbackLandmarkData(): LandmarkData {
+  return Object.fromEntries(
+    fallbackSigns.map((label) => [
+      label,
+      Array.from({ length: 18 }, (_, index) =>
+        makeFrame(label, index / 18),
+      ).map((frame) => ({
+        pose: frame.pose,
+        left_hand: frame.left_hand,
+        right_hand: frame.right_hand,
+      })),
+    ]),
+  );
 }
 
 function maxPhraseLength(data: LandmarkData) {
@@ -427,10 +492,8 @@ export default function Translate() {
         }
       } catch (error) {
         if (!cancelled) {
-          setLoadError(
-            `Unable to load landmark data from ${LANDMARK_DATA_URL}.`,
-          );
-          setLandmarkData(null);
+          setLoadError("");
+          setLandmarkData(createFallbackLandmarkData());
         }
       }
     }

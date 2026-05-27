@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BarChart3, Menu, X, LogOut, User } from "lucide-react";
+import { BarChart3, Menu, X, LogOut, Moon, Sun, User } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -20,8 +21,10 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { resolvedTheme, setTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isDarkMode = resolvedTheme === "dark";
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -60,10 +63,29 @@ export default function Layout({ children }: LayoutProps) {
     toast({ description: "You have signed out" });
   };
 
+  const toggleTheme = () => {
+    setTheme(isDarkMode ? "light" : "dark");
+  };
+
+  const ThemeToggle = ({ fullWidth = false }: { fullWidth?: boolean }) => (
+    <Button
+      type="button"
+      variant="outline"
+      size={fullWidth ? "default" : "icon"}
+      className={fullWidth ? "w-full justify-start gap-2" : "h-11 w-11"}
+      onClick={toggleTheme}
+      aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDarkMode ? "Light mode" : "Dark mode"}
+    >
+      {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+      {fullWidth && <span>{isDarkMode ? "Light Mode" : "Dark Mode"}</span>}
+    </Button>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Navigation Bar */}
-      <nav className="border-b border-border bg-white sticky top-0 z-50 shadow-sm">
+      <nav className="border-b border-border bg-background sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
@@ -93,6 +115,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Desktop Auth Buttons / User Menu */}
             <div className="hidden md:flex items-center gap-3">
+              <ThemeToggle />
               {isAuthenticated && user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -164,6 +187,7 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center gap-2">
+              <ThemeToggle />
               {isAuthenticated && user ? (
                 <Button variant="ghost" size="sm" className="gap-2 h-11 px-3">
                   <div className="w-7 h-7 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
@@ -183,6 +207,9 @@ export default function Layout({ children }: LayoutProps) {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="md:hidden border-t border-border py-4 space-y-2">
+              <div className="px-4">
+                <ThemeToggle fullWidth />
+              </div>
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
