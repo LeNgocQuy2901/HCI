@@ -9,7 +9,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { BarChart3, Menu, X, LogOut, Moon, Sun, User } from "lucide-react";
+import {
+  BarChart3,
+  FileText,
+  Menu,
+  Shield,
+  X,
+  LogOut,
+  Moon,
+  Sun,
+  User,
+} from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -40,10 +50,10 @@ export default function Layout({ children }: LayoutProps) {
     navLinks.push({ href: "/profile", label: "Profile" });
   }
 
-  if (isAuthenticated && user?.role === "admin") {
-    navLinks.push({ href: "/admin/content", label: "Content" });
-    navLinks.push({ href: "/admin/analytics", label: "Analytics" });
-  }
+  const adminLinks = [
+    { href: "/admin/content", label: "Content", icon: FileText },
+    { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  ];
 
   // Get user initials for avatar
   const getInitials = (fullName?: string) => {
@@ -101,16 +111,43 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-6 lg:gap-8">
+            <div className="hidden md:flex items-center gap-4 lg:gap-6">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
-                  className="text-base font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  className="whitespace-nowrap text-sm lg:text-base font-semibold text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {link.label}
                 </Link>
               ))}
+              {isAuthenticated && user?.role === "admin" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-10 gap-2 whitespace-nowrap px-3 text-sm lg:text-base font-semibold text-muted-foreground hover:text-foreground"
+                    >
+                      <Shield size={16} />
+                      Admin
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {adminLinks.map((link) => {
+                      const Icon = link.icon;
+                      return (
+                        <DropdownMenuItem key={link.href} className="gap-2" asChild>
+                          <Link to={link.href}>
+                            <Icon size={16} />
+                            <span>{link.label}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             {/* Desktop Auth Buttons / User Menu */}
@@ -220,6 +257,27 @@ export default function Layout({ children }: LayoutProps) {
                   {link.label}
                 </Link>
               ))}
+              {isAuthenticated && user?.role === "admin" && (
+                <div className="px-4 py-2 space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Admin
+                  </p>
+                  {adminLinks.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <Link
+                        key={link.href}
+                        to={link.href}
+                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Icon size={16} />
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
               <div className="pt-4 border-t border-border space-y-2">
                 {isAuthenticated && user ? (
                   <>
