@@ -99,3 +99,4 @@ Thumbs.db
 .env.*.local
 
 service-account-key.json
+SmartSignLanguage/public/data/combined_avg_landmarks.json
