@@ -29,6 +29,7 @@ export default function Layout({ children }: LayoutProps) {
     { href: "/translate", label: "Translate" },
     { href: "/recognition", label: "Recognition" },
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/lookup", label: "Lookup" },
   ];
 
   // Add Profile link only if authenticated
@@ -78,7 +79,7 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-10">
+            <div className="hidden md:flex items-center gap-6 lg:gap-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -284,6 +285,11 @@ export default function Layout({ children }: LayoutProps) {
                     Dashboard
                   </Link>
                 </li>
+                <li>
+                  <Link to="/lookup" className="hover:text-foreground">
+                    Lookup
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
@@ -313,7 +319,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </div>
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-            <p>© Smart Sign Language</p>
+            <p>&copy; Smart Sign Language</p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <a href="#" className="hover:text-foreground">
                 X
