@@ -20,7 +20,36 @@ const LANDMARK_DATA_URL = "/data/combined_avg_landmarks.json";
 const FRAME_INTERVAL_MS = 55;
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 640;
-const RIGHT_HAND_ONLY_SIGNS = new Set(["thank", "thank you"]);
+const RIGHT_HAND_ONLY_SIGNS = new Set([
+  "hello",
+  "thank",
+  "thank you",
+  "you",
+  "father",
+  "mother",
+  "bird",
+  "fish",
+  "black",
+  "red",
+  "blue",
+  "yellow",
+  "pink",
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  ..."abcdefghijklmnopqrstuvwxyz".split(""),
+]);
 
 const POSE_CONNECTIONS = [
   [11, 13],

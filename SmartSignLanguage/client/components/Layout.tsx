@@ -67,11 +67,11 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 flex-shrink-0">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-sm">
-                <span className="text-white font-bold text-xs leading-none text-center">
-                  SS
-                </span>
-              </div>
+              <img
+                src="/img/logo2.png"
+                alt="Smart Sign Language logo"
+                className="w-10 h-10 rounded-xl object-contain shadow-sm"
+              />
               <span className="hidden sm:inline font-bold text-2xl text-foreground tracking-tight">
                 Smart Sign Language
               </span>
