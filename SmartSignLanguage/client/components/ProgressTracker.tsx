@@ -80,10 +80,10 @@ export default function ProgressTracker({
         {/* Streak */}
         <Card className="p-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <Flame className="h-5 w-5 text-orange-600" />
+            <div className="h-16 w-16 bg-orange-100 rounded-2xl flex items-center justify-center">
+              <Flame className="h-7 w-7 text-orange-600" />
             </div>
-            <div>
+            <div className="min-h-16">
               <p className="text-sm text-muted-foreground">Current Streak</p>
               <p className="text-3xl font-bold">{stats.currentStreak}</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -96,10 +96,10 @@ export default function ProgressTracker({
         {/* Today's Reviews */}
         <Card className="p-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="h-5 w-5 text-blue-600" />
+            <div className="h-16 w-16 bg-blue-100 rounded-2xl flex items-center justify-center">
+              <Calendar className="h-7 w-7 text-blue-600" />
             </div>
-            <div>
+            <div className="min-h-16">
               <p className="text-sm text-muted-foreground">Today's Reviews</p>
               <p className="text-3xl font-bold">{stats.totalReviewsToday}</p>
               {stats.nextReviewDate && (
@@ -115,10 +115,10 @@ export default function ProgressTracker({
         {/* Mastered Words */}
         <Card className="p-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <Award className="h-5 w-5 text-green-600" />
+            <div className="h-16 w-16 bg-green-100 rounded-2xl flex items-center justify-center">
+              <Award className="h-7 w-7 text-green-600" />
             </div>
-            <div>
+            <div className="min-h-16">
               <p className="text-sm text-muted-foreground">Mastered Words</p>
               <p className="text-3xl font-bold">{stats.masteredWords}</p>
               <p className="text-xs text-muted-foreground mt-1">
@@ -131,10 +131,10 @@ export default function ProgressTracker({
         {/* Total Words */}
         <Card className="p-6">
           <div className="flex items-start gap-4">
-            <div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <BookOpen className="h-5 w-5 text-purple-600" />
+            <div className="h-16 w-16 bg-purple-100 rounded-2xl flex items-center justify-center">
+              <BookOpen className="h-7 w-7 text-purple-600" />
             </div>
-            <div>
+            <div className="min-h-16">
               <p className="text-sm text-muted-foreground">Total Words</p>
               <p className="text-3xl font-bold">{stats.totalWords}</p>
               <p className="text-xs text-muted-foreground mt-1">
