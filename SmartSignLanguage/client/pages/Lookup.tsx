@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Video, BookOpen } from "lucide-react";
+import { Search, Video } from "lucide-react";
 import {
   categoryLabels,
   difficultyLabels,
@@ -29,13 +30,6 @@ function queryTerms(value: string) {
   const terms = normalized.split(" ").filter((term) => term && !stopWords.has(term));
   return terms.length > 0 ? terms : [normalized];
 }
-
-/** Map difficulty key → color classes (Tailwind) */
-const difficultyStyle: Record<string, string> = {
-  beginner:     "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
-  intermediate: "bg-amber-50  text-amber-700  border-amber-200  dark:bg-amber-950/40  dark:text-amber-300  dark:border-amber-800",
-  advanced:     "bg-rose-50   text-rose-700   border-rose-200   dark:bg-rose-950/40   dark:text-rose-300   dark:border-rose-800",
-};
 
 export default function Lookup() {
   const [query, setQuery] = useState("");
@@ -89,7 +83,7 @@ export default function Lookup() {
       <div className="container mx-auto px-4 py-8 space-y-6">
         <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)] gap-6">
 
-          {/* Search card (phase 2) */}
+          {/* ── PHASE 2: Redesigned search card ── */}
           <Card className="p-5 space-y-4 border-slate-200 dark:border-slate-800">
             <div>
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Search Vocabulary</h2>
@@ -97,6 +91,8 @@ export default function Lookup() {
                 Type a word or part of a word. Typing "ch" shows all words containing "ch".
               </p>
             </div>
+
+            {/* Search input — thêm focus ring xanh đồng nhất với Index */}
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -106,12 +102,16 @@ export default function Lookup() {
                 placeholder="Example: ch, school, thank you"
               />
             </div>
+
+            {/* Count chip */}
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 px-3 py-1 text-xs font-semibold text-[#0056d2] dark:text-blue-300">
                 <Search className="h-3 w-3" />
                 {results.length} word{results.length === 1 ? "" : "s"} found
               </span>
             </div>
+
+            {/* ── Word list: selected = #0056d2 accent, border-left highlight ── */}
             <div className="max-h-[520px] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
               {results.length === 0 ? (
                 <div className="p-6 text-sm text-slate-400 text-center">
@@ -148,31 +148,23 @@ export default function Lookup() {
             </div>
           </Card>
 
-          {/* ── PHASE 3: Redesigned detail card ── */}
-          <Card className="overflow-hidden border-slate-200 dark:border-slate-800">
+          {/* Detail card (unchanged from phase 1) */}
+          <Card className="overflow-hidden">
             {selectedCard ? (
-              <div className="space-y-5 p-5">
-
-                {/* Header row: word + category badge */}
+              <div className="space-y-4 p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-1">
-                    <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                      {selectedCard.word}
-                    </h2>
-                    {selectedCard.description && (
-                      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                        {selectedCard.description}
-                      </p>
-                    )}
+                  <div>
+                    <h2 className="text-3xl font-bold">{selectedCard.word}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {selectedCard.description}
+                    </p>
                   </div>
-                  {/* Category — blue pill, matches Index accent color */}
-                  <span className="shrink-0 inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 px-3 py-1 text-xs font-semibold text-[#0056d2] dark:text-blue-300">
+                  <Badge variant="secondary">
                     {categoryLabels[selectedCard.category]}
-                  </span>
+                  </Badge>
                 </div>
 
-                {/* Video */}
-                <div className="overflow-hidden rounded-xl bg-black ring-1 ring-slate-200 dark:ring-slate-700">
+                <div className="overflow-hidden rounded-md bg-black">
                   <video
                     key={selectedCard.videoUrl}
                     className="block w-full aspect-video"
@@ -185,29 +177,19 @@ export default function Lookup() {
                   </video>
                 </div>
 
-                {/* Footer: difficulty (semantic color) + example */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                  {/* Difficulty — semantic color */}
-                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${difficultyStyle[selectedCard.difficulty] ?? "bg-slate-100 text-slate-600 border-slate-200"}`}>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">
                     {difficultyLabels[selectedCard.difficulty]}
-                  </span>
-
-                  {/* Example — subtle, with quote icon */}
+                  </Badge>
                   {selectedCard.example && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1 text-xs text-slate-600 dark:text-slate-300">
-                      <BookOpen className="h-3 w-3 shrink-0 text-slate-400" />
-                      {selectedCard.example}
-                    </span>
+                    <Badge variant="outline">{selectedCard.example}</Badge>
                   )}
                 </div>
               </div>
             ) : (
-              /* Empty state */
-              <div className="flex min-h-96 flex-col items-center justify-center gap-3 text-slate-400 dark:text-slate-500">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
-                  <Video className="h-7 w-7" />
-                </div>
-                <p className="text-sm font-medium">Select a word to play its video</p>
+              <div className="flex min-h-96 items-center justify-center text-muted-foreground">
+                <Video className="mr-2 h-5 w-5" />
+                Select a word to play its video.
               </div>
             )}
           </Card>
