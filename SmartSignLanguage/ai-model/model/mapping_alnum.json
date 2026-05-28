@@ -25,17 +25,7 @@
     "W": 22,
     "X": 23,
     "Y": 24,
-    "Z": 25,
-    "0": 26,
-    "1": 27,
-    "2": 28,
-    "3": 29,
-    "4": 30,
-    "5": 31,
-    "6": 32,
-    "7": 33,
-    "8": 34,
-    "9": 35
+    "Z": 25
   },
   "index_to_word": {
     "0": "A",
@@ -63,17 +53,7 @@
     "22": "W",
     "23": "X",
     "24": "Y",
-    "25": "Z",
-    "26": "0",
-    "27": "1",
-    "28": "2",
-    "29": "3",
-    "30": "4",
-    "31": "5",
-    "32": "6",
-    "33": "7",
-    "34": "8",
-    "35": "9"
+    "25": "Z"
   },
   "selected_words": [
     "A",
@@ -101,21 +81,17 @@
     "W",
     "X",
     "Y",
-    "Z",
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9"
+    "Z"
   ],
-  "num_classes": 36,
+  "num_classes": 26,
   "seq_len": 5,
   "feature_dim": 225,
   "normalized": true,
-  "architecture": "asl_alphabet_digits_fast"
+  "architecture": "asl_alnum_landmark_conv1d",
+  "source_dataset": "/kaggle/input/datasets/grassknoted/asl-alphabet/asl_alphabet_train/asl_alphabet_train",
+  "digits_dataset": null,
+  "test_metrics": {
+    "accuracy": 0.989086389541626,
+    "loss": 0.0461910180747509
+  }
 }
