@@ -115,8 +115,8 @@ const RECOGNITION_MODES: Array<{
   },
   {
     value: "alnum",
-    label: "Alphabet/Number",
-    description: "Fast A-Z and 0-9 model",
+    label: "Alphabet",
+    description: "Dedicated A-Z alphabet model",
   },
   {
     value: "numbers",
