@@ -112,6 +112,8 @@ def startup_event() -> None:
             hand_landmarker_path(),
             assets_dir / "pose_landmarker.task",
             name="Alphabet Landmark Keras",
+            sequence_strategy="repeat_current",
+            use_pose=False,
         )
     else:
         logger.warning(
