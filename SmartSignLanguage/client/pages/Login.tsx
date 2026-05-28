@@ -61,12 +61,12 @@ export default function Login() {
 
   return (
     <Layout>
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md p-6">
-          <div className="space-y-6">
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <Card className="w-full max-w-md p-6 bg-white/90 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800/70 shadow-lg backdrop-blur">
+          <div className="space-y-6 text-slate-900 dark:text-slate-100">
             <div className="space-y-2 text-center">
               <h1 className="text-3xl font-bold">Sign In</h1>
-              <p className="text-muted-foreground">
+              <p className="text-slate-500 dark:text-slate-300">
                 Enter your email and password to access your account.
               </p>
             </div>
@@ -119,7 +119,7 @@ export default function Login() {
             </form>
 
             <div className="text-center text-sm">
-              <span className="text-muted-foreground">
+              <span className="text-slate-500 dark:text-slate-300">
                 Don't have an account?{" "}
               </span>
               <Link to="/register" className="text-primary hover:underline">
