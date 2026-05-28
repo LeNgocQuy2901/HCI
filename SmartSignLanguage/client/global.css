@@ -1,5 +1,5 @@
 /** @import must precede all other statements */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Lexend:wght@400;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -113,5 +113,62 @@
   code {
     overflow-x: auto;
     white-space: pre;
+  }
+}
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .rotate-x-12 {
+    transform: rotateX(12deg);
+  }
+  .-rotate-x-12 {
+    transform: rotateX(-12deg);
+  }
+  .font-kids {
+    font-family: "Lexend", "Inter", sans-serif;
+  }
+
+  .quiz-fireworks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 10;
+  }
+
+  .quiz-firework {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background: #f59e0b;
+    box-shadow:
+      0 -26px #fbbf24,
+      0 26px #fde68a,
+      26px 0 #f59e0b,
+      -26px 0 #fbbf24,
+      18px 18px #fde68a,
+      -18px 18px #f59e0b,
+      18px -18px #fbbf24,
+      -18px -18px #fde68a;
+    opacity: 0;
+    filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8));
+    animation: quiz-firework-pop 1100ms ease-out forwards;
+  }
+
+  @keyframes quiz-firework-pop {
+    0% {
+      transform: scale(0.15);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1.8);
+      opacity: 0;
+    }
   }
 }
