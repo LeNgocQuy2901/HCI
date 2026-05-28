@@ -78,7 +78,7 @@ interface HandDetectionOverlay {
   confidence: number[];
 }
 
-type RecognitionMode = "words" | "alnum";
+type RecognitionMode = "words" | "alnum" | "numbers";
 type RecognitionSource = "camera" | "upload";
 type LessonPracticeState = {
   mode?: "lesson-practice";
@@ -91,6 +91,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const PREDICTION_INTERVAL_MS = 120;
 const MIN_ACCEPTED_CONFIDENCE = 0.45;
 const ALNUM_MIN_ACCEPTED_CONFIDENCE = 0.55;
+const NUMBER_MIN_ACCEPTED_CONFIDENCE = 0.25;
 const LESSON_PRACTICE_CONFIDENCE = 0.75;
 const PRACTICE_REQUIRED_CORRECT = 2;
 const PRACTICE_MAX_ATTEMPTS = 3;
@@ -116,6 +117,11 @@ const RECOGNITION_MODES: Array<{
     value: "alnum",
     label: "Alphabet/Number",
     description: "Fast A-Z and 0-9 model",
+  },
+  {
+    value: "numbers",
+    label: "Numbers",
+    description: "Dedicated 0-9 number model",
   },
 ];
 
@@ -547,9 +553,11 @@ export default function Recognition() {
         setLiveResult(newResult);
 
         const minAcceptedConfidence =
-          recognitionMode === "alnum"
-            ? ALNUM_MIN_ACCEPTED_CONFIDENCE
-            : MIN_ACCEPTED_CONFIDENCE;
+          recognitionMode === "numbers"
+            ? NUMBER_MIN_ACCEPTED_CONFIDENCE
+            : recognitionMode === "alnum"
+              ? ALNUM_MIN_ACCEPTED_CONFIDENCE
+              : MIN_ACCEPTED_CONFIDENCE;
 
         if (
           isLessonPractice &&
@@ -1335,7 +1343,11 @@ export default function Recognition() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Mode</span>
                   <Badge variant="outline">
-                    {recognitionMode === "alnum" ? "Alphabet/Number" : "Words"}
+                    {
+                      RECOGNITION_MODES.find(
+                        (mode) => mode.value === recognitionMode,
+                      )?.label
+                    }
                   </Badge>
                 </div>
                 <div className="flex justify-between">

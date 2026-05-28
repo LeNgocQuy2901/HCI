@@ -15,6 +15,12 @@ if not exist "model\model_landmarks.keras" (
 if not exist "model\mapping.json" (
     echo ! mapping.json not found in ai-model\model
 )
+if not exist "model\model_number.keras" (
+    echo ! model_number.keras not found in ai-model\model
+)
+if not exist "model\mapping_number.json" (
+    echo ! mapping_number.json not found in ai-model\model
+)
 if not exist "model\hand_landmarker.task" (
     echo ! hand_landmarker.task not found in ai-model\model
 )
@@ -42,7 +48,7 @@ echo.
 echo Tips:
 echo    - Press Ctrl+C to stop the server
 echo    - Open http://localhost:5173/recognition in browser
-echo    - Supported words: book, finish, go, good, help, like, mother, what, who, yes
+echo    - Supported modes: words, alnum, numbers
 echo    - Keep the sign visible for at least 20 frames before reading the result
 echo.
 echo ========================================

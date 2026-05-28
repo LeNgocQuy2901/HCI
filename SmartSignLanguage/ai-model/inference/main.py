@@ -52,8 +52,18 @@ app.add_middleware(
 models: dict[str, pipeline.WlaslLandmarkSequenceModel] = {}
 
 
+def normalize_mode(mode: str = "words") -> str:
+    normalized_mode = mode.lower().strip()
+    mode_aliases = {
+        "number": "numbers",
+        "digit": "numbers",
+        "digits": "numbers",
+    }
+    return mode_aliases.get(normalized_mode, normalized_mode)
+
+
 def get_model(mode: str = "words") -> pipeline.WlaslLandmarkSequenceModel:
-    normalized_mode = mode.lower()
+    normalized_mode = normalize_mode(mode)
     if normalized_mode not in models:
         raise HTTPException(
             status_code=404,
@@ -110,6 +120,25 @@ def startup_event() -> None:
             alnum_mapping_path,
         )
 
+    number_model_path = assets_dir / "model_number.keras"
+    number_mapping_path = assets_dir / "mapping_number.json"
+    if number_model_path.exists() and number_mapping_path.exists():
+        loaded_models["numbers"] = pipeline.WlaslLandmarkSequenceModel(
+            number_model_path,
+            number_mapping_path,
+            hand_landmarker_path(),
+            assets_dir / "pose_landmarker.task",
+            name="Number Landmark Keras",
+            sequence_strategy="repeat_current",
+            use_pose=False,
+        )
+    else:
+        logger.warning(
+            "Number model unavailable. Expected %s and %s",
+            number_model_path,
+            number_mapping_path,
+        )
+
     models = loaded_models
 
 
@@ -143,6 +172,7 @@ def health_check() -> dict[str, Any]:
 
 @app.post("/api/predict")
 async def predict(file: UploadFile = File(...), mode: str = "words") -> dict[str, Any]:
+    mode = normalize_mode(mode)
     selected_model = get_model(mode)
     try:
         image_bgr = pipeline.image_bytes_to_bgr(await file.read())
@@ -156,7 +186,7 @@ async def predict(file: UploadFile = File(...), mode: str = "words") -> dict[str
 
 @app.post("/api/predict-base64")
 async def predict_base64(data: dict[str, Any]) -> dict[str, Any]:
-    mode = str(data.get("mode") or "words")
+    mode = normalize_mode(str(data.get("mode") or "words"))
     selected_model = get_model(mode)
     try:
         base64_str = data.get("image")
@@ -176,6 +206,7 @@ async def predict_base64(data: dict[str, Any]) -> dict[str, Any]:
 
 @app.post("/api/batch-predict")
 async def batch_predict(files: list[UploadFile] = File(...), mode: str = "words") -> dict[str, Any]:
+    mode = normalize_mode(mode)
     selected_model = get_model(mode)
     results = []
     for file in files:
@@ -192,6 +223,7 @@ async def batch_predict(files: list[UploadFile] = File(...), mode: str = "words"
 
 @app.post("/api/reset-sequence")
 def reset_sequence(mode: str = "words") -> dict[str, Any]:
+    mode = normalize_mode(mode)
     selected_model = get_model(mode)
     selected_model.reset()
     return {"status": "success", "mode": mode.lower(), "frames_ready": 0}
@@ -206,6 +238,7 @@ def reset_all_sequences() -> dict[str, Any]:
 
 @app.get("/api/gestures")
 def list_gestures(mode: str = "words") -> dict[str, Any]:
+    mode = normalize_mode(mode)
     selected_model = get_model(mode)
     return {
         "mode": mode.lower(),
