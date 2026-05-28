@@ -111,11 +111,13 @@ def startup_event() -> None:
             alnum_mapping_path,
             hand_landmarker_path(),
             assets_dir / "pose_landmarker.task",
-            name="Alphabet/Number Landmark Keras",
+            name="Alphabet Landmark Keras",
+            sequence_strategy="repeat_current",
+            use_pose=False,
         )
     else:
         logger.warning(
-            "Alphabet/Number model unavailable. Expected %s and %s",
+            "Alphabet model unavailable. Expected %s and %s",
             alnum_model_path,
             alnum_mapping_path,
         )
