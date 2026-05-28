@@ -32,11 +32,22 @@ import {
   BarChart3,
   BookOpen,
   CheckCircle2,
+  Clock,
+  Gift,
+  Hand,
   HelpCircle,
+  Home,
   Lock,
+  Map,
+  Palette,
+  PawPrint,
   PlayCircle,
+  Smile,
+  Sparkles,
   Target,
+  Utensils,
   Video,
+  XCircle,
   Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -150,6 +161,40 @@ export default function Learn() {
 
   const getLessonProgress = (lessonId: string) =>
     learningStore.getLessonProgress(lessonId, userId);
+
+  const getLessonIcon = (category: Category) => {
+    switch (category) {
+      case "greeting":
+        return Hand;
+      case "family":
+        return Home;
+      case "colors":
+        return Palette;
+      case "numbers":
+        return Gift;
+      case "animals":
+        return PawPrint;
+      case "food":
+        return Utensils;
+      case "time":
+        return Clock;
+      case "emotions":
+        return Smile;
+      default:
+        return Sparkles;
+    }
+  };
+
+  const categoryCardStyles: Record<Category, string> = {
+    greeting: "from-sky-100/90 to-sky-50/80 dark:from-slate-900 dark:to-slate-800 border-sky-200/70 dark:border-slate-700",
+    family: "from-rose-100/90 to-rose-50/80 dark:from-slate-900 dark:to-slate-800 border-rose-200/70 dark:border-slate-700",
+    colors: "from-amber-100/90 to-amber-50/80 dark:from-slate-900 dark:to-slate-800 border-amber-200/70 dark:border-slate-700",
+    numbers: "from-emerald-100/90 to-emerald-50/80 dark:from-slate-900 dark:to-slate-800 border-emerald-200/70 dark:border-slate-700",
+    animals: "from-lime-100/90 to-lime-50/80 dark:from-slate-900 dark:to-slate-800 border-lime-200/70 dark:border-slate-700",
+    food: "from-orange-100/90 to-orange-50/80 dark:from-slate-900 dark:to-slate-800 border-orange-200/70 dark:border-slate-700",
+    time: "from-indigo-100/90 to-indigo-50/80 dark:from-slate-900 dark:to-slate-800 border-indigo-200/70 dark:border-slate-700",
+    emotions: "from-pink-100/90 to-pink-50/80 dark:from-slate-900 dark:to-slate-800 border-pink-200/70 dark:border-slate-700",
+  };
 
   const getLessonMastery = (lesson: Lesson) => {
     const cardSet = new Set(lesson.cardIds);
@@ -327,7 +372,7 @@ export default function Learn() {
   if (quizMode) {
     return (
       <Layout>
-        <div className="container max-w-4xl mx-auto py-12 px-4">
+        <div className="container max-w-4xl mx-auto py-12 px-4 font-kids">
           <Button
             variant="ghost"
             onClick={() => setQuizMode(false)}
@@ -392,73 +437,126 @@ export default function Learn() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="path" className="space-y-6">
-            {displayCourses.map((course) => (
-              <section key={course.id} className="space-y-4">
-                <div>
-                  <h2 className="text-2xl font-semibold">{course.title}</h2>
-                  <p className="text-muted-foreground">{course.description}</p>
+          <TabsContent value="path" className="space-y-8">
+            <Card className="p-6 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-gradient-to-br from-sky-50 via-emerald-50 to-amber-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-white/80 dark:bg-slate-800 flex items-center justify-center shadow-sm">
+                  <Map className="h-6 w-6 text-sky-600" />
                 </div>
-                <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-                  {course.lessons.map((lesson) => {
-                    const progress = getLessonProgress(lesson.id);
-                    const mastery = getLessonMastery(lesson);
-                    const locked = isLessonLocked(lesson);
-                    const completed = progress?.status === "completed";
+                <div>
+                  <h2 className="text-2xl font-bold">Adventure Path</h2>
+                  <p className="text-sm text-muted-foreground">Tap a station to play.</p>
+                </div>
+              </div>
+            </Card>
 
-                    return (
-                      <Card key={lesson.id} className="p-5 space-y-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h3 className="font-semibold">{lesson.title}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {categoryLabels[lesson.category]}
-                            </p>
-                          </div>
-                          {locked ? (
-                            <Lock className="h-5 w-5 text-muted-foreground" />
-                          ) : completed ? (
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                          ) : (
-                            <Badge variant="outline">Lesson {lesson.order}</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {lesson.description}
-                        </p>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Mastery</span>
-                            <span>
-                              {mastery.mastered}/{mastery.total}
-                            </span>
-                          </div>
-                          <Progress value={mastery.percent} className="h-2" />
-                        </div>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          <Badge variant="secondary">
-                            Quiz {lesson.requiredQuizScore}%+
-                          </Badge>
-                          <Badge variant="secondary">Recognition required</Badge>
-                        </div>
-                        <Button
-                          className="w-full"
-                          variant={completed ? "outline" : "default"}
+            {displayCourses.map((course) => (
+              <section key={course.id} className="space-y-5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-sky-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-sky-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">{course.title}</h3>
+                    <p className="text-sm text-muted-foreground">{course.description}</p>
+                  </div>
+                </div>
+
+                <div className="relative pl-8">
+                  <div className="absolute left-3 top-2 bottom-2 w-[4px] rounded-full bg-gradient-to-b from-sky-200 via-emerald-200 to-amber-200 dark:from-slate-700 dark:via-slate-700 dark:to-slate-800" />
+
+                  <div className="space-y-6">
+                    {course.lessons.map((lesson) => {
+                      const progress = getLessonProgress(lesson.id);
+                      const mastery = getLessonMastery(lesson);
+                      const locked = isLessonLocked(lesson);
+                      const completed = progress?.status === "completed";
+                      const isNext = !locked && !completed;
+                      const LessonIcon = getLessonIcon(lesson.category);
+
+                      const badgeClasses = completed
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200"
+                        : locked
+                          ? "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200";
+
+                      const cardClasses = completed
+                        ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/20"
+                        : locked
+                          ? "border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/60 opacity-80"
+                          : "border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20";
+
+                      return (
+                        <button
+                          key={lesson.id}
+                          type="button"
                           disabled={locked}
                           onClick={() => startLesson(lesson)}
+                          className={`group w-full text-left rounded-3xl border p-5 transition-transform hover:-translate-y-1 hover:shadow-lg ${cardClasses}`}
                         >
-                          {completed ? "Review Lesson" : "Start Lesson"}
-                        </Button>
-                      </Card>
-                    );
-                  })}
+                          <div className="flex items-start gap-4">
+                            <div className="relative">
+                              <div
+                                className={`h-12 w-12 rounded-2xl flex items-center justify-center bg-white/90 dark:bg-slate-900 shadow-sm border border-white/70 dark:border-slate-800 ${
+                                  isNext ? "animate-pulse" : ""
+                                }`}
+                              >
+                                <LessonIcon className="h-6 w-6 text-sky-600" />
+                              </div>
+                              <div className="absolute -right-2 -bottom-2">
+                                {locked ? (
+                                  <Lock className="h-4 w-4 text-slate-400" />
+                                ) : completed ? (
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                ) : (
+                                  <PlayCircle className="h-4 w-4 text-amber-500" />
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex-1 space-y-3">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="text-lg font-semibold">{lesson.title}</h4>
+                                <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClasses}`}>
+                                  {categoryLabels[lesson.category]}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <div className="flex-1 h-2 rounded-full bg-white/80 dark:bg-slate-800 overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 to-amber-400"
+                                    style={{ width: `${mastery.percent}%` }}
+                                  />
+                                </div>
+                                <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                  {mastery.percent}%
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                                <span className="inline-flex items-center gap-1">
+                                  <Gift className="h-3 w-3" />
+                                  {lesson.requiredQuizScore}%
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Video className="h-3 w-3" />
+                                  Camera
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </section>
             ))}
           </TabsContent>
 
           <TabsContent value="learn" className="space-y-6">
-            <Card className="p-6 space-y-5">
+            <Card className="p-6 space-y-5 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-gradient-to-br from-sky-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
               <div className="grid md:grid-cols-[1fr_260px] gap-4">
                 <div>
                   <h2 className="text-2xl font-semibold">
@@ -489,25 +587,39 @@ export default function Learn() {
                 </Select>
               </div>
 
+              <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/70 dark:border-slate-800 bg-white/80 dark:bg-slate-900/70 p-4">
+                <div className="h-14 w-14 rounded-2xl bg-sky-100 dark:bg-slate-800 flex items-center justify-center shadow-sm">
+                  <div className="relative h-8 w-8 rounded-full bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700">
+                    <span className="absolute left-2 top-2 h-1.5 w-1.5 rounded-full bg-slate-800 dark:bg-slate-200" />
+                    <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-slate-800 dark:bg-slate-200" />
+                    <span className="absolute left-2 right-2 bottom-2 h-1 rounded-full bg-emerald-400" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">Guide Bot</p>
+                  <p className="text-base font-semibold">Watch, copy, then tap the big buttons.</p>
+                </div>
+              </div>
+
               {selectedLesson && (
                 <div className="grid md:grid-cols-4 gap-3">
-                  <Card className="p-4 bg-muted">
+                  <Card className="p-4 bg-white/80 dark:bg-slate-900/70 border border-white/70 dark:border-slate-800">
                     <p className="text-sm text-muted-foreground">Cards</p>
                     <p className="text-2xl font-bold">{lessonCards.length}</p>
                   </Card>
-                  <Card className="p-4 bg-muted">
+                  <Card className="p-4 bg-white/80 dark:bg-slate-900/70 border border-white/70 dark:border-slate-800">
                     <p className="text-sm text-muted-foreground">Mastery</p>
                     <p className="text-2xl font-bold">
                       {selectedLessonMastery.percent}%
                     </p>
                   </Card>
-                  <Card className="p-4 bg-muted">
+                  <Card className="p-4 bg-white/80 dark:bg-slate-900/70 border border-white/70 dark:border-slate-800">
                     <p className="text-sm text-muted-foreground">Quiz</p>
                     <p className="text-2xl font-bold">
                       {selectedLessonProgress?.quizScore ?? "--"}%
                     </p>
                   </Card>
-                  <Card className="p-4 bg-muted">
+                  <Card className="p-4 bg-white/80 dark:bg-slate-900/70 border border-white/70 dark:border-slate-800">
                     <p className="text-sm text-muted-foreground">Step</p>
                     <p className="text-2xl font-bold capitalize">
                       {selectedLessonProgress?.currentStep || "learn"}
@@ -523,7 +635,7 @@ export default function Learn() {
                       {currentCardIndex + 1} / {lessonCards.length}
                     </Badge>
                     <p className="text-sm text-muted-foreground">
-                      Watch the sign, read the context, then mark your result.
+                      Watch the sign, copy it, then tap.
                     </p>
                   </div>
                   <VocabularyCardFlip
@@ -543,32 +655,24 @@ export default function Learn() {
                   />
 
                   {currentMetadata && (
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <Card className="p-4">
-                        <h3 className="font-semibold mb-2">
-                          How to Sign
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {currentMetadata.instruction}
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <Card className="p-4 rounded-2xl border border-emerald-200/70 dark:border-emerald-900/40 bg-emerald-50/80 dark:bg-emerald-900/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                          <h3 className="font-semibold">Do this</h3>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                          {currentMetadata.instruction.split(".")[0]}.
                         </p>
                       </Card>
-                      <Card className="p-4">
-                        <h3 className="font-semibold mb-2">
-                          Common Mistakes
-                        </h3>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                          {currentMetadata.commonMistakes.slice(0, 3).map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      </Card>
-                      <Card className="p-4">
-                        <h3 className="font-semibold mb-2">Practice Tips</h3>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                          {currentMetadata.practiceTips.slice(0, 3).map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
+                      <Card className="p-4 rounded-2xl border border-rose-200/70 dark:border-rose-900/40 bg-rose-50/80 dark:bg-rose-900/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <XCircle className="h-5 w-5 text-rose-500" />
+                          <h3 className="font-semibold">Avoid this</h3>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">
+                          {currentMetadata.commonMistakes[0] || "Slow down and keep hands visible."}
+                        </p>
                       </Card>
                     </div>
                   )}
@@ -581,12 +685,12 @@ export default function Learn() {
             </Card>
 
             {selectedLesson && (
-              <Card className="p-6 space-y-4">
+              <Card className="p-6 space-y-4 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-white/90 dark:bg-slate-900/70">
                 <h3 className="text-xl font-semibold">Complete This Lesson</h3>
                 <div className="grid md:grid-cols-3 gap-4">
                   <Button
                     variant="outline"
-                    className="gap-2"
+                    className="gap-2 h-14 rounded-2xl text-base font-semibold transition-transform hover:-translate-y-0.5 active:scale-95"
                     onClick={() => void startLessonQuiz(selectedLesson)}
                   >
                     <HelpCircle className="h-4 w-4" />
@@ -594,7 +698,7 @@ export default function Learn() {
                   </Button>
                   <Button
                     variant="outline"
-                    className="gap-2"
+                    className="gap-2 h-14 rounded-2xl text-base font-semibold transition-transform hover:-translate-y-0.5 active:scale-95"
                     disabled={!currentCard}
                     onClick={() => currentCard && practiceCardWithCamera(currentCard)}
                   >
@@ -602,7 +706,7 @@ export default function Learn() {
                     Practice with Camera
                   </Button>
                   <Button
-                    className="gap-2"
+                    className="gap-2 h-14 rounded-2xl text-base font-semibold transition-transform hover:-translate-y-0.5 active:scale-95"
                     onClick={markRecognitionPracticeDone}
                   >
                     <CheckCircle2 className="h-4 w-4" />
@@ -617,65 +721,77 @@ export default function Learn() {
             )}
           </TabsContent>
 
-          <TabsContent value="review" className="space-y-6">
+          <TabsContent value="review" className="space-y-6 font-kids">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="p-6 space-y-4">
+              <Card className="p-7 space-y-5 rounded-3xl border border-slate-200/70 dark:border-slate-800">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Zap className="h-5 w-5 text-yellow-500" />
                   Today's Review ({dueCards.length})
                 </h3>
                 {dueCards.length > 0 ? (
-                  dueCards.map((card) => (
-                    <button
-                      key={card.id}
-                      className="w-full text-left p-3 bg-muted rounded-md hover:bg-muted/80"
-                      onClick={() => {
-                        const lesson = publishedLessons.find((item) =>
-                          item.cardIds.includes(card.id),
-                        );
-                        if (lesson) {
-                          startLesson(lesson);
-                          const index = getPublishedLessonCards(lesson.id).findIndex(
-                            (item) => item.id === card.id,
+                  <div className="space-y-4">
+                    {dueCards.map((card) => (
+                      <button
+                        key={card.id}
+                        className={`w-full text-left p-5 rounded-3xl border bg-gradient-to-br ${categoryCardStyles[card.category]} transition-transform hover:-translate-y-0.5 hover:shadow-md`}
+                        onClick={() => {
+                          const lesson = publishedLessons.find((item) =>
+                            item.cardIds.includes(card.id),
                           );
-                          setCurrentCardIndex(Math.max(index, 0));
-                        }
-                      }}
-                    >
-                      <p className="font-medium">{card.word}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {categoryLabels[card.category]}
-                      </p>
-                    </button>
-                  ))
+                          if (lesson) {
+                            startLesson(lesson);
+                            const index = getPublishedLessonCards(lesson.id).findIndex(
+                              (item) => item.id === card.id,
+                            );
+                            setCurrentCardIndex(Math.max(index, 0));
+                          }
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-lg font-semibold">{card.word}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
+                              {categoryLabels[card.category]}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 ) : (
                   <p className="text-muted-foreground">No cards due today.</p>
                 )}
               </Card>
 
-              <Card className="p-6 space-y-4">
+              <Card className="p-7 space-y-5 rounded-3xl border border-slate-200/70 dark:border-slate-800">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Target className="h-5 w-5 text-red-500" />
                   Weak Words ({weakCards.length})
                 </h3>
                 {weakCards.length > 0 ? (
-                  weakCards.map((card) => (
-                    <button
-                      key={card.id}
-                      className="w-full text-left p-3 bg-muted rounded-md hover:bg-muted/80"
-                      onClick={() => {
-                        const lesson = publishedLessons.find((item) =>
-                          item.cardIds.includes(card.id),
-                        );
-                        if (lesson) startLesson(lesson);
-                      }}
-                    >
-                      <p className="font-medium">{card.word}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Needs more practice in {categoryLabels[card.category]}
-                      </p>
-                    </button>
-                  ))
+                  <div className="space-y-4">
+                    {weakCards.map((card) => (
+                      <button
+                        key={card.id}
+                        className={`w-full text-left p-5 rounded-3xl border bg-gradient-to-br ${categoryCardStyles[card.category]} transition-transform hover:-translate-y-0.5 hover:shadow-md`}
+                        onClick={() => {
+                          const lesson = publishedLessons.find((item) =>
+                            item.cardIds.includes(card.id),
+                          );
+                          if (lesson) startLesson(lesson);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-lg font-semibold">{card.word}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-300">
+                              {categoryLabels[card.category]}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 ) : (
                   <p className="text-muted-foreground">
                     Weak words will appear after you review cards.
@@ -685,9 +801,9 @@ export default function Learn() {
             </div>
           </TabsContent>
 
-          <TabsContent value="quiz" className="space-y-6">
-            <Card className="p-6 text-center space-y-4">
-              <PlayCircle className="h-16 w-16 mx-auto text-blue-500" />
+          <TabsContent value="quiz" className="space-y-6 font-kids">
+            <Card className="p-7 text-center space-y-4 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-gradient-to-br from-sky-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
+              <PlayCircle className="h-16 w-16 mx-auto text-sky-500" />
               <div>
                 <h3 className="text-2xl font-bold mb-2">Practice Quiz</h3>
                 <p className="text-muted-foreground mb-6">
@@ -719,7 +835,7 @@ export default function Learn() {
                 </Select>
               </div>
 
-              <Button onClick={startFreeQuiz} size="lg" className="gap-2">
+              <Button onClick={startFreeQuiz} size="lg" className="gap-2 rounded-2xl">
                 <HelpCircle className="h-5 w-5" />
                 Start practice quiz
               </Button>
