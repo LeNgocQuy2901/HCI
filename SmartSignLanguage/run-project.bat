@@ -42,6 +42,18 @@ if not exist "%AI_DIR%\model\mapping.json" (
     exit /b 1
 )
 
+if not exist "%AI_DIR%\model\model_number.keras" (
+    echo [ERROR] Missing ai-model\model\model_number.keras
+    pause
+    exit /b 1
+)
+
+if not exist "%AI_DIR%\model\mapping_number.json" (
+    echo [ERROR] Missing ai-model\model\mapping_number.json
+    pause
+    exit /b 1
+)
+
 if not exist "%AI_DIR%\model\hand_landmarker.task" (
     echo [ERROR] Missing ai-model\model\hand_landmarker.task
     pause

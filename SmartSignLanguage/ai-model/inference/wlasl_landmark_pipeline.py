@@ -63,6 +63,7 @@ def response(
     status: str,
     gesture: str,
     confidence: float = 0.0,
+    raw_confidence: Optional[float] = None,
     class_id: int = -1,
     landmarks: Optional[list[list[dict[str, float]]]] = None,
     handedness: Optional[list[str]] = None,
@@ -72,13 +73,14 @@ def response(
     model_name: str = "WLASL 10-word Landmark Keras",
     frames_ready: int = 0,
     frames_required: int = SEQ_LEN,
+    confidence_temperature: Optional[float] = None,
 ) -> dict[str, Any]:
     return {
         "status": status,
         "gesture": gesture,
         "confidence": confidence,
-        "raw_confidence": confidence,
-        "confidence_temperature": None,
+        "raw_confidence": confidence if raw_confidence is None else raw_confidence,
+        "confidence_temperature": confidence_temperature,
         "class_id": class_id,
         "landmarks": landmarks or [],
         "handedness": handedness or [],
@@ -132,6 +134,16 @@ def normalize_sequence(seq: np.ndarray) -> np.ndarray:
             seq[frame_index, 126:225] = (pose / shoulder_width).flatten()
 
     return seq.astype(np.float32)
+
+
+def calibrate_probabilities(probs: np.ndarray, temperature: float) -> np.ndarray:
+    if temperature <= 0 or abs(temperature - 1.0) < 1e-6:
+        return probs
+
+    clipped = np.clip(probs.astype(np.float64), 1e-8, 1.0)
+    calibrated = np.power(clipped, 1.0 / temperature)
+    calibrated /= np.sum(calibrated)
+    return calibrated.astype(np.float32)
 
 
 class HolisticLandmarkExtractor:
@@ -239,6 +251,8 @@ class WlaslLandmarkSequenceModel:
         pose_task_path: Path,
         sequence_length: Optional[int] = None,
         name: str = "WLASL 8-source 10-word Landmark Keras",
+        sequence_strategy: str = "rolling",
+        use_pose: bool = True,
     ):
         if load_model is None:
             raise RuntimeError("tensorflow is not installed")
@@ -255,9 +269,14 @@ class WlaslLandmarkSequenceModel:
         self.name = name
         self.labels, self.mapping = load_mapping(mapping_path)
         self.sequence_length = int(sequence_length or self.mapping.get("seq_len") or SEQ_LEN)
+        self.confidence_temperature = float(self.mapping.get("confidence_temperature") or 1.0)
+        if sequence_strategy not in {"rolling", "repeat_current"}:
+            raise ValueError(f"Unsupported sequence strategy: {sequence_strategy}")
+        self.sequence_strategy = sequence_strategy
+        self.use_pose = use_pose
         self.model = load_model(str(model_path), compile=False)
         self.extractor = HolisticLandmarkExtractor(hand_task_path, pose_task_path)
-        self.sequence: deque[np.ndarray] = deque(maxlen=sequence_length)
+        self.sequence: deque[np.ndarray] = deque(maxlen=self.sequence_length)
 
         output_shape = getattr(self.model, "output_shape", None)
         if isinstance(output_shape, tuple) and output_shape[-1] != len(self.labels):
@@ -293,6 +312,9 @@ class WlaslLandmarkSequenceModel:
             "hand_task_path": str(self.hand_task_path),
             "pose_task_path": str(self.pose_task_path),
             "frames_ready": len(self.sequence),
+            "sequence_strategy": self.sequence_strategy,
+            "use_pose": self.use_pose,
+            "confidence_temperature": self.confidence_temperature,
         }
 
     def predict(self, image_bgr: np.ndarray) -> dict[str, Any]:
@@ -306,35 +328,50 @@ class WlaslLandmarkSequenceModel:
                 frames_required=self.sequence_length,
             )
 
-        self.sequence.append(extracted["features"])
-        frames_ready = len(self.sequence)
-        if frames_ready < self.sequence_length:
-            return response(
-                "warming_up",
-                "Collecting frames",
-                landmarks=extracted["landmarks"],
-                handedness=extracted["handedness"],
-                confidence_scores=extracted["hand_scores"],
-                bbox=extracted["bbox"],
-                model_name=self.name,
-                frames_ready=frames_ready,
-                frames_required=self.sequence_length,
-            )
+        features = extracted["features"].copy()
+        if not self.use_pose:
+            features[126:225] = 0
 
-        sequence = normalize_sequence(np.array(self.sequence, dtype=np.float32))
+        if self.sequence_strategy == "repeat_current":
+            sequence = normalize_sequence(
+                np.repeat(features[None, :], self.sequence_length, axis=0).astype(np.float32)
+            )
+            frames_ready = self.sequence_length
+            self.sequence.clear()
+            self.sequence.extend(sequence)
+        else:
+            self.sequence.append(features)
+            frames_ready = len(self.sequence)
+            if frames_ready < self.sequence_length:
+                return response(
+                    "warming_up",
+                    "Collecting frames",
+                    landmarks=extracted["landmarks"],
+                    handedness=extracted["handedness"],
+                    confidence_scores=extracted["hand_scores"],
+                    bbox=extracted["bbox"],
+                    model_name=self.name,
+                    frames_ready=frames_ready,
+                    frames_required=self.sequence_length,
+                )
+
+            sequence = normalize_sequence(np.array(self.sequence, dtype=np.float32))
+
         raw_prediction = self.model.predict(np.array([sequence], dtype=np.float32), verbose=0)[0]
-        class_id = int(np.argmax(raw_prediction))
-        confidence = float(raw_prediction[class_id])
+        prediction = calibrate_probabilities(raw_prediction, self.confidence_temperature)
+        class_id = int(np.argmax(prediction))
+        confidence = float(prediction[class_id])
+        raw_confidence = float(raw_prediction[class_id])
         gesture = self.labels[class_id] if class_id < len(self.labels) else f"Gesture_{class_id}"
 
-        top_indices = np.argsort(raw_prediction)[-5:][::-1]
+        top_indices = np.argsort(prediction)[-5:][::-1]
         top_predictions = [
             {
                 "class_id": int(index),
                 "gesture": self.labels[int(index)]
                 if int(index) < len(self.labels)
                 else f"Gesture_{int(index)}",
-                "confidence": float(raw_prediction[int(index)]),
+                "confidence": float(prediction[int(index)]),
                 "raw_confidence": float(raw_prediction[int(index)]),
             }
             for index in top_indices
@@ -344,6 +381,7 @@ class WlaslLandmarkSequenceModel:
             "success",
             gesture,
             confidence=confidence,
+            raw_confidence=raw_confidence,
             class_id=class_id,
             landmarks=extracted["landmarks"],
             handedness=extracted["handedness"],
@@ -353,4 +391,5 @@ class WlaslLandmarkSequenceModel:
             model_name=self.name,
             frames_ready=frames_ready,
             frames_required=self.sequence_length,
+            confidence_temperature=self.confidence_temperature,
         )
