@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   QuizQuestion,
   VocabularyCard,
@@ -37,6 +37,7 @@ export default function QuizComponent({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const current = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
@@ -76,8 +77,26 @@ export default function QuizComponent({
   const isAnswerCorrect =
     selectedAnswers[currentIndex] === current.correctAnswerIndex;
 
+  useEffect(() => {
+    if (submitted && isAnswerCorrect) {
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 900);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [submitted, isAnswerCorrect, currentIndex]);
+
+  const fireworkBursts = [
+    { left: "15%", top: "15%", delay: "0ms" },
+    { left: "45%", top: "12%", delay: "90ms" },
+    { left: "75%", top: "18%", delay: "160ms" },
+    { left: "22%", top: "52%", delay: "120ms" },
+    { left: "60%", top: "48%", delay: "40ms" },
+    { left: "82%", top: "62%", delay: "190ms" },
+  ];
+
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6">
+    <div className="w-full max-w-2xl mx-auto space-y-6 font-kids">
       {/* Progress Bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -90,7 +109,18 @@ export default function QuizComponent({
       </div>
 
       {/* Question Card */}
-      <Card className="p-8 space-y-6">
+      <Card className="relative p-8 space-y-6 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-gradient-to-br from-sky-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 overflow-hidden">
+        {showCelebration && (
+          <div className="quiz-fireworks" aria-hidden="true">
+            {fireworkBursts.map((burst, index) => (
+              <span
+                key={index}
+                className="quiz-firework"
+                style={{ left: burst.left, top: burst.top, animationDelay: burst.delay }}
+              />
+            ))}
+          </div>
+        )}
         {/* Question Type Badge */}
         <div className="flex gap-2">
           <Badge variant="secondary">
