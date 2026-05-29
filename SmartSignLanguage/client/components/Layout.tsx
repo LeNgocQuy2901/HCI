@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { resolvedTheme, setTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -49,6 +50,11 @@ export default function Layout({ children }: LayoutProps) {
   if (isAuthenticated) {
     navLinks.push({ href: "/profile", label: "Profile" });
   }
+
+  const isActivePath = (href: string) => {
+    if (href === "/") return location.pathname === "/";
+    return location.pathname === href || location.pathname.startsWith(`${href}/`);
+  };
 
   const adminLinks = [
     { href: "/admin/content", label: "Content", icon: FileText },
@@ -116,7 +122,12 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={link.href}
                   to={link.href}
-                  className="whitespace-nowrap text-sm lg:text-base font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  aria-current={isActivePath(link.href) ? "page" : undefined}
+                  className={`relative whitespace-nowrap rounded-full px-3 py-2 text-sm lg:text-base font-semibold transition-colors ${
+                    isActivePath(link.href)
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
                 >
                   {link.label}
                 </Link>
@@ -251,7 +262,12 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={link.href}
                   to={link.href}
-                  className="block px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                  aria-current={isActivePath(link.href) ? "page" : undefined}
+                  className={`block rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                    isActivePath(link.href)
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
