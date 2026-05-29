@@ -4,7 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Pause, Play, RotateCcw, Sparkles } from "lucide-react";
+import {
+  Loader2,
+  Pause,
+  Play,
+  RotateCcw,
+  Sparkles,
+  Type,
+} from "lucide-react";
 
 type Point = { x: number; y: number; z?: number; v?: number };
 type SignFrame = {
@@ -17,6 +24,11 @@ type RawSignFrame = Partial<
   Record<"pose" | "left_hand" | "right_hand", Point[]>
 >;
 type LandmarkData = Record<string, RawSignFrame[]>;
+type SequenceItem = {
+  word: string;
+  status: "available" | "fingerspelled" | "missing";
+  letters?: string[];
+};
 
 const LANDMARK_DATA_URL = "/data/combined_avg_landmarks.json";
 const FRAME_INTERVAL_MS = 55;
@@ -127,11 +139,11 @@ const stopWords = new Set([
 ]);
 
 const samples = [
-  "hello thank you",
-  "how are you",
-  "i am happy",
-  "father mother sister",
-  "one two three four five",
+  "Hello",
+  "Thank you",
+  "Good morning",
+  "I need help",
+  "What is your name?",
 ];
 
 const fallbackSigns = [
@@ -314,9 +326,10 @@ function buildAnimation(text: string, data: LandmarkData | null) {
   const frames: SignFrame[] = [];
   const words: string[] = [];
   const unsupported: string[] = [];
+  const sequence: SequenceItem[] = [];
 
   if (!data) {
-    return { frames, unsupported, words };
+    return { frames, sequence, unsupported, words };
   }
 
   const appendLabel = (label: string) => {
@@ -350,6 +363,7 @@ function buildAnimation(text: string, data: LandmarkData | null) {
     ) {
       const phrase = tokens.slice(index, index + size).join(" ");
       if (appendLabel(phrase)) {
+        sequence.push({ word: phrase, status: "available" });
         index += size;
         matched = true;
         break;
@@ -368,10 +382,20 @@ function buildAnimation(text: string, data: LandmarkData | null) {
     }
 
     unsupported.push(word);
-    word.split("").forEach((letter) => appendLabel(letter));
+    const letters: string[] = [];
+    word.split("").forEach((letter) => {
+      if (appendLabel(letter)) {
+        letters.push(letter);
+      }
+    });
+    sequence.push({
+      word,
+      status: letters.length > 0 ? "fingerspelled" : "missing",
+      letters,
+    });
   }
 
-  return { frames, unsupported, words };
+  return { frames, sequence, unsupported, words };
 }
 
 function drawConnections(
@@ -461,8 +485,11 @@ function drawFrame(canvas: HTMLCanvasElement, frame?: SignFrame) {
 }
 
 export default function Translate() {
-  const [input, setInput] = useState("hello thank you");
+  const [draftInput, setDraftInput] = useState("");
+  const [generatedInput, setGeneratedInput] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [hasCompleted, setHasCompleted] = useState(false);
   const [frameIndex, setFrameIndex] = useState(0);
   const [landmarkData, setLandmarkData] = useState<LandmarkData | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -471,10 +498,21 @@ export default function Translate() {
   const lastTickRef = useRef(0);
 
   const animation = useMemo(
-    () => buildAnimation(input, landmarkData),
-    [input, landmarkData],
+    () => buildAnimation(generatedInput, landmarkData),
+    [generatedInput, landmarkData],
   );
   const activeFrame = animation.frames[frameIndex];
+  const hasDraftInput = draftInput.trim().length > 0;
+  const hasGeneratedInput = generatedInput.trim().length > 0;
+  const matchedCount = animation.sequence.filter(
+    (item) => item.status === "available",
+  ).length;
+  const fingerspelledCount = animation.sequence.filter(
+    (item) => item.status === "fingerspelled",
+  ).length;
+  const missingCount = animation.sequence.filter(
+    (item) => item.status === "missing",
+  ).length;
 
   useEffect(() => {
     let cancelled = false;
@@ -508,7 +546,8 @@ export default function Translate() {
   useEffect(() => {
     setFrameIndex(0);
     setIsPlaying(false);
-  }, [input]);
+    setHasCompleted(false);
+  }, [generatedInput]);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -521,7 +560,15 @@ export default function Translate() {
 
     const tick = (time: number) => {
       if (time - lastTickRef.current > FRAME_INTERVAL_MS) {
-        setFrameIndex((current) => (current + 1) % animation.frames.length);
+        setFrameIndex((current) => {
+          const next = current + 1;
+          if (next >= animation.frames.length) {
+            setIsPlaying(false);
+            setHasCompleted(true);
+            return animation.frames.length - 1;
+          }
+          return next;
+        });
         lastTickRef.current = time;
       }
       animationRef.current = requestAnimationFrame(tick);
@@ -539,139 +586,345 @@ export default function Translate() {
     animation.frames.length > 0
       ? Math.round(((frameIndex + 1) / animation.frames.length) * 100)
       : 0;
+  const statusLabel = loadError
+    ? "Error"
+    : isGenerating
+      ? "Generating"
+      : isPlaying
+        ? "Playing"
+        : hasCompleted
+          ? "Completed"
+          : animation.frames.length > 0
+            ? "Ready"
+            : "Waiting";
+  const actionHint = !landmarkData
+    ? "Loading signs..."
+    : !hasDraftInput
+      ? "Enter a sentence to begin."
+      : draftInput.length > 120
+        ? "Shorter sentences are easier to read as signs."
+        : "Press Translate & Play to start.";
+
+  const handleGenerate = () => {
+    if (!hasDraftInput || isGenerating) return;
+    setIsGenerating(true);
+    setIsPlaying(false);
+    setHasCompleted(false);
+
+    window.setTimeout(() => {
+      setGeneratedInput(draftInput.trim());
+      setFrameIndex(0);
+      setIsGenerating(false);
+      setIsPlaying(true);
+    }, 180);
+  };
+
+  const handleSample = (sample: string) => {
+    setDraftInput(sample);
+    setGeneratedInput(sample);
+    setFrameIndex(0);
+    setIsPlaying(true);
+    setHasCompleted(false);
+  };
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8 space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">Text to Sign Converter</h1>
-          <p className="text-lg text-muted-foreground">
-            Generates sign-language landmark animation from text using the
-            Text-to-Sign converter pipeline.
-          </p>
-        </div>
+      <main className="container mx-auto px-4 py-4 md:py-6">
+        <header className="mb-5 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 p-5 text-white shadow-lg">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Text to Sign Translation
+              </h1>
+              <p className="mt-2 text-sm text-white/90 md:text-base">
+                Type a sentence, then translate and play it in one step.
+              </p>
+            </div>
+            <Badge
+              className="w-fit bg-white/20 text-white hover:bg-white/20"
+              role="status"
+              aria-live="polite"
+            >
+              {statusLabel}
+            </Badge>
+          </div>
+        </header>
 
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_420px] gap-6">
+        <div className="grid gap-5 lg:grid-cols-[minmax(340px,0.78fr)_minmax(0,1.22fr)]">
           <section className="space-y-4">
-            <Card className="overflow-hidden bg-black">
-              <canvas
-                ref={canvasRef}
-                width={CANVAS_WIDTH}
-                height={CANVAS_HEIGHT}
-                className="block w-full aspect-[3/2]"
+            <Card className="p-5 shadow-sm">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="rounded-xl bg-primary/10 p-3 text-primary">
+                  <Type className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold">Enter Text</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Short daily sentences work best.
+                  </p>
+                </div>
+              </div>
+
+              <label htmlFor="translate-input" className="sr-only">
+                Enter text to translate into sign language
+              </label>
+              <Textarea
+                id="translate-input"
+                value={draftInput}
+                onChange={(event) => setDraftInput(event.target.value)}
+                maxLength={160}
+                className="min-h-32 resize-none text-base focus-visible:ring-2 focus-visible:ring-primary"
+                placeholder="Example: hello, thank you, good morning"
               />
+              <div className="mt-2 flex items-center justify-between gap-3 text-sm">
+                <p className="text-muted-foreground" role="status" aria-live="polite">
+                  {actionHint}
+                </p>
+                <span className="shrink-0 text-muted-foreground">
+                  {draftInput.length}/160
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={handleGenerate}
+                  disabled={!hasDraftInput || isGenerating || !landmarkData}
+                  className="gap-2 text-base"
+                  aria-label="Translate and play sign language animation"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  {isGenerating ? "Translating..." : "Translate & Play"}
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    setDraftInput("");
+                    setGeneratedInput("");
+                    setFrameIndex(0);
+                    setIsPlaying(false);
+                    setHasCompleted(false);
+                  }}
+                  disabled={!draftInput && !generatedInput}
+                  className="gap-2"
+                  aria-label="Clear translated text"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Clear
+                </Button>
+              </div>
+
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium">Examples</p>
+                <div className="flex flex-wrap gap-2">
+                  {samples.map((sample) => (
+                    <Button
+                      key={sample}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSample(sample)}
+                      className="rounded-full focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      {sample}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </Card>
 
-            <div className="flex flex-wrap gap-3">
-              <Button
-                onClick={() => setIsPlaying((current) => !current)}
-                disabled={!landmarkData || animation.frames.length === 0}
-              >
-                {isPlaying ? <Pause /> : <Play />}
-                {isPlaying ? "Pause" : "Play"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setFrameIndex(0);
-                  setIsPlaying(false);
-                }}
-                disabled={!landmarkData || animation.frames.length === 0}
-              >
-                <RotateCcw />
-                Reset
-              </Button>
-              <Badge variant="outline" className="h-10 px-4 text-sm">
-                {animation.frames.length} frames
-              </Badge>
-              <Badge variant="secondary" className="h-10 px-4 text-sm">
-                {landmarkData
-                  ? `${Object.keys(landmarkData).length} signs loaded`
-                  : "Loading signs"}
-              </Badge>
-              <Badge variant="secondary" className="h-10 px-4 text-sm">
-                {progress}% played
-              </Badge>
-            </div>
-          </section>
-
-          <aside className="space-y-4">
-            <Card className="p-5 space-y-4">
-              <div>
-                <h2 className="text-xl font-semibold">Input Text</h2>
-                <p className="text-sm text-muted-foreground">
-                  Landmark data is loaded from the Text-to-Sign converter JSON.
-                  Unsupported words fall back to fingerspelling when letter
-                  signs exist.
-                </p>
-                {loadError && (
-                  <p className="text-sm text-destructive mt-2">{loadError}</p>
+            <Card className="p-5 shadow-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold">Sign Sequence</h2>
+                {animation.sequence.length > 0 && (
+                  <Badge variant="secondary">
+                    {animation.sequence.length} signs
+                  </Badge>
                 )}
               </div>
-              <Textarea
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                className="min-h-36 resize-none text-base"
-                placeholder="Type a sentence..."
-              />
-              <div className="flex flex-wrap gap-2">
-                {samples.map((sample) => (
-                  <Button
-                    key={sample}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setInput(sample)}
-                  >
-                    {sample}
-                  </Button>
-                ))}
-              </div>
-            </Card>
-
-            <Card className="p-5 space-y-4">
-              <h2 className="text-xl font-semibold">Generated Sequence</h2>
-              <div className="flex flex-wrap gap-2">
-                {animation.words.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No sign tokens generated.
-                  </p>
-                ) : (
-                  animation.words.map((word, index) => (
+              {animation.sequence.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  The translated signs will appear here.
+                </p>
+              ) : (
+                <div className="flex max-h-44 flex-wrap gap-2 overflow-y-auto pr-1">
+                  {animation.sequence.map((item, index) => (
                     <Badge
-                      key={`${word}-${index}`}
+                      key={`${item.word}-${index}`}
                       variant={
-                        animation.unsupported.includes(word)
-                          ? "secondary"
-                          : "default"
+                        item.status === "available" ? "default" : "secondary"
+                      }
+                      className={
+                        item.status === "fingerspelled"
+                          ? "bg-amber-500 text-white"
+                          : item.status === "missing"
+                            ? "bg-red-600 text-white"
+                            : ""
                       }
                     >
-                      {word}
+                      {item.word}
+                      {item.status === "fingerspelled" ? " - spelled" : ""}
                     </Badge>
-                  ))
-                )}
-              </div>
-              {animation.unsupported.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Fingerspelled fallback: {animation.unsupported.join(", ")}
+                  ))}
+                </div>
+              )}
+              {fingerspelledCount > 0 && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Some words are spelled letter by letter.
+                </p>
+              )}
+              {missingCount > 0 && (
+                <p className="mt-3 text-sm text-destructive">
+                  Some signs are unavailable. Try simpler words.
                 </p>
               )}
             </Card>
+          </section>
 
-            <Card className="p-5 space-y-3">
-              <h2 className="text-xl font-semibold">Model Source</h2>
-              <div className="flex items-start gap-3 text-sm text-muted-foreground">
-                <Sparkles className="h-4 w-4 mt-0.5 text-primary" />
-                <p>
-                  Uses the Text-to-Sign converter approach from
-                  `Bidirectional-Sign-Language-Converter/Text-to-Sign-Convertor`:
-                  text normalization, stopword removal, word fallback, and
-                  landmark skeleton rendering. No video playback is used.
-                </p>
+          <section className="lg:sticky lg:top-24 lg:self-start">
+            <Card className="overflow-hidden shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Sign Animation Preview
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    The animation starts after translation.
+                  </p>
+                </div>
+                <Badge
+                  variant={loadError ? "destructive" : "secondary"}
+                  className={
+                    isPlaying
+                      ? "bg-indigo-600 text-white"
+                      : animation.frames.length > 0
+                        ? "bg-green-600 text-white"
+                        : ""
+                  }
+                  role="status"
+                  aria-live="polite"
+                >
+                  {isGenerating
+                    ? "Translating"
+                    : isPlaying
+                      ? "Playing"
+                      : hasCompleted
+                        ? "Completed"
+                        : animation.frames.length > 0
+                          ? "Ready"
+                          : "Empty"}
+                </Badge>
+              </div>
+
+              <div className="relative bg-black">
+                <canvas
+                  ref={canvasRef}
+                  width={CANVAS_WIDTH}
+                  height={CANVAS_HEIGHT}
+                  className="block w-full aspect-video"
+                />
+                {!hasGeneratedInput && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30 px-6 text-center">
+                    <div className="max-w-sm rounded-xl border border-white/10 bg-black/55 p-5 text-white backdrop-blur">
+                      <Sparkles className="mx-auto mb-3 h-8 w-8 text-cyan-300" />
+                      <p className="font-medium">
+                        Enter text and press Translate & Play.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {isGenerating && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/50 px-6 text-center">
+                    <div className="rounded-xl border border-white/10 bg-black/70 p-5 text-white backdrop-blur">
+                      <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-cyan-300" />
+                      <p className="font-medium">Translating...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 p-4">
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    size="lg"
+                  onClick={() => {
+                    setIsPlaying((current) => !current);
+                    setHasCompleted(false);
+                  }}
+                    disabled={!landmarkData || animation.frames.length === 0}
+                    className="gap-2"
+                    aria-label={isPlaying ? "Pause animation" : "Play animation"}
+                  >
+                    {isPlaying ? (
+                      <Pause className="h-4 w-4" />
+                    ) : (
+                      <Play className="h-4 w-4" />
+                    )}
+                    {isPlaying ? "Pause" : "Play"}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={() => {
+                      setFrameIndex(0);
+                      setIsPlaying(false);
+                      setHasCompleted(false);
+                    }}
+                    disabled={!landmarkData || animation.frames.length === 0}
+                    className="gap-2"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Replay
+                  </Button>
+                  {missingCount > 0 && (
+                    <Badge variant="destructive" className="h-10 px-4">
+                      Some signs unavailable
+                    </Badge>
+                  )}
+                  {matchedCount > 0 && missingCount === 0 && (
+                    <Badge className="h-10 bg-green-600 px-4 text-white">
+                      All signs ready
+                    </Badge>
+                  )}
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Playback {progress}%
+                    </span>
+                    <span className="font-medium">
+                      {animation.frames.length > 0
+                        ? `${frameIndex + 1} / ${animation.frames.length}`
+                        : "No animation"}
+                    </span>
+                  </div>
+                  <div
+                    className="h-3 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={progress}
+                    aria-label="Playback progress"
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
               </div>
             </Card>
-          </aside>
+          </section>
         </div>
-      </div>
+      </main>
     </Layout>
   );
 }
