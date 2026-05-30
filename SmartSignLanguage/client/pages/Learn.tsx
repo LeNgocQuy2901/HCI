@@ -214,10 +214,7 @@ export default function Learn() {
   };
 
   const isLessonLocked = (lesson: Lesson) => {
-    if (lesson.order === 1) return false;
-    const previous = publishedLessons.find((item) => item.order === lesson.order - 1);
-    if (!previous) return false;
-    return getLessonProgress(previous.id)?.status !== "completed";
+    return false;
   };
 
   const startLesson = (lesson: Lesson) => {
