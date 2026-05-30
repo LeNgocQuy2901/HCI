@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import VocabularyCardFlip from "@/components/VocabularyCardFlip";
 import ProgressTracker from "@/components/ProgressTracker";
@@ -23,7 +22,12 @@ import {
   QuizQuestion,
   type VocabularyCard as VocabType,
 } from "@shared/vocabulary";
-import { courses, getLessonCards, lessons, type Lesson } from "@shared/curriculum";
+import {
+  courses,
+  getLessonCards,
+  lessons,
+  type Lesson,
+} from "@shared/curriculum";
 import { getSignMetadata } from "@shared/sign-metadata";
 import { useLearningStore } from "@/hooks/use-learning-store";
 import { trackLearningEvent } from "@/hooks/use-learning-store";
@@ -37,7 +41,6 @@ import {
   Hand,
   HelpCircle,
   Home,
-  Lock,
   Map,
   Palette,
   PawPrint,
@@ -46,7 +49,6 @@ import {
   Sparkles,
   Target,
   Utensils,
-  Video,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -55,10 +57,13 @@ import { useToast } from "@/hooks/use-toast";
 type Tab = "path" | "learn" | "review" | "quiz" | "stats";
 type QuizContext = { type: "lesson"; lessonId: string } | { type: "free" };
 
-const buildQuiz = (cards: VocabType[], questionPrefix = "What does this sign mean?") => {
+const buildQuiz = (
+  cards: VocabType[],
+  questionPrefix = "What does this sign mean?",
+) => {
   const source = cards.length >= 4 ? cards : vocabularyCards.slice(0, 12);
 
-  return cards.slice(0, 10).map((card, index): QuizQuestion => {
+  return cards.map((card, index): QuizQuestion => {
     const options = source
       .filter((item) => item.id !== card.id)
       .map((item) => item.word)
@@ -85,15 +90,33 @@ const buildQuiz = (cards: VocabType[], questionPrefix = "What does this sign mea
   });
 };
 
+const uniqueQuestionsByCard = (
+  questions: QuizQuestion[],
+  maxQuestions: number,
+) => {
+  const seen = new Set<string>();
+  const unique: QuizQuestion[] = [];
+
+  for (const question of questions) {
+    if (seen.has(question.cardId)) continue;
+    seen.add(question.cardId);
+    unique.push(question);
+    if (unique.length >= maxQuestions) break;
+  }
+
+  return unique;
+};
+
 export default function Learn() {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuthStore();
   const learningStore = useLearningStore();
   const userId = user?.id || "guest";
 
   const [activeTab, setActiveTab] = useState<Tab>("path");
-  const [selectedLessonId, setSelectedLessonId] = useState(lessons[0]?.id || "");
+  const [selectedLessonId, setSelectedLessonId] = useState(
+    lessons[0]?.id || "",
+  );
   const [selectedQuizCategory, setSelectedQuizCategory] =
     useState<Category>("greeting");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -101,7 +124,8 @@ export default function Learn() {
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [quizContext, setQuizContext] = useState<QuizContext>({ type: "free" });
   const [publishedLessons, setPublishedLessons] = useState<Lesson[]>(lessons);
-  const [publishedCards, setPublishedCards] = useState<VocabType[]>(vocabularyCards);
+  const [publishedCards, setPublishedCards] =
+    useState<VocabType[]>(vocabularyCards);
 
   useEffect(() => {
     const loadPublishedContent = async () => {
@@ -110,10 +134,44 @@ export default function Learn() {
         if (!response.ok) return;
         const data = await response.json();
         if (Array.isArray(data.lessons) && Array.isArray(data.signs)) {
-          setPublishedLessons(data.lessons);
-          setPublishedCards(data.signs);
-          if (data.lessons.length > 0 && !data.lessons.some((lesson: Lesson) => lesson.id === selectedLessonId)) {
-            setSelectedLessonId(data.lessons[0].id);
+          const localCardsById = new globalThis.Map(
+            vocabularyCards.map((card) => [card.id, card]),
+          );
+          const normalizedSigns = (data.signs as VocabType[]).map((sign) => {
+            const localCard = localCardsById.get(sign.id);
+            return localCard
+              ? {
+                  ...sign,
+                  videoUrl: localCard.videoUrl,
+                }
+              : sign;
+          });
+          const mergedLessons = (data.lessons as Lesson[]).map((lesson) => {
+            const localLesson = lessons.find((item) => item.id === lesson.id);
+            if (
+              !localLesson ||
+              localLesson.cardIds.length <= lesson.cardIds.length
+            ) {
+              return lesson;
+            }
+
+            return {
+              ...lesson,
+              targetCardCount: Math.max(
+                lesson.targetCardCount,
+                localLesson.targetCardCount,
+              ),
+              cardIds: localLesson.cardIds,
+            };
+          });
+
+          setPublishedLessons(mergedLessons);
+          setPublishedCards(normalizedSigns);
+          if (
+            mergedLessons.length > 0 &&
+            !mergedLessons.some((lesson) => lesson.id === selectedLessonId)
+          ) {
+            setSelectedLessonId(mergedLessons[0].id);
           }
         }
       } catch (error) {
@@ -124,6 +182,47 @@ export default function Learn() {
     void loadPublishedContent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!user || userId === "guest") return;
+
+    let lastStartedAt = Date.now();
+
+    const flushStudyTime = () => {
+      const now = Date.now();
+      const durationMs = now - lastStartedAt;
+      lastStartedAt = now;
+
+      if (durationMs < 15000) return;
+
+      void trackLearningEvent({
+        eventType: "study_session",
+        lessonId: selectedLessonId || undefined,
+        durationMs,
+        metadata: {
+          tab: activeTab,
+          source: "learn_page",
+        },
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        flushStudyTime();
+      } else {
+        lastStartedAt = Date.now();
+      }
+    };
+
+    const interval = window.setInterval(flushStudyTime, 60000);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      flushStudyTime();
+    };
+  }, [activeTab, selectedLessonId, user, userId]);
 
   const getPublishedLessonCards = (lessonId: string): VocabType[] => {
     const lesson = publishedLessons.find((item) => item.id === lessonId);
@@ -136,12 +235,16 @@ export default function Learn() {
     () =>
       courses.map((course) => ({
         ...course,
-        lessons: publishedLessons.filter((lesson) => lesson.level === course.id),
+        lessons: publishedLessons.filter(
+          (lesson) => lesson.level === course.id,
+        ),
       })),
     [publishedLessons],
   );
 
-  const selectedLesson = publishedLessons.find((lesson) => lesson.id === selectedLessonId);
+  const selectedLesson = publishedLessons.find(
+    (lesson) => lesson.id === selectedLessonId,
+  );
   const lessonCards = useMemo(
     () => (selectedLesson ? getPublishedLessonCards(selectedLesson.id) : []),
     [selectedLesson, publishedCards, publishedLessons],
@@ -170,62 +273,86 @@ export default function Learn() {
         return Home;
       case "colors":
         return Palette;
-      case "numbers":
-        return Gift;
       case "animals":
         return PawPrint;
-      case "food":
+      case "food-drink":
         return Utensils;
-      case "time":
+      case "time-calendar":
         return Clock;
-      case "emotions":
+      case "emotions-feelings":
         return Smile;
+      case "sports-activities":
+        return Gift;
       default:
         return Sparkles;
     }
   };
 
   const categoryCardStyles: Record<Category, string> = {
-    greeting: "from-sky-100/90 to-sky-50/80 dark:from-slate-900 dark:to-slate-800 border-sky-200/70 dark:border-slate-700",
-    family: "from-rose-100/90 to-rose-50/80 dark:from-slate-900 dark:to-slate-800 border-rose-200/70 dark:border-slate-700",
-    colors: "from-amber-100/90 to-amber-50/80 dark:from-slate-900 dark:to-slate-800 border-amber-200/70 dark:border-slate-700",
-    numbers: "from-emerald-100/90 to-emerald-50/80 dark:from-slate-900 dark:to-slate-800 border-emerald-200/70 dark:border-slate-700",
-    animals: "from-lime-100/90 to-lime-50/80 dark:from-slate-900 dark:to-slate-800 border-lime-200/70 dark:border-slate-700",
-    food: "from-orange-100/90 to-orange-50/80 dark:from-slate-900 dark:to-slate-800 border-orange-200/70 dark:border-slate-700",
-    time: "from-indigo-100/90 to-indigo-50/80 dark:from-slate-900 dark:to-slate-800 border-indigo-200/70 dark:border-slate-700",
-    emotions: "from-pink-100/90 to-pink-50/80 dark:from-slate-900 dark:to-slate-800 border-pink-200/70 dark:border-slate-700",
+    greeting:
+      "from-sky-100/90 to-sky-50/80 dark:from-slate-900 dark:to-slate-800 border-sky-200/70 dark:border-slate-700",
+    "action-verbs":
+      "from-violet-100/90 to-violet-50/80 dark:from-slate-900 dark:to-slate-800 border-violet-200/70 dark:border-slate-700",
+    family:
+      "from-rose-100/90 to-rose-50/80 dark:from-slate-900 dark:to-slate-800 border-rose-200/70 dark:border-slate-700",
+    animals:
+      "from-lime-100/90 to-lime-50/80 dark:from-slate-900 dark:to-slate-800 border-lime-200/70 dark:border-slate-700",
+    colors:
+      "from-amber-100/90 to-amber-50/80 dark:from-slate-900 dark:to-slate-800 border-amber-200/70 dark:border-slate-700",
+    "body-health":
+      "from-red-100/90 to-red-50/80 dark:from-slate-900 dark:to-slate-800 border-red-200/70 dark:border-slate-700",
+    "deaf-community-asl":
+      "from-cyan-100/90 to-cyan-50/80 dark:from-slate-900 dark:to-slate-800 border-cyan-200/70 dark:border-slate-700",
+    "nature-weather":
+      "from-emerald-100/90 to-emerald-50/80 dark:from-slate-900 dark:to-slate-800 border-emerald-200/70 dark:border-slate-700",
+    "time-calendar":
+      "from-indigo-100/90 to-indigo-50/80 dark:from-slate-900 dark:to-slate-800 border-indigo-200/70 dark:border-slate-700",
+    "sports-activities":
+      "from-lime-100/90 to-lime-50/80 dark:from-slate-900 dark:to-slate-800 border-lime-200/70 dark:border-slate-700",
+    "education-school":
+      "from-blue-100/90 to-blue-50/80 dark:from-slate-900 dark:to-slate-800 border-blue-200/70 dark:border-slate-700",
+    "emotions-feelings":
+      "from-pink-100/90 to-pink-50/80 dark:from-slate-900 dark:to-slate-800 border-pink-200/70 dark:border-slate-700",
+    "food-drink":
+      "from-orange-100/90 to-orange-50/80 dark:from-slate-900 dark:to-slate-800 border-orange-200/70 dark:border-slate-700",
+    "places-buildings":
+      "from-stone-100/90 to-stone-50/80 dark:from-slate-900 dark:to-slate-800 border-stone-200/70 dark:border-slate-700",
+    "travel-transportation":
+      "from-teal-100/90 to-teal-50/80 dark:from-slate-900 dark:to-slate-800 border-teal-200/70 dark:border-slate-700",
+    "technology-computer":
+      "from-slate-100/90 to-slate-50/80 dark:from-slate-900 dark:to-slate-800 border-slate-200/70 dark:border-slate-700",
   };
 
   const getLessonMastery = (lesson: Lesson) => {
     const cardSet = new Set(lesson.cardIds);
-    const mastered = lesson.cardIds.filter((cardId) => {
-      const progress = learningStore.progress.get(`${userId}:${cardId}`);
-      return (
-        progress?.status === "mastered" ||
-        learningStore.understoodCards.has(`${userId}:${cardId}`)
-      );
-    }).length;
+    const mastered = lesson.cardIds.filter((cardId) =>
+      learningStore.understoodCards.has(`${userId}:${cardId}`),
+    ).length;
 
     return {
       mastered,
       total: cardSet.size,
-      percent: cardSet.size > 0 ? Math.round((mastered / cardSet.size) * 100) : 0,
+      percent:
+        cardSet.size > 0 ? Math.round((mastered / cardSet.size) * 100) : 0,
     };
   };
 
-  const isLessonLocked = (lesson: Lesson) => {
-    if (lesson.order === 1) return false;
-    const previous = publishedLessons.find((item) => item.order === lesson.order - 1);
-    if (!previous) return false;
-    return getLessonProgress(previous.id)?.status !== "completed";
+  const getLessonCompletionPercent = (
+    lesson: Lesson,
+    mastery: ReturnType<typeof getLessonMastery>,
+    progress?: ReturnType<typeof getLessonProgress>,
+  ) => {
+    if (progress?.status === "completed" || progress?.quizPassed) return 100;
+
+    const learnedContribution = mastery.percent * 0.6;
+    const quizScore = progress?.quizScore ?? 0;
+    const quizContribution =
+      Math.min(quizScore / lesson.requiredQuizScore, 1) * 40;
+
+    return Math.min(99, Math.round(learnedContribution + quizContribution));
   };
 
   const startLesson = (lesson: Lesson) => {
-    if (isLessonLocked(lesson)) {
-      toast({ description: "Complete the previous lesson first." });
-      return;
-    }
-
     learningStore.startLesson(lesson.id, userId);
     setSelectedLessonId(lesson.id);
     setCurrentCardIndex(0);
@@ -262,37 +389,56 @@ export default function Learn() {
     }
 
     learningStore.setLessonStep(selectedLesson.id, userId, "quiz");
-    toast({ description: "Lesson cards complete. Take the required quiz next." });
+    toast({
+      description: "Lesson cards complete. Take the quiz to pass this lesson.",
+    });
     void startLessonQuiz(selectedLesson);
   };
 
   const startLessonQuiz = async (lesson: Lesson) => {
     const cards = getLessonCards(lesson.id);
     const lessonPublishedCards = getPublishedLessonCards(lesson.id);
+    const lessonQuizCards = lessonPublishedCards.length
+      ? lessonPublishedCards
+      : cards;
+    const targetQuestionCount = lessonQuizCards.length;
     try {
       const response = await fetch(`/api/learning/lessons/${lesson.id}/quiz`);
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data.questions) && data.questions.length > 0) {
-          setQuizQuestions(data.questions.slice(0, 12));
+          const uniqueQuestions = uniqueQuestionsByCard(
+            data.questions as QuizQuestion[],
+            targetQuestionCount,
+          );
+          setQuizQuestions(
+            uniqueQuestions.length >= targetQuestionCount
+              ? uniqueQuestions
+              : buildQuiz(lessonQuizCards),
+          );
         } else {
-          setQuizQuestions(buildQuiz(lessonPublishedCards.length ? lessonPublishedCards : cards));
+          setQuizQuestions(buildQuiz(lessonQuizCards));
         }
       } else {
-        setQuizQuestions(buildQuiz(lessonPublishedCards.length ? lessonPublishedCards : cards));
+        setQuizQuestions(buildQuiz(lessonQuizCards));
       }
     } catch (error) {
       console.error("Failed to load lesson quiz:", error);
-      setQuizQuestions(buildQuiz(lessonPublishedCards.length ? lessonPublishedCards : cards));
+      setQuizQuestions(buildQuiz(lessonQuizCards));
     }
     setQuizContext({ type: "lesson", lessonId: lesson.id });
     setQuizMode(true);
   };
 
   const startFreeQuiz = () => {
-    const topicCards = publishedCards
-      .filter((card) => card.category === selectedQuizCategory)
-      .slice(0, 10);
+    const topicLesson = publishedLessons.find(
+      (lesson) => lesson.category === selectedQuizCategory,
+    );
+    const topicCards = topicLesson
+      ? getPublishedLessonCards(topicLesson.id)
+      : publishedCards
+          .filter((card) => card.category === selectedQuizCategory)
+          .slice(0, 10);
     setQuizQuestions(buildQuiz(topicCards));
     setQuizContext({ type: "free" });
     setQuizMode(true);
@@ -302,11 +448,24 @@ export default function Learn() {
     score: number;
     totalQuestions: number;
     answers: number[];
+    incorrectCardIds: string[];
   }) => {
-    const percentage = Math.round((results.score / results.totalQuestions) * 100);
+    const percentage = Math.round(
+      (results.score / results.totalQuestions) * 100,
+    );
+
+    results.incorrectCardIds.forEach((cardId) => {
+      if (!learningStore.getProgressByCard(cardId)) {
+        learningStore.addProgress(cardId, userId);
+      }
+      learningStore.unmarkCardUnderstood(cardId, userId);
+      learningStore.updateProgress(cardId, userId, 2);
+    });
 
     if (quizContext.type === "lesson") {
-      const lesson = publishedLessons.find((item) => item.id === quizContext.lessonId);
+      const lesson = publishedLessons.find(
+        (item) => item.id === quizContext.lessonId,
+      );
       if (lesson) {
         learningStore.recordLessonQuiz(
           lesson.id,
@@ -314,12 +473,18 @@ export default function Learn() {
           percentage,
           lesson.requiredQuizScore,
         );
+        if (percentage >= lesson.requiredQuizScore) {
+          learningStore.completeLesson(lesson.id, userId);
+        }
         toast({
-          title: percentage >= lesson.requiredQuizScore ? "Quiz passed" : "Quiz needs retry",
+          title:
+            percentage >= lesson.requiredQuizScore
+              ? "Lesson completed"
+              : "Quiz needs retry",
           description:
             percentage >= lesson.requiredQuizScore
-              ? `You scored ${percentage}%. Complete recognition practice to finish the lesson.`
-              : `You scored ${percentage}%. Required score is ${lesson.requiredQuizScore}%.`,
+              ? `You scored ${percentage}%.`
+              : `You scored ${percentage}%. Review the missed signs and retry the quiz.`,
         });
         setSelectedLessonId(lesson.id);
         setActiveTab("learn");
@@ -333,40 +498,6 @@ export default function Learn() {
 
     setQuizMode(false);
     setQuizQuestions([]);
-  };
-
-  const markRecognitionPracticeDone = () => {
-    if (!selectedLesson) return;
-    learningStore.recordLessonRecognition(selectedLesson.id, userId, true);
-    void trackLearningEvent({
-      eventType: "recognition_attempted",
-      lessonId: selectedLesson.id,
-      cardId: currentCard?.id,
-      signId: currentCard?.id,
-      isCorrect: true,
-      metadata: { source: "manual_mark_done" },
-    });
-    const progress = learningStore.getLessonProgress(selectedLesson.id, userId);
-    if (progress?.quizPassed) {
-      learningStore.completeLesson(selectedLesson.id, userId);
-      toast({ description: "Lesson completed." });
-      setActiveTab("path");
-    } else {
-      toast({ description: "Recognition practice saved. Pass the quiz to complete this lesson." });
-    }
-  };
-
-  const practiceCardWithCamera = (card: VocabType) => {
-    if (!selectedLesson) return;
-    learningStore.setLessonStep(selectedLesson.id, userId, "recognition");
-    navigate("/recognition", {
-      state: {
-        mode: "lesson-practice",
-        lessonId: selectedLesson.id,
-        cardId: card.id,
-        expectedWord: card.word,
-      },
-    });
   };
 
   if (quizMode) {
@@ -406,14 +537,16 @@ export default function Learn() {
             <h1 className="text-4xl font-bold">Learn Sign Language</h1>
           </div>
           <p className="text-muted-foreground text-lg">
-            Follow structured lessons, pass quizzes, and use recognition practice
-            before completing each lesson.
+            Follow structured lessons and pass quizzes at your own pace.
           </p>
         </div>
 
         <ProgressTracker stats={stats} compact={true} />
 
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as Tab)}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as Tab)}
+        >
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="path" className="gap-2">
               <Target className="h-4 w-4" />
@@ -445,7 +578,9 @@ export default function Learn() {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">Adventure Path</h2>
-                  <p className="text-sm text-muted-foreground">Tap a station to play.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Tap a station to play.
+                  </p>
                 </div>
               </div>
             </Card>
@@ -458,7 +593,9 @@ export default function Learn() {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">{course.title}</h3>
-                    <p className="text-sm text-muted-foreground">{course.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {course.description}
+                    </p>
                   </div>
                 </div>
 
@@ -469,28 +606,28 @@ export default function Learn() {
                     {course.lessons.map((lesson) => {
                       const progress = getLessonProgress(lesson.id);
                       const mastery = getLessonMastery(lesson);
-                      const locked = isLessonLocked(lesson);
+                      const completionPercent = getLessonCompletionPercent(
+                        lesson,
+                        mastery,
+                        progress,
+                      );
+                      const quizScore = progress?.quizScore;
                       const completed = progress?.status === "completed";
-                      const isNext = !locked && !completed;
+                      const isNext = !completed;
                       const LessonIcon = getLessonIcon(lesson.category);
 
                       const badgeClasses = completed
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200"
-                        : locked
-                          ? "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200";
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200";
 
                       const cardClasses = completed
                         ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/20"
-                        : locked
-                          ? "border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/60 opacity-80"
-                          : "border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20";
+                        : "border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20";
 
                       return (
                         <button
                           key={lesson.id}
                           type="button"
-                          disabled={locked}
                           onClick={() => startLesson(lesson)}
                           className={`group w-full text-left rounded-3xl border p-5 transition-transform hover:-translate-y-1 hover:shadow-lg ${cardClasses}`}
                         >
@@ -504,9 +641,7 @@ export default function Learn() {
                                 <LessonIcon className="h-6 w-6 text-sky-600" />
                               </div>
                               <div className="absolute -right-2 -bottom-2">
-                                {locked ? (
-                                  <Lock className="h-4 w-4 text-slate-400" />
-                                ) : completed ? (
+                                {completed ? (
                                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                 ) : (
                                   <PlayCircle className="h-4 w-4 text-amber-500" />
@@ -516,8 +651,12 @@ export default function Learn() {
 
                             <div className="flex-1 space-y-3">
                               <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="text-lg font-semibold">{lesson.title}</h4>
-                                <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClasses}`}>
+                                <h4 className="text-lg font-semibold">
+                                  {lesson.title}
+                                </h4>
+                                <span
+                                  className={`px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClasses}`}
+                                >
                                   {categoryLabels[lesson.category]}
                                 </span>
                               </div>
@@ -526,22 +665,24 @@ export default function Learn() {
                                 <div className="flex-1 h-2 rounded-full bg-white/80 dark:bg-slate-800 overflow-hidden">
                                   <div
                                     className="h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 to-amber-400"
-                                    style={{ width: `${mastery.percent}%` }}
+                                    style={{ width: `${completionPercent}%` }}
                                   />
                                 </div>
                                 <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                                  {mastery.percent}%
+                                  {completionPercent}%
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                                 <span className="inline-flex items-center gap-1">
                                   <Gift className="h-3 w-3" />
-                                  {lesson.requiredQuizScore}%
+                                  {mastery.mastered}/{mastery.total} learned
                                 </span>
                                 <span className="inline-flex items-center gap-1">
-                                  <Video className="h-3 w-3" />
-                                  Camera
+                                  <HelpCircle className="h-3 w-3" />
+                                  {quizScore == null
+                                    ? "Quiz --"
+                                    : `${quizScore}% quiz`}
                                 </span>
                               </div>
                             </div>
@@ -597,7 +738,9 @@ export default function Learn() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Guide Bot</p>
-                  <p className="text-base font-semibold">Watch, copy, then tap the big buttons.</p>
+                  <p className="text-base font-semibold">
+                    Watch, copy, then tap the big buttons.
+                  </p>
                 </div>
               </div>
 
@@ -608,7 +751,7 @@ export default function Learn() {
                     <p className="text-2xl font-bold">{lessonCards.length}</p>
                   </Card>
                   <Card className="p-4 bg-white/80 dark:bg-slate-900/70 border border-white/70 dark:border-slate-800">
-                    <p className="text-sm text-muted-foreground">Mastery</p>
+                    <p className="text-sm text-muted-foreground">Learned</p>
                     <p className="text-2xl font-bold">
                       {selectedLessonMastery.percent}%
                     </p>
@@ -671,7 +814,8 @@ export default function Learn() {
                           <h3 className="font-semibold">Avoid this</h3>
                         </div>
                         <p className="text-sm text-slate-600 dark:text-slate-300">
-                          {currentMetadata.commonMistakes[0] || "Slow down and keep hands visible."}
+                          {currentMetadata.commonMistakes[0] ||
+                            "Slow down and keep hands visible."}
                         </p>
                       </Card>
                     </div>
@@ -687,35 +831,18 @@ export default function Learn() {
             {selectedLesson && (
               <Card className="p-6 space-y-4 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-white/90 dark:bg-slate-900/70">
                 <h3 className="text-xl font-semibold">Complete This Lesson</h3>
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-1 gap-4 max-w-sm">
                   <Button
                     variant="outline"
                     className="gap-2 h-14 rounded-2xl text-base font-semibold transition-transform hover:-translate-y-0.5 active:scale-95"
                     onClick={() => void startLessonQuiz(selectedLesson)}
                   >
                     <HelpCircle className="h-4 w-4" />
-                    Required Quiz
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="gap-2 h-14 rounded-2xl text-base font-semibold transition-transform hover:-translate-y-0.5 active:scale-95"
-                    disabled={!currentCard}
-                    onClick={() => currentCard && practiceCardWithCamera(currentCard)}
-                  >
-                    <Video className="h-4 w-4" />
-                    Practice with Camera
-                  </Button>
-                  <Button
-                    className="gap-2 h-14 rounded-2xl text-base font-semibold transition-transform hover:-translate-y-0.5 active:scale-95"
-                    onClick={markRecognitionPracticeDone}
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Mark Practice Done
+                    Lesson Quiz
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Passing quiz score: {selectedLesson.requiredQuizScore}%.
-                  Recognition practice is recorded after you use the camera mode.
                 </p>
               </Card>
             )}
@@ -740,9 +867,9 @@ export default function Learn() {
                           );
                           if (lesson) {
                             startLesson(lesson);
-                            const index = getPublishedLessonCards(lesson.id).findIndex(
-                              (item) => item.id === card.id,
-                            );
+                            const index = getPublishedLessonCards(
+                              lesson.id,
+                            ).findIndex((item) => item.id === card.id);
                             setCurrentCardIndex(Math.max(index, 0));
                           }
                         }}
@@ -778,7 +905,13 @@ export default function Learn() {
                           const lesson = publishedLessons.find((item) =>
                             item.cardIds.includes(card.id),
                           );
-                          if (lesson) startLesson(lesson);
+                          if (lesson) {
+                            startLesson(lesson);
+                            const index = getPublishedLessonCards(
+                              lesson.id,
+                            ).findIndex((item) => item.id === card.id);
+                            setCurrentCardIndex(Math.max(index, 0));
+                          }
                         }}
                       >
                         <div className="flex items-center justify-between gap-4">
@@ -835,7 +968,11 @@ export default function Learn() {
                 </Select>
               </div>
 
-              <Button onClick={startFreeQuiz} size="lg" className="gap-2 rounded-2xl">
+              <Button
+                onClick={startFreeQuiz}
+                size="lg"
+                className="gap-2 rounded-2xl"
+              >
                 <HelpCircle className="h-5 w-5" />
                 Start practice quiz
               </Button>
