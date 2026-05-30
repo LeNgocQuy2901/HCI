@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLearningStore } from "@/hooks/use-learning-store";
-import { courses, lessons } from "@shared/curriculum";
+import { courses, lessons, type Lesson } from "@shared/curriculum";
 import { getSignMetadata } from "@shared/sign-metadata";
 import {
   categories,
@@ -15,6 +15,7 @@ import {
   difficulties,
   difficultyLabels,
   type SRSProgress,
+  type VocabularyCard as VocabType,
   vocabularyCards,
 } from "@shared/vocabulary";
 import {
@@ -47,6 +48,9 @@ const getAccuracy = (progress: SRSProgress[]) => {
   return attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
 };
 
+const getProgressStatusLabel = (status: SRSProgress["status"]) =>
+  status === "mastered" ? "learned" : status;
+
 type RecognitionPracticeHistoryItem = {
   id: string;
   lessonId: string;
@@ -65,7 +69,11 @@ type RecognitionPracticeHistoryItem = {
 
 type LearnerAnalytics = {
   studyTimeThisWeekMs: number;
-  accuracyTrend: Array<{ date: string; attempts: number; averageScore: number }>;
+  accuracyTrend: Array<{
+    date: string;
+    attempts: number;
+    averageScore: number;
+  }>;
   weakestTopics: Array<{
     category: string;
     attempts: number;
@@ -95,6 +103,9 @@ export default function Dashboard() {
     RecognitionPracticeHistoryItem[]
   >([]);
   const [analytics, setAnalytics] = useState<LearnerAnalytics | null>(null);
+  const [dashboardCards, setDashboardCards] =
+    useState<VocabType[]>(vocabularyCards);
+  const [dashboardLessons, setDashboardLessons] = useState<Lesson[]>(lessons);
   const userId = user?.id || "guest";
 
   const stats = learningStore.getProgressStats(userId);
@@ -159,34 +170,40 @@ export default function Dashboard() {
         accuracy: item.attempts > 0 ? item.correct / item.attempts : 0,
         avgConfidence:
           item.attempts > 0 ? item.avgConfidence / item.attempts : 0,
-        avgStability:
-          item.attempts > 0 ? item.avgStability / item.attempts : 0,
+        avgStability: item.attempts > 0 ? item.avgStability / item.attempts : 0,
       }))
       .filter((item) => item.accuracy < 0.7 || item.avgConfidence < 0.75)
-      .sort((a, b) => a.accuracy - b.accuracy || a.avgConfidence - b.avgConfidence)
+      .sort(
+        (a, b) => a.accuracy - b.accuracy || a.avgConfidence - b.avgConfidence,
+      )
       .slice(0, 6);
   }, [recognitionHistory]);
   const weakCards = learningStore.getWeakCards(userId, 6);
-  const completedLessons = lessons.filter(
+  const completedLessons = dashboardLessons.filter(
     (lesson) =>
       learningStore.getLessonProgress(lesson.id, userId)?.status ===
       "completed",
   );
   const inProgressLesson =
-    lessons.find(
+    dashboardLessons.find(
       (lesson) =>
         learningStore.getLessonProgress(lesson.id, userId)?.status ===
         "in-progress",
     ) ||
-    lessons.find(
+    dashboardLessons.find(
       (lesson) =>
         learningStore.getLessonProgress(lesson.id, userId)?.status !==
         "completed",
     );
   const lessonCompletionPercentage =
-    lessons.length > 0
-      ? Math.round((completedLessons.length / lessons.length) * 100)
+    dashboardLessons.length > 0
+      ? Math.round((completedLessons.length / dashboardLessons.length) * 100)
       : 0;
+
+  const dashboardCourses = courses.map((course) => ({
+    ...course,
+    lessons: dashboardLessons.filter((lesson) => lesson.level === course.id),
+  }));
 
   const progressByCard = new Map(
     allProgress.map((item) => [item.cardId, item] as const),
@@ -194,7 +211,7 @@ export default function Dashboard() {
 
   const categoryRows = categories
     .map((category) => {
-      const cards = vocabularyCards.filter((card) => card.category === category);
+      const cards = dashboardCards.filter((card) => card.category === category);
       const mastered = cards.filter((card) => masteredIds.has(card.id)).length;
       const learning = cards.filter(
         (card) => progressByCard.get(card.id)?.status === "learning",
@@ -215,7 +232,7 @@ export default function Dashboard() {
     .sort((a, b) => b.percent - a.percent || b.mastered - a.mastered);
 
   const difficultyRows = difficulties.map((difficulty) => {
-    const cards = vocabularyCards.filter(
+    const cards = dashboardCards.filter(
       (card) => card.difficulty === difficulty,
     );
     const mastered = cards.filter((card) => masteredIds.has(card.id)).length;
@@ -249,12 +266,39 @@ export default function Dashboard() {
     )
     .slice(0, 8);
 
-  const learnedCards = vocabularyCards
+  const learnedCards = dashboardCards
     .filter((card) => masteredIds.has(card.id))
     .sort((a, b) => a.word.localeCompare(b.word));
 
   const findCard = (cardId: string) =>
-    vocabularyCards.find((card) => card.id === cardId);
+    dashboardCards.find((card) => card.id === cardId);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPublishedContent() {
+      try {
+        const response = await fetch("/api/learning/published-content");
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (!cancelled && Array.isArray(data.signs)) {
+          setDashboardCards(data.signs);
+        }
+        if (!cancelled && Array.isArray(data.lessons)) {
+          setDashboardLessons(data.lessons);
+        }
+      } catch (error) {
+        console.error("Failed to load dashboard content:", error);
+      }
+    }
+
+    void loadPublishedContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -339,7 +383,7 @@ export default function Dashboard() {
           <Card className="p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm text-muted-foreground">Mastered</p>
+                <p className="text-sm text-muted-foreground">Learned</p>
                 <p className="text-3xl font-bold">{stats.masteredWords}</p>
               </div>
               <Award className="h-9 w-9 text-emerald-600" />
@@ -368,7 +412,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Lessons</p>
                 <p className="text-3xl font-bold">
-                  {completedLessons.length}/{lessons.length}
+                  {completedLessons.length}/{dashboardLessons.length}
                 </p>
               </div>
               <ListChecks className="h-9 w-9 text-red-500" />
@@ -378,7 +422,9 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <Card className="p-5">
-            <p className="text-sm text-muted-foreground">Study time this week</p>
+            <p className="text-sm text-muted-foreground">
+              Study time this week
+            </p>
             <p className="text-2xl font-bold">
               {formatMinutes(analytics?.studyTimeThisWeekMs || 0)}
             </p>
@@ -386,7 +432,8 @@ export default function Dashboard() {
           <Card className="p-5">
             <p className="text-sm text-muted-foreground">Accuracy trend</p>
             <p className="text-2xl font-bold">
-              {analytics?.accuracyTrend?.[analytics.accuracyTrend.length - 1]?.averageScore
+              {analytics?.accuracyTrend?.[analytics.accuracyTrend.length - 1]
+                ?.averageScore
                 ? `${Math.round(analytics.accuracyTrend[analytics.accuracyTrend.length - 1].averageScore)}%`
                 : `${accuracy}%`}
             </p>
@@ -398,7 +445,9 @@ export default function Dashboard() {
             </p>
           </Card>
           <Card className="p-5">
-            <p className="text-sm text-muted-foreground">Recognition improvement</p>
+            <p className="text-sm text-muted-foreground">
+              Recognition improvement
+            </p>
             <p className="text-2xl font-bold">
               {analytics
                 ? `${analytics.recognitionImprovement.recentAccuracy - analytics.recognitionImprovement.firstAccuracy}%`
@@ -422,7 +471,9 @@ export default function Dashboard() {
                   {analytics.weakestTopics.map((topic) => {
                     const accuracyValue =
                       topic.attempts > 0
-                        ? Math.round((Number(topic.correct || 0) / topic.attempts) * 100)
+                        ? Math.round(
+                            (Number(topic.correct || 0) / topic.attempts) * 100,
+                          )
                         : 0;
                     return (
                       <div key={topic.category} className="space-y-2">
@@ -474,7 +525,10 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <Progress value={analytics.reviewConsistency.percent} className="h-2" />
+              <Progress
+                value={analytics.reviewConsistency.percent}
+                className="h-2"
+              />
             </Card>
           </div>
         )}
@@ -515,7 +569,9 @@ export default function Dashboard() {
                 <Flame className="h-5 w-5" />
                 <h2 className="text-xl font-semibold">Learning Health</h2>
               </div>
-              <Badge variant="outline">{lessonCompletionPercentage}% lessons</Badge>
+              <Badge variant="outline">
+                {lessonCompletionPercentage}% lessons
+              </Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
@@ -550,10 +606,10 @@ export default function Dashboard() {
                 <h2 className="text-xl font-semibold">Overall Progress</h2>
                 <p className="text-sm text-muted-foreground">
                   {stats.masteredWords} of {stats.totalWords} vocabulary items
-                  mastered
+                  learned
                 </p>
               </div>
-              <Badge variant="outline">{masteryPercentage}% complete</Badge>
+              <Badge variant="outline">{masteryPercentage}% learned</Badge>
             </div>
             <Progress value={masteryPercentage} className="h-3" />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -610,7 +666,7 @@ export default function Dashboard() {
               <h2 className="text-xl font-semibold">Lesson Completion</h2>
             </div>
             <div className="space-y-5">
-              {courses.map((course) => {
+              {dashboardCourses.map((course) => {
                 const completed = course.lessons.filter(
                   (lesson) =>
                     learningStore.getLessonProgress(lesson.id, userId)
@@ -688,9 +744,7 @@ export default function Dashboard() {
                 <div key={item.id} className="rounded-md border p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium">
-                        Target: {item.expectedWord}
-                      </p>
+                      <p className="font-medium">Target: {item.expectedWord}</p>
                       <p className="text-xs text-muted-foreground">
                         Detected: {item.predictedWord} ·{" "}
                         {Math.round(item.confidence * 100)}%
@@ -750,7 +804,7 @@ export default function Dashboard() {
           {weakRecognitionSigns.length > 0 ? (
             <div className="space-y-3">
               {weakRecognitionSigns.slice(0, 3).map((item) => {
-                const card = vocabularyCards.find(
+                const card = dashboardCards.find(
                   (vocab) => vocab.id === item.cardId,
                 );
                 const metadata = card ? getSignMetadata(card) : null;
@@ -889,7 +943,9 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <Badge variant="outline">{item.status}</Badge>
+                        <Badge variant="outline">
+                          {getProgressStatusLabel(item.status)}
+                        </Badge>
                         <p className="text-xs text-muted-foreground mt-1">
                           {formatDate(item.lastReviewedDate)}
                         </p>
