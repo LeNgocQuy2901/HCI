@@ -27,6 +27,7 @@ interface QuizComponentProps {
     score: number;
     totalQuestions: number;
     answers: number[];
+    incorrectCardIds: string[];
   }) => void;
 }
 
@@ -38,6 +39,7 @@ export default function QuizComponent({
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   const current = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
@@ -62,15 +64,7 @@ export default function QuizComponent({
       setCurrentIndex(currentIndex + 1);
       setSubmitted(false);
     } else {
-      // Calculate score
-      const correctAnswers = questions.filter(
-        (q, i) => q.correctAnswerIndex === selectedAnswers[i],
-      ).length;
-      onComplete({
-        score: correctAnswers,
-        totalQuestions: questions.length,
-        answers: selectedAnswers,
-      });
+      setShowSummary(true);
     }
   };
 
@@ -95,6 +89,99 @@ export default function QuizComponent({
     { left: "82%", top: "62%", delay: "190ms" },
   ];
 
+  const correctAnswers = questions.filter(
+    (question, index) => question.correctAnswerIndex === selectedAnswers[index],
+  ).length;
+  const incorrectQuestions = questions.filter(
+    (question, index) => question.correctAnswerIndex !== selectedAnswers[index],
+  );
+
+  const finishQuiz = () => {
+    onComplete({
+      score: correctAnswers,
+      totalQuestions: questions.length,
+      answers: selectedAnswers,
+      incorrectCardIds: incorrectQuestions.map((question) => question.cardId),
+    });
+  };
+
+  if (showSummary) {
+    const scorePercent =
+      questions.length > 0
+        ? Math.round((correctAnswers / questions.length) * 100)
+        : 0;
+
+    return (
+      <div className="w-full max-w-3xl mx-auto space-y-6 font-kids">
+        <Card className="p-8 space-y-6 rounded-3xl border border-slate-200/70 dark:border-slate-800">
+          <div className="space-y-2 text-center">
+            <Badge variant="secondary">Quiz Result</Badge>
+            <h2 className="text-3xl font-bold">
+              {correctAnswers}/{questions.length} correct
+            </h2>
+            <Progress value={scorePercent} className="h-2" />
+            <p className="text-sm text-muted-foreground">
+              {scorePercent}% score
+            </p>
+          </div>
+
+          {incorrectQuestions.length > 0 ? (
+            <div className="space-y-3">
+              <h3 className="font-semibold">Review these answers</h3>
+              {incorrectQuestions.map((question) => {
+                const questionIndex = questions.indexOf(question);
+                const selectedIndex = selectedAnswers[questionIndex];
+                const selectedText =
+                  selectedIndex === undefined
+                    ? "No answer"
+                    : question.options[selectedIndex];
+                const correctText =
+                  question.options[question.correctAnswerIndex];
+                const card = vocabularyCards.find(
+                  (item) => item.id === question.cardId,
+                );
+
+                return (
+                  <div
+                    key={question.id}
+                    className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-900"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <XCircle className="h-4 w-4" />
+                      <p className="font-semibold">
+                        {card?.word || correctText}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-sm">{question.question}</p>
+                    <p className="mt-2 text-sm">
+                      Your answer:{" "}
+                      <span className="font-medium">{selectedText}</span>
+                    </p>
+                    <p className="text-sm">
+                      Correct answer:{" "}
+                      <span className="font-medium">{correctText}</span>
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-green-900">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5" />
+                <p className="font-semibold">All answers correct.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <Button onClick={finishQuiz}>Finish Quiz</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6 font-kids">
       {/* Progress Bar */}
@@ -116,7 +203,11 @@ export default function QuizComponent({
               <span
                 key={index}
                 className="quiz-firework"
-                style={{ left: burst.left, top: burst.top, animationDelay: burst.delay }}
+                style={{
+                  left: burst.left,
+                  top: burst.top,
+                  animationDelay: burst.delay,
+                }}
               />
             ))}
           </div>
