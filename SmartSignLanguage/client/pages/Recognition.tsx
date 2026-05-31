@@ -24,8 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertCircle,
   Camera,
-  Clock,
-  Eye,
   Image as ImageIcon,
   Play,
   RotateCcw,
@@ -79,7 +77,6 @@ interface HandDetectionOverlay {
 
 type RecognitionMode = "words" | "alnum" | "numbers";
 type RecognitionSource = "camera" | "upload";
-type UploadedMediaType = "image" | "video";
 type LessonPracticeState = {
   mode?: "lesson-practice";
   lessonId?: string;
@@ -102,29 +99,22 @@ const LIVE_RESULT_TTL_MS = 2500;
 const HAND_LOST_GRACE_MS = 3000;
 const HAND_LOST_MISSES = 10;
 const SERVER_SEQUENCE_RESET_COOLDOWN_MS = 1200;
-const WORD_VIDEO_SAMPLE_COUNT = 240;
-const VIDEO_LOAD_TIMEOUT_MS = 10000;
-const VIDEO_SEEK_TIMEOUT_MS = 2500;
 
 const RECOGNITION_MODES: Array<{
   value: RecognitionMode;
   label: string;
-  description: string;
 }> = [
   {
     value: "words",
     label: "Words",
-    description: "10 words + full 46-class model",
   },
   {
     value: "alnum",
     label: "Alphabet",
-    description: "Dedicated A-Z alphabet model",
   },
   {
     value: "numbers",
     label: "Numbers",
-    description: "Dedicated 0-9 number model",
   },
 ];
 
@@ -155,151 +145,6 @@ function canvasToJpegBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
   return new Promise((resolve) => {
     canvas.toBlob(resolve, "image/jpeg", 0.82);
   });
-}
-
-function getUsableVideoDuration(video: HTMLVideoElement) {
-  if (Number.isFinite(video.duration) && video.duration > 0) {
-    return video.duration;
-  }
-
-  if (video.seekable.length > 0) {
-    const end = video.seekable.end(video.seekable.length - 1);
-    if (Number.isFinite(end) && end > 0) return end;
-  }
-
-  return 0;
-}
-
-function isVideoReadable(video: HTMLVideoElement) {
-  return (
-    video.readyState >= video.HAVE_METADATA &&
-    video.videoWidth > 0 &&
-    video.videoHeight > 0
-  );
-}
-
-function getVideoLoadError(video: HTMLVideoElement) {
-  if (!video.error) {
-    return "Unable to load this video. Try another file.";
-  }
-
-  if (video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-    return "This video codec is not supported by the browser. Try an H.264 MP4 or WebM file.";
-  }
-
-  return "Unable to decode this video. Try another MP4/WebM file.";
-}
-
-function waitForVideoMetadata(video: HTMLVideoElement): Promise<boolean> {
-  if (isVideoReadable(video)) {
-    return Promise.resolve(true);
-  }
-
-  return new Promise((resolve) => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    const cleanup = () => {
-      video.removeEventListener("loadedmetadata", handleLoaded);
-      video.removeEventListener("loadeddata", handleLoaded);
-      video.removeEventListener("canplay", handleLoaded);
-      video.removeEventListener("error", handleError);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-    const handleLoaded = () => {
-      if (!isVideoReadable(video)) return;
-      cleanup();
-      resolve(true);
-    };
-    const handleError = () => {
-      cleanup();
-      resolve(false);
-    };
-
-    timeoutId = setTimeout(() => {
-      cleanup();
-      resolve(isVideoReadable(video));
-    }, VIDEO_LOAD_TIMEOUT_MS);
-
-    video.addEventListener("loadedmetadata", handleLoaded, { once: true });
-    video.addEventListener("loadeddata", handleLoaded, { once: true });
-    video.addEventListener("canplay", handleLoaded, { once: true });
-    video.addEventListener("error", handleError, { once: true });
-    video.load();
-  });
-}
-
-function seekUploadedVideo(
-  video: HTMLVideoElement,
-  targetTime: number,
-): Promise<boolean> {
-  const duration = getUsableVideoDuration(video);
-  const safeTime =
-    duration > 0
-      ? Math.min(Math.max(targetTime, 0), Math.max(duration - 0.02, 0))
-      : 0;
-
-  if (
-    Math.abs(video.currentTime - safeTime) < 0.03 &&
-    video.readyState >= video.HAVE_CURRENT_DATA
-  ) {
-    return Promise.resolve(true);
-  }
-
-  return new Promise((resolve) => {
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    const cleanup = () => {
-      video.removeEventListener("seeked", handleSeeked);
-      video.removeEventListener("error", handleError);
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-    const handleSeeked = () => {
-      cleanup();
-      resolve(video.readyState >= video.HAVE_CURRENT_DATA);
-    };
-    const handleError = () => {
-      cleanup();
-      resolve(false);
-    };
-
-    timeoutId = setTimeout(() => {
-      cleanup();
-      resolve(video.readyState >= video.HAVE_CURRENT_DATA);
-    }, VIDEO_SEEK_TIMEOUT_MS);
-
-    video.addEventListener("seeked", handleSeeked, { once: true });
-    video.addEventListener("error", handleError, { once: true });
-    video.currentTime = safeTime;
-  });
-}
-
-function drawVideoFrameToCanvas(
-  video: HTMLVideoElement,
-  canvas: HTMLCanvasElement,
-) {
-  const context = canvas.getContext("2d");
-  if (!context) return false;
-
-  canvas.width = video.videoWidth || 640;
-  canvas.height = video.videoHeight || 480;
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  return true;
-}
-
-function getVideoSampleTimes(duration: number, count: number) {
-  if (!Number.isFinite(duration) || duration <= 0) {
-    return Array.from({ length: count }, () => 0);
-  }
-
-  if (count <= 1) return [duration / 2];
-
-  const edgePadding = Math.min(0.08, duration * 0.05);
-  const start = edgePadding;
-  const end = Math.max(start, duration - edgePadding);
-
-  return Array.from(
-    { length: count },
-    (_, index) => start + ((end - start) * index) / (count - 1),
-  );
 }
 
 function normalizeGestureLabel(value: string) {
@@ -395,11 +240,7 @@ export default function Recognition() {
       width: 640,
       height: 480,
     });
-  const {
-    isReady: handDetectionReady,
-    error: handDetectionError,
-    detectHands,
-  } = useHandDetection();
+  const { detectHands } = useHandDetection();
 
   const animationFrameRef = useRef<number | null>(null);
   const currentFrameRef = useRef(0);
@@ -416,8 +257,6 @@ export default function Recognition() {
   const practiceStartedAtRef = useRef(Date.now());
   const uploadedVideoUrlRef = useRef<string | null>(null);
   const uploadedImageRef = useRef<HTMLImageElement | null>(null);
-  const uploadedFileRef = useRef<File | null>(null);
-  const uploadPredictionRunRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isRunning, setIsRunning] = useState(false);
@@ -426,14 +265,11 @@ export default function Recognition() {
   const [uploadedVideoName, setUploadedVideoName] = useState<string | null>(
     null,
   );
-  const [uploadedMediaType, setUploadedMediaType] =
-    useState<UploadedMediaType | null>(null);
   const [uploadedVideoError, setUploadedVideoError] = useState<string | null>(
     null,
   );
   const [results, setResults] = useState<RecognitionResult[]>([]);
   const [liveResult, setLiveResult] = useState<RecognitionResult | null>(null);
-  const [currentFrame, setCurrentFrame] = useState(0);
   const [stats, setStats] = useState<Stats>({
     totalRecognitions: 0,
     averageConfidence: 0,
@@ -533,10 +369,7 @@ export default function Recognition() {
   );
 
   const predictCanvasFrame = useCallback(
-    async (
-      canvas: HTMLCanvasElement,
-      mode: RecognitionMode = recognitionMode,
-    ): Promise<InferencePrediction | null> => {
+    async (canvas: HTMLCanvasElement): Promise<InferencePrediction | null> => {
       if (!serverConnected || isProcessingRef.current) return null;
 
       isProcessingRef.current = true;
@@ -549,7 +382,7 @@ export default function Recognition() {
         formData.append("file", blob, "frame.jpg");
 
         const response = await fetch(
-          `${API_BASE_URL}/api/predict?mode=${mode}`,
+          `${API_BASE_URL}/api/predict?mode=${recognitionMode}`,
           {
             method: "POST",
             body: formData,
@@ -649,9 +482,6 @@ export default function Recognition() {
     }
 
     currentFrameRef.current += 1;
-    if (currentFrameRef.current % 10 === 0) {
-      setCurrentFrame(currentFrameRef.current);
-    }
 
     const now = Date.now();
     if (
@@ -962,39 +792,6 @@ export default function Recognition() {
     return true;
   };
 
-  const prepareUploadedVideo = async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (!video || !canvas || !uploadedVideoUrlRef.current) {
-      setUploadedVideoError("Please choose a video file before starting.");
-      return false;
-    }
-
-    video.pause();
-    video.muted = true;
-    video.playsInline = true;
-
-    const hasMetadata = await waitForVideoMetadata(video);
-    if (!hasMetadata) {
-      setUploadedVideoError(getVideoLoadError(video));
-      return false;
-    }
-
-    const duration = getUsableVideoDuration(video);
-    const isSeekReady = await seekUploadedVideo(
-      video,
-      duration > 0 ? Math.min(duration / 2, 0.25) : 0,
-    );
-
-    if (!isSeekReady || !drawVideoFrameToCanvas(video, canvas)) {
-      setUploadedVideoError("Unable to read frames from this video.");
-      return false;
-    }
-
-    return true;
-  };
-
   const predictUploadedImage = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1083,243 +880,17 @@ export default function Recognition() {
     setIsRunning(false);
   };
 
-  const predictUploadedVideo = async (runId: number) => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) {
-      setIsRunning(false);
-      return;
-    }
-
-    const sampleTimes = getVideoSampleTimes(
-      getUsableVideoDuration(video),
-      WORD_VIDEO_SAMPLE_COUNT,
-    );
-
-    for (let index = 0; index < sampleTimes.length; index += 1) {
-      if (uploadPredictionRunRef.current !== runId) return;
-
-      const isSeekReady = await seekUploadedVideo(video, sampleTimes[index]);
-      if (uploadPredictionRunRef.current !== runId) return;
-      if (!isSeekReady || !drawVideoFrameToCanvas(video, canvas)) {
-        continue;
-      }
-
-      currentFrameRef.current = index + 1;
-      setCurrentFrame(index + 1);
-
-      const prediction = await predictCanvasFrame(canvas, "words");
-      if (uploadPredictionRunRef.current !== runId) return;
-
-      if (!prediction) {
-        setLiveResult({
-          timestamp: Date.now(),
-          gesture: `Sampling video frame ${index + 1}/${sampleTimes.length}`,
-          confidence: 0,
-          handedness: "Unknown",
-        });
-        continue;
-      }
-
-      if (prediction.landmarks.length > 0) {
-        latestDetectionRef.current = {
-          landmarks: prediction.landmarks,
-          handedness: prediction.handedness,
-          confidence: prediction.confidence_scores ?? [],
-        };
-        lastHandSeenAtRef.current = Date.now();
-        missedHandFramesRef.current = 0;
-      }
-
-      if (prediction.status === "warming_up") {
-        const framesReady =
-          prediction.training_metadata?.frames_ready ?? index + 1;
-        const framesRequired =
-          prediction.training_metadata?.frames_per_video ?? 20;
-
-        setLiveResult({
-          timestamp: Date.now(),
-          gesture: `Collecting frames ${framesReady}/${framesRequired}`,
-          confidence: 0,
-          handedness: formatDetectedHands(
-            prediction.handedness,
-            prediction.landmarks.length,
-          ),
-        });
-        continue;
-      }
-
-      if (prediction.status !== "success") {
-        setLiveResult({
-          timestamp: Date.now(),
-          gesture:
-            prediction.status === "no_hand"
-              ? `No hand in frame ${index + 1}/${sampleTimes.length}`
-              : "Unable to recognize this frame",
-          confidence: 0,
-          handedness: "Unknown",
-        });
-        continue;
-      }
-
-      const newResult: RecognitionResult = {
-        timestamp: Date.now(),
-        gesture: normalizeGestureLabel(prediction.gesture),
-        confidence: prediction.confidence,
-        handedness: formatDetectedHands(
-          prediction.handedness,
-          prediction.landmarks.length,
-        ),
-      };
-
-      setLiveResult(newResult);
-
-      if (prediction.confidence >= MIN_ACCEPTED_CONFIDENCE) {
-        lastAcceptedRef.current = newResult;
-        setResults((prev) => [newResult, ...prev].slice(0, 50));
-      }
-
-      setIsRunning(false);
-      return;
-    }
-
-    if (uploadPredictionRunRef.current === runId) {
-      setLiveResult({
-        timestamp: Date.now(),
-        gesture: "Not enough hand frames detected",
-        confidence: 0,
-        handedness: "Unknown",
-      });
-      setUploadedVideoError(
-        "The video did not provide enough detectable hand frames for Words recognition.",
-      );
-      setIsRunning(false);
-    }
-  };
-
-  const predictUploadedVideoFile = async (runId: number) => {
-    const file = uploadedFileRef.current;
-    if (!file) {
-      setUploadedVideoError("Please choose a video file before starting.");
-      setIsRunning(false);
-      return;
-    }
-
-    try {
-      setLiveResult({
-        timestamp: Date.now(),
-        gesture: "Uploading video for Words recognition",
-        confidence: 0,
-        handedness: "Unknown",
-      });
-
-      const formData = new FormData();
-      formData.append("file", file, file.name);
-
-      const response = await fetch(
-        `${API_BASE_URL}/api/predict-video?mode=words&sample_count=${WORD_VIDEO_SAMPLE_COUNT}`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      if (uploadPredictionRunRef.current !== runId) return;
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Video prediction failed");
-      }
-
-      const prediction = (await response.json()) as InferencePrediction & {
-        frames_processed?: number;
-        frames_with_hands?: number;
-      };
-
-      if (prediction.landmarks.length > 0) {
-        latestDetectionRef.current = {
-          landmarks: prediction.landmarks,
-          handedness: prediction.handedness,
-          confidence: prediction.confidence_scores ?? [],
-        };
-        lastHandSeenAtRef.current = Date.now();
-        missedHandFramesRef.current = 0;
-      }
-
-      const framesReady =
-        prediction.training_metadata?.frames_ready ??
-        prediction.frames_with_hands ??
-        prediction.frames_processed ??
-        0;
-      const framesRequired =
-        prediction.training_metadata?.frames_per_video ?? 20;
-      currentFrameRef.current = framesReady;
-      setCurrentFrame(framesReady);
-
-      if (prediction.status === "success") {
-        const newResult: RecognitionResult = {
-          timestamp: Date.now(),
-          gesture: normalizeGestureLabel(prediction.gesture),
-          confidence: prediction.confidence,
-          handedness: formatDetectedHands(
-            prediction.handedness,
-            prediction.landmarks.length,
-          ),
-        };
-
-        setLiveResult(newResult);
-        if (prediction.confidence >= MIN_ACCEPTED_CONFIDENCE) {
-          lastAcceptedRef.current = newResult;
-          setResults((prev) => [newResult, ...prev].slice(0, 50));
-        }
-        setUploadedVideoError(null);
-        return;
-      }
-
-      setLiveResult({
-        timestamp: Date.now(),
-        gesture:
-          prediction.status === "warming_up"
-            ? `Collecting frames ${framesReady}/${framesRequired}`
-            : prediction.gesture || "Unable to recognize this video",
-        confidence: 0,
-        handedness: formatDetectedHands(
-          prediction.handedness,
-          prediction.landmarks.length,
-        ),
-      });
-      setUploadedVideoError(
-        prediction.status === "error"
-          ? prediction.gesture
-          : `The video provided ${framesReady}/${framesRequired} detectable hand frames for Words recognition.`,
-      );
-    } catch (err) {
-      console.error("Video upload prediction error:", err);
-      setUploadedVideoError(
-        "Unable to recognize this video. Restart the FastAPI server so /api/predict-video is available.",
-      );
-      setLiveResult(null);
-    } finally {
-      if (uploadPredictionRunRef.current === runId) {
-        setIsRunning(false);
-      }
-    }
-  };
-
   const handleMediaUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const isImage = file.type.startsWith("image/");
-    const isVideo = file.type.startsWith("video/");
 
-    if (!isImage && !isVideo) {
-      setUploadedVideoError("Please select a valid image or video file.");
+    if (!isImage) {
+      setUploadedVideoError("Please select a valid image file.");
       event.target.value = "";
       return;
     }
-
-    uploadPredictionRunRef.current += 1;
 
     if (uploadedVideoUrlRef.current) {
       URL.revokeObjectURL(uploadedVideoUrlRef.current);
@@ -1327,18 +898,12 @@ export default function Recognition() {
 
     const nextUrl = URL.createObjectURL(file);
     uploadedVideoUrlRef.current = nextUrl;
-    uploadedFileRef.current = file;
     setUploadedVideoName(file.name);
-    setUploadedMediaType(isVideo ? "video" : "image");
     setUploadedVideoError(null);
     setRecognitionSource("upload");
-    const nextMode = isVideo
-      ? "words"
-      : recognitionMode === "words"
-        ? "alnum"
-        : recognitionMode;
-    if (recognitionMode !== nextMode) {
-      setRecognitionMode(nextMode);
+    const nextMode = recognitionMode === "words" ? "alnum" : recognitionMode;
+    if (recognitionMode === "words") {
+      setRecognitionMode("alnum");
     }
     setIsRunning(false);
     stopCamera();
@@ -1349,12 +914,6 @@ export default function Recognition() {
       video.pause();
       video.srcObject = null;
       video.removeAttribute("src");
-      if (isVideo) {
-        video.src = nextUrl;
-        video.muted = true;
-        video.playsInline = true;
-        video.preload = "auto";
-      }
       video.load();
     }
 
@@ -1386,30 +945,10 @@ export default function Recognition() {
       image.src = nextUrl;
     }
 
-    if (isVideo && video) {
-      void waitForVideoMetadata(video).then(async (hasMetadata) => {
-        if (!hasMetadata || uploadedVideoUrlRef.current !== nextUrl) return;
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const duration = getUsableVideoDuration(video);
-        const isSeekReady = await seekUploadedVideo(
-          video,
-          duration > 0 ? Math.min(duration / 2, 0.25) : 0,
-        );
-
-        if (isSeekReady && uploadedVideoUrlRef.current === nextUrl) {
-          drawVideoFrameToCanvas(video, canvas);
-        }
-      });
-    }
-
     latestDetectionRef.current = null;
     setLiveResult(null);
     predictionWindowRef.current = [];
     currentFrameRef.current = 0;
-    setCurrentFrame(0);
     if (canvasRef.current) {
       clearCanvas(canvasRef.current);
     }
@@ -1424,7 +963,6 @@ export default function Recognition() {
     setLiveResult(null);
     predictionWindowRef.current = [];
     currentFrameRef.current = 0;
-    setCurrentFrame(0);
 
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -1443,8 +981,13 @@ export default function Recognition() {
       if (video && uploadedVideoUrlRef.current) {
         video.pause();
         video.srcObject = null;
-        video.src = uploadedVideoUrlRef.current;
+        video.removeAttribute("src");
         video.load();
+      }
+
+      if (recognitionMode === "words") {
+        setRecognitionMode("alnum");
+        resetServerSequence("alnum");
       }
     }
 
@@ -1458,42 +1001,26 @@ export default function Recognition() {
       }
 
       if (recognitionSource === "upload") {
-        if (uploadedMediaType === "video" && recognitionMode !== "words") {
+        if (recognitionMode === "words") {
           setUploadedVideoError(
-            "Video upload is available in Words mode only.",
+            "Image upload supports Alphabet & Numbers and Numbers modes only.",
           );
+          setRecognitionMode("alnum");
+          await resetServerSequence("alnum");
           return;
         }
 
-        if (uploadedMediaType === "image" && recognitionMode === "words") {
-          setUploadedVideoError(
-            "Words mode requires a video upload. Choose an MP4/WebM file.",
-          );
-          return;
-        }
-
-        if (uploadedMediaType === "image") {
-          const isMediaReady = await prepareUploadedImage();
-          if (!isMediaReady) return;
-        }
+        const isImageReady = await prepareUploadedImage();
+        if (!isImageReady) return;
       }
 
       await resetServerSequence(recognitionMode);
-      const uploadRunId =
-        recognitionSource === "upload" ? uploadPredictionRunRef.current + 1 : 0;
-      if (recognitionSource === "upload") {
-        uploadPredictionRunRef.current = uploadRunId;
-      }
       startTimeRef.current = Date.now();
       practiceStartedAtRef.current = Date.now();
       setIsRunning(true);
 
       if (recognitionSource === "upload") {
-        if (uploadedMediaType === "video") {
-          void predictUploadedVideoFile(uploadRunId);
-        } else {
-          void predictUploadedImage();
-        }
+        void predictUploadedImage();
       }
     } catch (err) {
       console.error("Failed to start recognition:", err);
@@ -1502,7 +1029,6 @@ export default function Recognition() {
   };
 
   const handleStop = () => {
-    uploadPredictionRunRef.current += 1;
     setIsRunning(false);
     resetServerSequence(recognitionMode);
     if (recognitionSource === "camera") {
@@ -1533,7 +1059,6 @@ export default function Recognition() {
   };
 
   const handleReset = () => {
-    uploadPredictionRunRef.current += 1;
     resetServerSequence(recognitionMode);
     setResults([]);
     latestDetectionRef.current = null;
@@ -1549,7 +1074,6 @@ export default function Recognition() {
     setPracticeFeedback(null);
     setPracticeAttempts([]);
     currentFrameRef.current = 0;
-    setCurrentFrame(0);
     if (recognitionSource === "upload" && videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
@@ -1564,29 +1088,13 @@ export default function Recognition() {
 
   const handleModeChange = (mode: RecognitionMode) => {
     if (mode === recognitionMode) return;
-    if (
-      recognitionSource === "upload" &&
-      mode === "words" &&
-      uploadedMediaType === "image"
-    ) {
+    if (recognitionSource === "upload" && mode === "words") {
       setUploadedVideoError(
-        "Words mode requires a video upload. Choose an MP4/WebM file.",
+        "Image upload supports Alphabet & Numbers and Numbers modes only.",
       );
       return;
     }
-    if (
-      recognitionSource === "upload" &&
-      mode !== "words" &&
-      uploadedMediaType === "video"
-    ) {
-      setUploadedVideoError(
-        "Alphabet and Numbers upload uses an image. Choose a JPG/PNG file.",
-      );
-      return;
-    }
-    uploadPredictionRunRef.current += 1;
     setRecognitionMode(mode);
-    setUploadedVideoError(null);
     resetServerSequence(mode);
     setResults([]);
     latestDetectionRef.current = null;
@@ -1602,7 +1110,6 @@ export default function Recognition() {
     setPracticeFeedback(null);
     setPracticeAttempts([]);
     currentFrameRef.current = 0;
-    setCurrentFrame(0);
   };
 
   const latestResult =
@@ -1612,14 +1119,41 @@ export default function Recognition() {
 
   return (
     <Layout>
-      <div className="container mx-auto py-8 px-4">
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold mb-2">Realtime Sign Recognition</h1>
-          <p className="text-lg text-muted-foreground">
-            Recognize signs from your camera or upload an image/video for
-            recognition.
-          </p>
-        </div>
+      <div className="container mx-auto px-4 py-4 md:py-5">
+        <header className="mb-5 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 p-5 text-white shadow-lg">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                Realtime Sign Recognition
+              </h1>
+              <p className="mt-2 text-sm text-white/90 md:text-base">
+                Recognize signs from your camera or an uploaded image.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center md:min-w-[360px]">
+              <div className="rounded-lg bg-white/15 px-3 py-2">
+                <p className="text-xs text-white/80">Recognitions</p>
+                <p className="text-lg font-bold">{stats.totalRecognitions}</p>
+              </div>
+              <div className="rounded-lg bg-white/15 px-3 py-2">
+                <p className="text-xs text-white/80">Avg confidence</p>
+                <p className="text-lg font-bold">
+                  {(stats.averageConfidence * 100).toFixed(0)}%
+                </p>
+              </div>
+              <div className="rounded-lg bg-white/15 px-3 py-2">
+                <p className="text-xs text-white/80">Mode</p>
+                <p className="truncate text-lg font-bold">
+                  {
+                    RECOGNITION_MODES.find(
+                      (mode) => mode.value === recognitionMode,
+                    )?.label
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
 
         {isLessonPractice && practiceState.expectedWord && (
           <Card className="mb-6 p-5 border-primary/30 bg-primary/5">
@@ -1681,176 +1215,54 @@ export default function Recognition() {
           </Card>
         )}
 
-        <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(340px,1fr)]">
           <section className="space-y-4">
-            <Card className="overflow-hidden bg-black">
-              <div className="relative bg-black">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="hidden"
-                />
-                <canvas
-                  ref={canvasRef}
-                  className="w-full h-auto max-h-[560px]"
-                  style={{ aspectRatio: "640/480" }}
-                />
+            <div>
+              <h2 className="mb-2 text-xl font-semibold">
+                Recognition Workspace
+              </h2>
+              <Card className="overflow-hidden bg-black shadow-sm">
+                <div className="relative bg-black">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="hidden"
+                  />
+                  <canvas
+                    ref={canvasRef}
+                    className="w-full h-auto max-h-[430px]"
+                    style={{ aspectRatio: "640/480" }}
+                  />
 
-                <div className="absolute top-4 left-4">
-                  <Badge
-                    variant={
-                      isRunning
-                        ? "default"
+                  <div className="absolute top-4 left-4">
+                    <Badge
+                      variant={
+                        isRunning
+                          ? "default"
+                          : isActive || uploadedVideoName
+                            ? "outline"
+                            : "secondary"
+                      }
+                      className={
+                        isRunning
+                          ? "bg-green-500 text-white"
+                          : isActive || uploadedVideoName
+                            ? "bg-yellow-500 text-white"
+                            : ""
+                      }
+                    >
+                      <Zap className="h-3 w-3 mr-1" />
+                      {isRunning
+                        ? "Recognizing"
                         : isActive || uploadedVideoName
-                          ? "outline"
-                          : "secondary"
-                    }
-                    className={
-                      isRunning
-                        ? "bg-green-500 text-white"
-                        : isActive || uploadedVideoName
-                          ? "bg-yellow-500 text-white"
-                          : ""
-                    }
-                  >
-                    <Zap className="h-3 w-3 mr-1" />
-                    {isRunning
-                      ? "Recognizing"
-                      : isActive || uploadedVideoName
-                        ? "Ready"
-                        : "Standby"}
-                  </Badge>
-                </div>
-
-                <div className="absolute top-4 right-4">
-                  <Badge variant="secondary">Frame: {currentFrame}</Badge>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <div className="mb-4 grid gap-2 sm:grid-cols-2">
-                <Button
-                  type="button"
-                  variant={
-                    recognitionSource === "camera" ? "default" : "outline"
-                  }
-                  onClick={() => handleSourceChange("camera")}
-                  className="gap-2"
-                >
-                  <Camera className="h-4 w-4" />
-                  Camera
-                </Button>
-                <Button
-                  type="button"
-                  variant={
-                    recognitionSource === "upload" ? "default" : "outline"
-                  }
-                  onClick={() => {
-                    if (recognitionSource !== "upload") {
-                      handleSourceChange("upload");
-                    }
-                    fileInputRef.current?.click();
-                  }}
-                  className="gap-2"
-                >
-                  <ImageIcon className="h-4 w-4" />
-                  Upload file
-                </Button>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*,video/*"
-                className="hidden"
-                onChange={handleMediaUpload}
-              />
-
-              {recognitionSource === "upload" && (
-                <div className="mb-4 rounded-md border border-dashed p-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {uploadedVideoName ||
-                        (recognitionMode === "words"
-                          ? "No video selected"
-                          : "No image selected")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Use a video for Words, or a JPG/PNG image for Alphabet and
-                      Numbers.
-                    </p>
-                    {uploadedVideoError && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {uploadedVideoError}
-                      </p>
-                    )}
+                          ? "Ready"
+                          : "Standby"}
+                    </Badge>
                   </div>
                 </div>
-              )}
-
-              <div className="flex flex-wrap gap-2">
-                {RECOGNITION_MODES.map((mode) => {
-                  const isSelected = recognitionMode === mode.value;
-                  return (
-                    <Button
-                      key={mode.value}
-                      type="button"
-                      variant={isSelected ? "default" : "outline"}
-                      onClick={() => handleModeChange(mode.value)}
-                      className="flex-1 min-w-[180px]"
-                    >
-                      {mode.label}
-                    </Button>
-                  );
-                })}
-              </div>
-              <p className="mt-3 text-sm text-muted-foreground">
-                {
-                  RECOGNITION_MODES.find(
-                    (mode) => mode.value === recognitionMode,
-                  )?.description
-                }
-              </p>
-            </Card>
-
-            <div className="flex flex-wrap gap-3">
-              {!isRunning ? (
-                <Button
-                  onClick={handleStart}
-                  disabled={
-                    !serverConnected ||
-                    (recognitionSource === "upload" && !uploadedVideoName)
-                  }
-                  className="gap-2"
-                  size="lg"
-                >
-                  <Play className="h-4 w-4" />
-                  Start Recognition
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleStop}
-                  variant="destructive"
-                  className="gap-2"
-                  size="lg"
-                >
-                  <Square className="h-4 w-4" />
-                  Stop Recognition
-                </Button>
-              )}
-
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                className="gap-2"
-                size="lg"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Reset Session
-              </Button>
+              </Card>
             </div>
 
             {error && (
@@ -1873,27 +1285,11 @@ export default function Recognition() {
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-yellow-900 text-sm">
-                      WLASL Recognition Server
+                      Recognition Unavailable
                     </p>
                     <p className="text-yellow-800 text-sm">
-                      {serverError}. Make sure the FastAPI server is running.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {handDetectionError && (
-              <Card className="border-yellow-200 bg-yellow-50">
-                <div className="flex items-start gap-3 p-4">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-yellow-900 text-sm">
-                      Hand Overlay
-                    </p>
-                    <p className="text-yellow-800 text-sm">
-                      Client-side hand overlay is unavailable, so landmarks may
-                      update less smoothly from server responses.
+                      Recognition is not ready yet. Please try again in a
+                      moment.
                     </p>
                   </div>
                 </div>
@@ -1901,11 +1297,158 @@ export default function Recognition() {
             )}
           </section>
 
-          <aside className="space-y-4">
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Latest Result</h2>
-                <Camera className="h-5 w-5 text-muted-foreground" />
+          <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
+            <Card className="overflow-hidden shadow-sm">
+              <div className="space-y-2.5 p-3">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                    <Camera className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      Recognition Controls
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Choose a source and model before starting.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-sm font-medium">
+                    Choose input source
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant={
+                        recognitionSource === "camera" ? "default" : "outline"
+                      }
+                      onClick={() => handleSourceChange("camera")}
+                      className="h-9 gap-2"
+                    >
+                      <Camera className="h-4 w-4" />
+                      Camera
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={
+                        recognitionSource === "upload" ? "default" : "outline"
+                      }
+                      onClick={() => {
+                        if (recognitionSource !== "upload") {
+                          handleSourceChange("upload");
+                        }
+                        fileInputRef.current?.click();
+                      }}
+                      className="h-9 gap-2"
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                      Upload file
+                    </Button>
+                  </div>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleMediaUpload}
+                />
+
+                {recognitionSource === "upload" && (
+                  <div className="rounded-md border border-dashed p-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {uploadedVideoName || "No image selected"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a JPG/PNG image for Alphabet and Numbers.
+                      </p>
+                      {uploadedVideoError && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {uploadedVideoError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="mb-1.5 text-sm font-medium">Recognition mode</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {RECOGNITION_MODES.map((mode) => {
+                      const isSelected = recognitionMode === mode.value;
+                      const isUploadWordsDisabled =
+                        recognitionSource === "upload" &&
+                        mode.value === "words";
+                      return (
+                        <Button
+                          key={mode.value}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          disabled={isUploadWordsDisabled}
+                          onClick={() => handleModeChange(mode.value)}
+                          className="h-9"
+                        >
+                          {mode.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 border-t p-3">
+                {!isRunning ? (
+                  <Button
+                    onClick={handleStart}
+                    disabled={
+                      !serverConnected ||
+                      (recognitionSource === "upload" && !uploadedVideoName)
+                    }
+                    className="gap-2"
+                    size="default"
+                  >
+                    <Play className="h-4 w-4" />
+                    Start Recognition
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleStop}
+                    variant="destructive"
+                    className="gap-2"
+                    size="default"
+                  >
+                    <Square className="h-4 w-4" />
+                    Stop Recognition
+                  </Button>
+                )}
+
+                <Button
+                  onClick={handleReset}
+                  variant="outline"
+                  className="gap-2"
+                  size="default"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset Session
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="p-4 shadow-sm">
+              <div className="mb-3 flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                  <Zap className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Latest Result</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Most recent prediction from the active session.
+                  </p>
+                </div>
               </div>
 
               {latestResult ? (
@@ -1917,15 +1460,15 @@ export default function Recognition() {
                     </p>
                   </div>
                   <div>
-                    <div className="flex justify-between text-sm mb-2">
+                    <div className="mb-2 flex justify-between text-sm">
                       <span className="text-muted-foreground">Confidence</span>
                       <span className="font-semibold">
                         {(latestResult.confidence * 100).toFixed(1)}%
                       </span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
+                    <div className="h-2 w-full rounded-full bg-muted">
                       <div
-                        className="bg-primary h-2 rounded-full transition-all"
+                        className="h-2 rounded-full bg-primary transition-all"
                         style={{ width: `${latestResult.confidence * 100}%` }}
                       />
                     </div>
@@ -1939,130 +1482,36 @@ export default function Recognition() {
                   </p>
                 </div>
               ) : (
-                <div className="py-10 text-center text-muted-foreground">
-                  <Camera className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <div className="py-5 text-center text-muted-foreground">
+                  <Camera className="mx-auto mb-2 h-8 w-8 opacity-50" />
                   <p>No result yet. Start recognition and show your hand.</p>
                 </div>
               )}
             </Card>
-
-            <Card className="p-5">
-              <h3 className="font-semibold mb-3">Status</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Source</span>
-                  <Badge
-                    variant={
-                      isActive || uploadedVideoName ? "default" : "secondary"
-                    }
-                    className={
-                      isActive || uploadedVideoName ? "bg-green-500" : ""
-                    }
-                  >
-                    {recognitionSource === "camera"
-                      ? isActive
-                        ? "Camera"
-                        : "Camera idle"
-                      : uploadedVideoName
-                        ? "Uploaded image"
-                        : "No file"}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Hand Overlay</span>
-                  <Badge
-                    variant={handDetectionReady ? "default" : "secondary"}
-                    className={handDetectionReady ? "bg-green-500" : ""}
-                  >
-                    {handDetectionReady ? "Client-side" : "Loading"}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Landmark Model</span>
-                  <Badge
-                    variant={serverConnected ? "default" : "secondary"}
-                    className={serverConnected ? "bg-green-500" : ""}
-                  >
-                    Server-side
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Mode</span>
-                  <Badge variant="outline">
-                    {
-                      RECOGNITION_MODES.find(
-                        (mode) => mode.value === recognitionMode,
-                      )?.label
-                    }
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Recognition</span>
-                  <Badge
-                    variant={isRunning ? "default" : "secondary"}
-                    className={isRunning ? "bg-green-500" : ""}
-                  >
-                    {isRunning ? "Active" : "Idle"}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">WLASL Server</span>
-                  <Badge
-                    variant={serverConnected ? "default" : "secondary"}
-                    className={
-                      serverConnected ? "bg-green-500" : "bg-orange-500"
-                    }
-                  >
-                    {serverConnected ? "Connected" : "Disconnected"}
-                  </Badge>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-5">
-              <h3 className="font-semibold mb-3">Display Options</h3>
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showBoundingBox}
-                    onChange={(e) => setShowBoundingBox(e.target.checked)}
-                    className="w-4 h-4 rounded"
-                  />
-                  <span className="text-sm font-medium">
-                    Show Bounding Boxes
-                  </span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showLandmarks}
-                    onChange={(e) => setShowLandmarks(e.target.checked)}
-                    className="w-4 h-4 rounded"
-                  />
-                  <span className="text-sm font-medium">Show Landmarks</span>
-                </label>
-              </div>
-            </Card>
           </aside>
         </div>
 
-        <div className="grid lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] gap-6 mt-6">
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Recognition History</h2>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+          <Card className="p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold">Recognition History</h2>
+              {results.length > 0 && (
+                <Badge variant="secondary">{results.length} results</Badge>
+              )}
+            </div>
             {results.length === 0 ? (
-              <p className="text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Recognition results will appear here during the session.
               </p>
             ) : (
-              <div className="space-y-2 max-h-80 overflow-y-auto">
+              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
                 {results.map((result, index) => (
                   <div
                     key={`${result.timestamp}-${index}`}
-                    className="flex items-center justify-between p-3 bg-muted rounded-lg hover:bg-muted/80 transition-colors"
+                    className="flex items-center justify-between rounded-lg bg-muted p-3 transition-colors hover:bg-muted/80"
                   >
-                    <div className="flex-1">
-                      <p className="font-semibold">{result.gesture}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{result.gesture}</p>
                       <p className="text-sm text-muted-foreground">
                         {result.handedness}
                       </p>
@@ -2071,7 +1520,7 @@ export default function Recognition() {
                       <Badge variant="outline">
                         {(result.confidence * 100).toFixed(1)}%
                       </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {new Date(result.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
@@ -2081,8 +1530,18 @@ export default function Recognition() {
             )}
           </Card>
 
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-4">Session Stats</h2>
+          <Card className="p-5 shadow-sm">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="rounded-xl bg-primary/10 p-3 text-primary">
+                <TrendingUp className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Session Stats</h2>
+                <p className="text-sm text-muted-foreground">
+                  Results update automatically while recognition is running.
+                </p>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">
@@ -2112,12 +1571,32 @@ export default function Recognition() {
                 </p>
               </div>
             </div>
-            <div className="mt-5 flex items-center gap-2 text-sm text-muted-foreground">
-              <TrendingUp className="h-4 w-4" />
-              Results update automatically while recognition is running.
-            </div>
           </Card>
         </div>
+
+        <Card className="mt-6 p-5 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold">Advanced Options</h2>
+          <div className="space-y-3">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={showBoundingBox}
+                onChange={(e) => setShowBoundingBox(e.target.checked)}
+                className="h-4 w-4 rounded"
+              />
+              <span className="text-sm font-medium">Show Bounding Boxes</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={showLandmarks}
+                onChange={(e) => setShowLandmarks(e.target.checked)}
+                className="h-4 w-4 rounded"
+              />
+              <span className="text-sm font-medium">Show Landmarks</span>
+            </label>
+          </div>
+        </Card>
       </div>
     </Layout>
   );
