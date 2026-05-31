@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLearningStore } from "@/hooks/use-learning-store";
 import { courses, lessons, type Lesson } from "@shared/curriculum";
-import { getSignMetadata } from "@shared/sign-metadata";
 import {
   categories,
   categoryLabels,
@@ -27,7 +26,9 @@ import {
   Flame,
   GraduationCap,
   ListChecks,
+  PlayCircle,
   Target,
+  X,
 } from "lucide-react";
 
 const formatDate = (date?: string) => {
@@ -51,22 +52,6 @@ const getAccuracy = (progress: SRSProgress[]) => {
 const getProgressStatusLabel = (status: SRSProgress["status"]) =>
   status === "mastered" ? "learned" : status;
 
-type RecognitionPracticeHistoryItem = {
-  id: string;
-  lessonId: string;
-  cardId: string;
-  expectedWord: string;
-  predictedWord: string;
-  isCorrect: boolean;
-  confidence: number;
-  attemptCount: number;
-  durationMs: number;
-  stabilityScore: number;
-  passedThreshold: boolean;
-  suggestion?: string;
-  createdAt: string;
-};
-
 type LearnerAnalytics = {
   studyTimeThisWeekMs: number;
   accuracyTrend: Array<{
@@ -80,13 +65,6 @@ type LearnerAnalytics = {
     correct: number;
     averageScore?: number;
   }>;
-  recognitionImprovement: {
-    attempts: number;
-    firstAccuracy: number;
-    recentAccuracy: number;
-    confidenceDelta: number;
-    stabilityDelta: number;
-  };
   reviewConsistency: {
     activeDaysThisWeek: number;
     percent: number;
@@ -99,14 +77,13 @@ const formatMinutes = (durationMs: number) =>
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuthStore();
   const learningStore = useLearningStore();
-  const [recognitionHistory, setRecognitionHistory] = useState<
-    RecognitionPracticeHistoryItem[]
-  >([]);
   const [analytics, setAnalytics] = useState<LearnerAnalytics | null>(null);
   const [dashboardCards, setDashboardCards] =
     useState<VocabType[]>(vocabularyCards);
   const [dashboardLessons, setDashboardLessons] = useState<Lesson[]>(lessons);
   const userId = user?.id || "guest";
+
+  const [selectedVideoCard, setSelectedVideoCard] = useState<VocabType | null>(null);
 
   const stats = learningStore.getProgressStats(userId);
   const allProgress = Array.from(learningStore.progress.values()).filter(
@@ -126,59 +103,50 @@ export default function Dashboard() {
     (item) => item.status === "learning",
   ).length;
   const reviewedCount = allProgress.filter((item) => item.attempts > 0).length;
+  const totalWords = dashboardCards.length || stats.totalWords;
   const masteryPercentage =
-    stats.totalWords > 0
-      ? Math.round((stats.masteredWords / stats.totalWords) * 100)
+    totalWords > 0
+      ? Math.round((masteredIds.size / totalWords) * 100)
       : 0;
   const accuracy = getAccuracy(allProgress);
-  const recognitionAccuracy = useMemo(() => {
-    if (recognitionHistory.length === 0) return 0;
-    const correct = recognitionHistory.filter((item) => item.isCorrect).length;
-    return Math.round((correct / recognitionHistory.length) * 100);
-  }, [recognitionHistory]);
-  const weakRecognitionSigns = useMemo(() => {
-    const grouped = new Map<
-      string,
-      {
-        expectedWord: string;
-        attempts: number;
-        correct: number;
-        avgConfidence: number;
-        avgStability: number;
-      }
-    >();
+  const publishedCardIds = new Set(dashboardCards.map((card) => card.id));
 
-    recognitionHistory.forEach((item) => {
-      const current = grouped.get(item.cardId) || {
-        expectedWord: item.expectedWord,
-        attempts: 0,
-        correct: 0,
-        avgConfidence: 0,
-        avgStability: 0,
-      };
-      current.attempts += 1;
-      current.correct += item.isCorrect ? 1 : 0;
-      current.avgConfidence += item.confidence;
-      current.avgStability += item.stabilityScore || 0;
-      grouped.set(item.cardId, current);
-    });
+  const now = new Date();
+  const dueCards = learningStore
+    .getDueCards(userId, 50)
+    .filter((card) => {
+      if (!publishedCardIds.has(card.id)) return false;
+      const progress = Array.from(learningStore.progress.values()).find(
+        (p) => p.userId === userId && p.cardId === card.id,
+      );
+      if (!progress || progress.status === "new" || progress.status === "mastered") return false;
+      return new Date(progress.nextReviewDate) <= now;
+  });
 
-    return Array.from(grouped.entries())
-      .map(([cardId, item]) => ({
-        cardId,
-        ...item,
-        accuracy: item.attempts > 0 ? item.correct / item.attempts : 0,
-        avgConfidence:
-          item.attempts > 0 ? item.avgConfidence / item.attempts : 0,
-        avgStability: item.attempts > 0 ? item.avgStability / item.attempts : 0,
-      }))
-      .filter((item) => item.accuracy < 0.7 || item.avgConfidence < 0.75)
-      .sort(
-        (a, b) => a.accuracy - b.accuracy || a.avgConfidence - b.avgConfidence,
-      )
-      .slice(0, 6);
-  }, [recognitionHistory]);
-  const weakCards = learningStore.getWeakCards(userId, 6);
+  // Also include cards that are past due (overdue) — same as dueCards since getDueCards returns all due
+  // Separate into: due today vs overdue (more than 1 day late)
+  const reviewQueueCards = (() => {
+    const allProgressArr = Array.from(learningStore.progress.values()).filter(
+      (p) => p.userId === userId && p.status !== "new" && p.status !== "mastered",
+    );
+    return allProgressArr
+      .filter((p) => publishedCardIds.has(p.cardId))
+      .map((p) => {
+        const card = vocabularyCards.find((c) => c.id === p.cardId) as VocabType | undefined;
+        if (!card) return null;
+        const dueDate = new Date(p.nextReviewDate);
+        const msOverdue = now.getTime() - dueDate.getTime();
+        const daysOverdue = Math.floor(msOverdue / (1000 * 60 * 60 * 24));
+        return { card, progress: p, dueDate, daysOverdue };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  })();
+
+
+  const weakCards = learningStore
+    .getWeakCards(userId, 6)
+    .filter((card) => publishedCardIds.has(card.id));
   const completedLessons = dashboardLessons.filter(
     (lesson) =>
       learningStore.getLessonProgress(lesson.id, userId)?.status ===
@@ -199,6 +167,20 @@ export default function Dashboard() {
     dashboardLessons.length > 0
       ? Math.round((completedLessons.length / dashboardLessons.length) * 100)
       : 0;
+
+  const getDashboardLessonMastery = (lesson: Lesson) => {
+    const mastered = lesson.cardIds.filter((cardId) =>
+      learningStore.understoodCards.has(`${userId}:${cardId}`),
+    ).length;
+    return {
+      mastered,
+      total: lesson.cardIds.length,
+      percent:
+        lesson.cardIds.length > 0
+          ? Math.round((mastered / lesson.cardIds.length) * 100)
+          : 0,
+    };
+  };
 
   const dashboardCourses = courses.map((course) => ({
     ...course,
@@ -302,49 +284,25 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!isAuthenticated || !token) {
-      setRecognitionHistory([]);
-      return;
-    }
+    if (!isAuthenticated || !token) return;
 
     let cancelled = false;
-    async function loadRecognitionHistory() {
+    async function loadAnalytics() {
       try {
-        const [historyResponse, analyticsResponse] = await Promise.all([
-          fetch("/api/learning/recognition-practice/history?limit=20", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-          fetch("/api/learning/analytics/me", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        ]);
-
-        if (historyResponse.ok) {
-          const data = await historyResponse.json();
-          if (!cancelled) {
-            setRecognitionHistory(data.results || []);
-          }
-        }
-
-        if (analyticsResponse.ok) {
-          const data = await analyticsResponse.json();
-          if (!cancelled) {
-            setAnalytics(data);
-          }
+        const response = await fetch("/api/learning/analytics/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (!cancelled) setAnalytics(data);
         }
       } catch (error) {
         console.error("Failed to load learning analytics:", error);
       }
     }
 
-    loadRecognitionHistory();
-    return () => {
-      cancelled = true;
-    };
+    void loadAnalytics();
+    return () => { cancelled = true; };
   }, [isAuthenticated]);
 
   return (
@@ -373,9 +331,6 @@ export default function Dashboard() {
             <Button variant="outline" asChild>
               <Link to="/learn">Continue learning</Link>
             </Button>
-            <Button asChild>
-              <Link to="/recognition">Practice recognition</Link>
-            </Button>
           </div>
         </div>
 
@@ -384,7 +339,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-muted-foreground">Learned</p>
-                <p className="text-3xl font-bold">{stats.masteredWords}</p>
+                <p className="text-3xl font-bold">{masteredIds.size}</p>
               </div>
               <Award className="h-9 w-9 text-emerald-600" />
             </div>
@@ -433,25 +388,18 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">Accuracy trend</p>
             <p className="text-2xl font-bold">
               {analytics?.accuracyTrend?.[analytics.accuracyTrend.length - 1]
-                ?.averageScore
+                ?.averageScore != null
                 ? `${Math.round(analytics.accuracyTrend[analytics.accuracyTrend.length - 1].averageScore)}%`
-                : `${accuracy}%`}
+                : "—"}
             </p>
           </Card>
           <Card className="p-5">
             <p className="text-sm text-muted-foreground">Weakest topics</p>
             <p className="text-2xl font-bold">
-              {analytics?.weakestTopics?.length || 0}
-            </p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Recognition improvement
-            </p>
-            <p className="text-2xl font-bold">
-              {analytics
-                ? `${analytics.recognitionImprovement.recentAccuracy - analytics.recognitionImprovement.firstAccuracy}%`
-                : "0%"}
+              {analytics?.weakestTopics?.filter(
+                (t) => t.attempts > 0 &&
+                Math.round((Number(t.correct || 0) / t.attempts) * 100) < 100
+              ).length || 0}
             </p>
           </Card>
           <Card className="p-5">
@@ -466,15 +414,19 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6 space-y-4">
               <h2 className="text-xl font-semibold">Weakest Topics</h2>
-              {analytics.weakestTopics.length > 0 ? (
+              {analytics.weakestTopics.filter((t) => t.attempts > 0 && Math.round((Number(t.correct || 0) / t.attempts) * 100) < 100).length > 0 ? (
                 <div className="space-y-3">
-                  {analytics.weakestTopics.map((topic) => {
-                    const accuracyValue =
-                      topic.attempts > 0
-                        ? Math.round(
-                            (Number(topic.correct || 0) / topic.attempts) * 100,
-                          )
-                        : 0;
+                  {[...analytics.weakestTopics]
+                    .map((topic) => ({
+                      ...topic,
+                      accuracyValue: topic.attempts > 0
+                        ? Math.round((Number(topic.correct || 0) / topic.attempts) * 100)
+                        : 0,
+                    }))
+                    .filter((topic) => topic.attempts > 0 && topic.accuracyValue < 100)
+                    .sort((a, b) => a.accuracyValue - b.accuracyValue)
+                    .map((topic) => {
+                    const { accuracyValue } = topic;
                     return (
                       <div key={topic.category} className="space-y-2">
                         <div className="flex justify-between text-sm">
@@ -492,36 +444,24 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  More quiz and recognition attempts will reveal weak topics.
+                  Complete more quizzes to reveal weak topics.
                 </p>
               )}
             </Card>
 
             <Card className="p-6 space-y-4">
-              <h2 className="text-xl font-semibold">Recognition Improvement</h2>
+              <h2 className="text-xl font-semibold">Review Consistency</h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">First attempts</p>
-                  <p className="text-lg font-semibold">
-                    {analytics.recognitionImprovement.firstAccuracy}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Recent attempts</p>
-                  <p className="text-lg font-semibold">
-                    {analytics.recognitionImprovement.recentAccuracy}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Confidence delta</p>
-                  <p className="text-lg font-semibold">
-                    {analytics.recognitionImprovement.confidenceDelta}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Active days</p>
+                  <p className="text-muted-foreground">Active days this week</p>
                   <p className="text-lg font-semibold">
                     {analytics.reviewConsistency.activeDaysThisWeek}/7
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Consistency</p>
+                  <p className="text-lg font-semibold">
+                    {analytics.reviewConsistency.percent}%
                   </p>
                 </div>
               </div>
@@ -575,19 +515,16 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Today's review</p>
+                <p className="text-muted-foreground">Due for review</p>
                 <p className="text-lg font-semibold">
-                  {stats.totalReviewsToday}
+                  {dueCards.length}
                 </p>
               </div>
               <div>
                 <p className="text-muted-foreground">Weak words</p>
                 <p className="text-lg font-semibold">{weakCards.length}</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Recognition</p>
-                <p className="text-lg font-semibold">{recognitionAccuracy}%</p>
-              </div>
+
               <div>
                 <p className="text-muted-foreground">Sync</p>
                 <p className="text-lg font-semibold">
@@ -605,7 +542,7 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-xl font-semibold">Overall Progress</h2>
                 <p className="text-sm text-muted-foreground">
-                  {stats.masteredWords} of {stats.totalWords} vocabulary items
+                  {masteredIds.size} of {totalWords} vocabulary items
                   learned
                 </p>
               </div>
@@ -618,9 +555,9 @@ export default function Dashboard() {
                 <p className="text-lg font-semibold">{reviewedCount}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Today</p>
+                <p className="text-muted-foreground">Due today</p>
                 <p className="text-lg font-semibold">
-                  {stats.totalReviewsToday}
+                  {dueCards.length}
                 </p>
               </div>
               <div>
@@ -676,15 +613,25 @@ export default function Dashboard() {
                   (completed / course.lessons.length) * 100,
                 );
 
+                const mastery = course.lessons.reduce(
+                    (acc, lesson) => {
+                      const m = getDashboardLessonMastery(lesson);
+                      return { mastered: acc.mastered + m.mastered, total: acc.total + m.total };
+                    },
+                    { mastered: 0, total: 0 },
+                  );
+                const masteryPercent = mastery.total > 0
+                    ? Math.round((mastery.mastered / mastery.total) * 100)
+                    : 0;
                 return (
                   <div key={course.id} className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="font-medium">{course.title}</span>
                       <span className="text-muted-foreground">
-                        {completed}/{course.lessons.length}
+                        {mastery.mastered}/{mastery.total} words · {completed}/{course.lessons.length} lessons
                       </span>
                     </div>
-                    <Progress value={percent} className="h-2" />
+                    <Progress value={masteryPercent} className="h-2" />
                   </div>
                 );
               })}
@@ -708,15 +655,23 @@ export default function Dashboard() {
                       : 0;
 
                   return (
-                    <div key={card.id} className="rounded-md border p-3">
-                      <p className="font-medium">{card.word}</p>
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => setSelectedVideoCard(card)}
+                      className="rounded-md border p-3 text-left hover:bg-muted/50 transition-colors group cursor-pointer w-full"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium">{card.word}</p>
+                        <PlayCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {categoryLabels[card.category]}
                       </p>
                       <Badge variant="secondary" className="mt-2">
                         {accuracyValue}% accuracy
                       </Badge>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -728,196 +683,69 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <Card className="p-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">
-                Recognition Practice History
-              </h2>
+        {reviewQueueCards.length > 0 && (
+          <Card className="p-6 space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5" />
+                <h2 className="text-xl font-semibold">Review Queue</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {reviewQueueCards.filter((i) => i.daysOverdue > 0).length > 0 && (
+                  <Badge variant="destructive">
+                    {reviewQueueCards.filter((i) => i.daysOverdue > 0).length} overdue
+                  </Badge>
+                )}
+                <Badge variant="outline">
+                  {reviewQueueCards.filter((i) => i.daysOverdue >= 0).length} due
+                </Badge>
+              </div>
             </div>
-            <Badge variant="outline">{recognitionAccuracy}% accuracy</Badge>
-          </div>
-          {recognitionHistory.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {recognitionHistory.slice(0, 8).map((item) => (
-                <div key={item.id} className="rounded-md border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium">Target: {item.expectedWord}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Detected: {item.predictedWord} ·{" "}
-                        {Math.round(item.confidence * 100)}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Attempts: {item.attemptCount} · Stability:{" "}
-                        {Math.round((item.stabilityScore || 0) * 100)}%
-                      </p>
-                    </div>
-                    <Badge variant={item.isCorrect ? "default" : "secondary"}>
-                      {item.isCorrect ? "Correct" : "Retry"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Recognition practice attempts will appear after using lesson
-              camera practice.
-            </p>
-          )}
-        </Card>
-
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Weak Recognition Signs</h2>
-          </div>
-          {weakRecognitionSigns.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {weakRecognitionSigns.map((item) => (
-                <div key={item.cardId} className="rounded-md border p-3">
-                  <p className="font-medium">{item.expectedWord}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Recognition accuracy {Math.round(item.accuracy * 100)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Avg confidence {Math.round(item.avgConfidence * 100)}% ·
-                    stability {Math.round(item.avgStability * 100)}%
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Weak recognition signs will appear after camera practice attempts.
-            </p>
-          )}
-        </Card>
-
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Recommended Review</h2>
-          </div>
-          {weakRecognitionSigns.length > 0 ? (
-            <div className="space-y-3">
-              {weakRecognitionSigns.slice(0, 3).map((item) => {
-                const card = dashboardCards.find(
-                  (vocab) => vocab.id === item.cardId,
-                );
-                const metadata = card ? getSignMetadata(card) : null;
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {reviewQueueCards.slice(0, 8).map(({ card, progress: prog, dueDate, daysOverdue }) => {
+                const accuracyPct = prog.attempts > 0
+                  ? Math.round((prog.correctAttempts / prog.attempts) * 100)
+                  : 0;
+                const isOverdue = daysOverdue > 0;
+                const isDueToday = daysOverdue === 0 || (daysOverdue < 0 && dueDate.getTime() <= now.getTime());
+                const isFuture = dueDate.getTime() > now.getTime();
 
                 return (
-                  <div key={item.cardId} className="rounded-md border p-3">
-                    <p className="font-medium">
-                      Practice again: {item.expectedWord}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata?.commonMistakes[0] ||
-                        "This sign needs more camera practice."}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Tip:{" "}
-                      {metadata?.practiceTips[0] ||
-                        "Slow down and keep the hand centered in frame."}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : weakCards.length > 0 ? (
-            <div className="space-y-3">
-              {weakCards.slice(0, 3).map((card) => {
-                const metadata = getSignMetadata(card);
-                return (
-                  <div key={card.id} className="rounded-md border p-3">
-                    <p className="font-medium">Review: {card.word}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata.instruction}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Complete more lessons and camera practice to get targeted review
-              recommendations.
-            </p>
-          )}
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-5">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">Topics</h2>
-            </div>
-            <div className="space-y-4">
-              {categoryRows.map((row) => (
-                <div key={row.category} className="space-y-2">
-                  <div className="flex items-center justify-between gap-3 text-sm">
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => setSelectedVideoCard(card)}
+                    className={`flex items-center justify-between gap-4 rounded-md border p-3 text-left hover:bg-muted/50 transition-colors group cursor-pointer w-full ${
+                      isOverdue ? "border-destructive/40 bg-destructive/5" : ""
+                    }`}
+                  >
                     <div>
-                      <p className="font-medium">{row.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {row.learning} learning, {row.total - row.mastered} left
-                      </p>
-                    </div>
-                    <span className="text-muted-foreground">
-                      {row.mastered}/{row.total}
-                    </span>
-                  </div>
-                  <Progress value={row.percent} className="h-2" />
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="p-6 space-y-5">
-            <div className="flex items-center gap-2">
-              <CalendarClock className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">Review Queue</h2>
-            </div>
-            <div className="space-y-3">
-              {upcomingReviews.length > 0 ? (
-                upcomingReviews.map((item) => {
-                  const card = findCard(item.cardId);
-                  if (!card) return null;
-
-                  return (
-                    <div
-                      key={item.cardId}
-                      className="flex items-center justify-between gap-4 rounded-md border p-3"
-                    >
-                      <div>
+                      <div className="flex items-center gap-1.5">
                         <p className="font-medium">{card.word}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {categoryLabels[card.category]}
-                        </p>
+                        <PlayCircle className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <div className="text-right">
-                        <Badge variant="secondary">{item.status}</Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(item.nextReviewDate)}
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {categoryLabels[card.category]}
+                      </p>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-md border border-dashed p-6 text-center">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
-                  <p className="font-medium">No reviews are due right now</p>
-                  <p className="text-sm text-muted-foreground">
-                    Learn new cards or come back after the next review date.
-                  </p>
-                </div>
-              )}
+                    <div className="text-right shrink-0">
+                      <Badge variant={accuracyPct >= 70 ? "outline" : "secondary"}>
+                        {accuracyPct}%
+                      </Badge>
+                      <p className={`text-xs mt-1 ${isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                        {isOverdue
+                          ? `${daysOverdue}d overdue`
+                          : isFuture
+                            ? `Due ${formatDate(prog.nextReviewDate)}`
+                            : "Due today"}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </Card>
-        </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-6">
           <Card className="p-6 space-y-5">
@@ -999,6 +827,50 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Video modal */}
+      {selectedVideoCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setSelectedVideoCard(null)}
+        >
+          <div
+            className="bg-background rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <div>
+                <p className="font-semibold text-lg">{selectedVideoCard.word}</p>
+                <p className="text-xs text-muted-foreground">{categoryLabels[selectedVideoCard.category]}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedVideoCard(null)}
+                className="rounded-md p-1 hover:bg-muted transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              {selectedVideoCard.videoUrl ? (
+                <video
+                  key={selectedVideoCard.id}
+                  src={selectedVideoCard.videoUrl}
+                  autoPlay
+                  loop
+                  controls
+                  className="w-full rounded-lg aspect-video bg-black"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center aspect-video rounded-lg bg-muted text-muted-foreground gap-2">
+                  <PlayCircle className="h-10 w-10" />
+                  <p className="text-sm">No video available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
