@@ -61,6 +61,7 @@ export interface User {
   fullName: string;
   avatarUrl: string;
   role: "user" | "admin";
+  status: "active" | "suspended";
   createdAt: string;
   updatedAt: string;
 }
@@ -121,8 +122,8 @@ export class UserService {
     const role = this.resolveInitialRole(email);
 
     const stmt = this.db.prepare(`
-      INSERT INTO users (id, email, username, password, fullName, avatarUrl, role, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, email, username, password, fullName, avatarUrl, role, status, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const avatarUrl = "/img/avatar/1.jfif";
@@ -134,6 +135,7 @@ export class UserService {
       fullName,
       avatarUrl,
       role,
+      "active",
       now,
       now,
     );
@@ -145,6 +147,7 @@ export class UserService {
       fullName,
       avatarUrl,
       role,
+      status: "active",
       createdAt: now,
       updatedAt: now,
     };
@@ -172,7 +175,7 @@ export class UserService {
   async getUserById(id: string): Promise<User | null> {
     const user = this.db
       .prepare(
-        "SELECT id, email, username, fullName, avatarUrl, role, createdAt, updatedAt FROM users WHERE id = ?",
+        "SELECT id, email, username, fullName, avatarUrl, role, status, createdAt, updatedAt FROM users WHERE id = ?",
       )
       .get(id) as User | undefined;
 

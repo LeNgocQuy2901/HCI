@@ -23,6 +23,7 @@ import Register from "./pages/Register";
 import Feedback from "./pages/Feedback";
 import AdminContent from "./pages/AdminContent";
 import AdminAnalytics from "./pages/AdminAnalytics";
+import AdminOperations from "./pages/AdminOperations";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,7 @@ function AppContent() {
               <Route path="/feedback" element={<Feedback />} />
               <Route path="/admin/content" element={<AdminContent />} />
               <Route path="/admin/analytics" element={<AdminAnalytics />} />
+              <Route path="/admin/operations" element={<AdminOperations />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

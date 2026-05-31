@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BarChart3,
+  ClipboardList,
   FileText,
   Menu,
   Shield,
@@ -56,6 +57,7 @@ export default function Layout({ children }: LayoutProps) {
   const adminLinks = [
     { href: "/admin/content", label: "Content", icon: FileText },
     { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+    { href: "/admin/operations", label: "Operations", icon: ClipboardList },
   ];
 
   // Get user initials for avatar

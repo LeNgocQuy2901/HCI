@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { getDatabase } from "../db";
 import { requireAdmin, requireAuth } from "../middleware/auth";
+import { writeAdminAudit } from "../admin-audit";
 
 const router = Router();
 
@@ -42,6 +43,20 @@ const lessonAssignmentSchema = z.object({
 
 const statusSchema = z.object({
   status: z.enum(["draft", "ready", "published", "archived"]),
+});
+
+const lessonSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  level: z.enum(["beginner", "intermediate", "advanced"]),
+  category: z.string().min(1),
+  description: z.string().default(""),
+  order: z.coerce.number().int().min(0),
+  targetCardCount: z.coerce.number().int().min(0),
+  requiredQuizScore: z.coerce.number().int().min(0).max(100),
+  recognitionRequired: z.boolean().default(false),
+  status: z.enum(["draft", "ready", "published", "archived"]).default("draft"),
+  signIds: z.array(z.string()).default([]),
 });
 
 const quizQuestionSchema = z.object({
@@ -196,6 +211,7 @@ router.post("/signs", (req: Request, res: Response) => {
       upsertPrimaryVideo(db, parsed.data.id, parsed.data.videoUrl, now);
     }
 
+    writeAdminAudit(db, req, "sign.created", "sign", parsed.data.id, parsed.data.word);
     return res.status(201).json({ sign: { ...parsed.data, createdAt: now, updatedAt: now } });
   } catch (error) {
     console.error("Create sign error:", error);
@@ -213,6 +229,13 @@ router.put("/signs/:id", (req: Request, res: Response) => {
   const now = new Date().toISOString();
   const signId = String(req.params.id);
   try {
+    if (parsed.data.status === "published") {
+      const blockers = getSignPublishBlockers(db, signId);
+      if (blockers.length > 0) {
+        return res.status(400).json({ error: "Cannot publish sign", blockers });
+      }
+    }
+
     const result = db.prepare(
       `
         UPDATE signs
@@ -240,6 +263,7 @@ router.put("/signs/:id", (req: Request, res: Response) => {
       db.prepare("DELETE FROM sign_media WHERE signId = ? AND isPrimary = 1").run(signId);
     }
 
+    writeAdminAudit(db, req, "sign.updated", "sign", signId, parsed.data.word);
     return res.json({ message: "Sign updated" });
   } catch (error) {
     console.error("Update sign error:", error);
@@ -254,6 +278,7 @@ router.delete("/signs/:id", (req: Request, res: Response) => {
   try {
     const result = db.prepare("DELETE FROM signs WHERE id = ?").run(req.params.id);
     if (result.changes === 0) return res.status(404).json({ error: "Sign not found" });
+    writeAdminAudit(db, req, "sign.deleted", "sign", req.params.id);
     return res.json({ message: "Sign deleted" });
   } finally {
     db.close();
@@ -291,6 +316,7 @@ router.put("/signs/:id/metadata", (req: Request, res: Response) => {
       updatedAt: now,
     });
 
+    writeAdminAudit(db, req, "sign.metadata.updated", "sign", req.params.id);
     return res.json({ message: "Metadata updated" });
   } finally {
     db.close();
@@ -313,6 +339,7 @@ router.put("/signs/:id/lessons", (req: Request, res: Response) => {
     });
 
     transaction();
+    writeAdminAudit(db, req, "sign.lessons.updated", "sign", req.params.id);
     return res.json({ message: "Lesson assignments updated" });
   } finally {
     db.close();
@@ -465,6 +492,126 @@ router.get("/lessons", (_req: Request, res: Response) => {
   }
 });
 
+router.post("/lessons", (req: Request, res: Response) => {
+  const parsed = lessonSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
+
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  try {
+    const transaction = db.transaction(() => {
+      db.prepare(
+        `
+          INSERT INTO lessons (
+            id, title, level, category, description, orderIndex,
+            targetCardCount, requiredQuizScore, recognitionRequired, status,
+            createdAt, updatedAt
+          )
+          VALUES (
+            @id, @title, @level, @category, @description, @orderIndex,
+            @targetCardCount, @requiredQuizScore, @recognitionRequired,
+            @status, @createdAt, @updatedAt
+          )
+        `,
+      ).run({
+        id: parsed.data.id,
+        title: parsed.data.title,
+        level: parsed.data.level,
+        category: parsed.data.category,
+        description: parsed.data.description,
+        orderIndex: parsed.data.order,
+        targetCardCount: parsed.data.targetCardCount,
+        requiredQuizScore: parsed.data.requiredQuizScore,
+        recognitionRequired: parsed.data.recognitionRequired ? 1 : 0,
+        status: parsed.data.status,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      replaceLessonSigns(db, parsed.data.id, parsed.data.signIds);
+      writeAdminAudit(db, req, "lesson.created", "lesson", parsed.data.id, parsed.data.title);
+    });
+
+    transaction();
+    return res.status(201).json({ message: "Lesson created" });
+  } catch (error) {
+    console.error("Create lesson error:", error);
+    return res.status(500).json({ error: "Failed to create lesson" });
+  } finally {
+    db.close();
+  }
+});
+
+router.put("/lessons/:id", (req: Request, res: Response) => {
+  const parsed = lessonSchema.omit({ id: true }).safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
+
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  try {
+    const transaction = db.transaction(() => {
+      const result = db.prepare(
+        `
+          UPDATE lessons
+          SET title = @title,
+              level = @level,
+              category = @category,
+              description = @description,
+              orderIndex = @orderIndex,
+              targetCardCount = @targetCardCount,
+              requiredQuizScore = @requiredQuizScore,
+              recognitionRequired = @recognitionRequired,
+              status = @status,
+              updatedAt = @updatedAt
+          WHERE id = @id
+        `,
+      ).run({
+        id: req.params.id,
+        title: parsed.data.title,
+        level: parsed.data.level,
+        category: parsed.data.category,
+        description: parsed.data.description,
+        orderIndex: parsed.data.order,
+        targetCardCount: parsed.data.targetCardCount,
+        requiredQuizScore: parsed.data.requiredQuizScore,
+        recognitionRequired: parsed.data.recognitionRequired ? 1 : 0,
+        status: parsed.data.status,
+        updatedAt: now,
+      });
+
+      if (result.changes === 0) {
+        throw new Error("Lesson not found");
+      }
+
+      replaceLessonSigns(db, req.params.id, parsed.data.signIds);
+      writeAdminAudit(db, req, "lesson.updated", "lesson", req.params.id, parsed.data.title);
+    });
+
+    transaction();
+    return res.json({ message: "Lesson updated" });
+  } catch (error) {
+    if (error instanceof Error && error.message === "Lesson not found") {
+      return res.status(404).json({ error: "Lesson not found" });
+    }
+    console.error("Update lesson error:", error);
+    return res.status(500).json({ error: "Failed to update lesson" });
+  } finally {
+    db.close();
+  }
+});
+
+router.delete("/lessons/:id", (req: Request, res: Response) => {
+  const db = getDatabase();
+  try {
+    const result = db.prepare("DELETE FROM lessons WHERE id = ?").run(req.params.id);
+    if (result.changes === 0) return res.status(404).json({ error: "Lesson not found" });
+    writeAdminAudit(db, req, "lesson.deleted", "lesson", req.params.id);
+    return res.json({ message: "Lesson deleted" });
+  } finally {
+    db.close();
+  }
+});
+
 router.patch("/lessons/:id/status", (req: Request, res: Response) => {
   const parsed = statusSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
@@ -476,6 +623,7 @@ router.patch("/lessons/:id/status", (req: Request, res: Response) => {
       .run(parsed.data.status, new Date().toISOString(), req.params.id);
 
     if (result.changes === 0) return res.status(404).json({ error: "Lesson not found" });
+    writeAdminAudit(db, req, "lesson.status.updated", "lesson", req.params.id, parsed.data.status);
     return res.json({ message: "Lesson status updated" });
   } finally {
     db.close();
@@ -599,6 +747,54 @@ function upsertPrimaryVideo(db: ReturnType<typeof getDatabase>, signId: string, 
     createdAt: now,
     updatedAt: now,
   });
+}
+
+function replaceLessonSigns(
+  db: ReturnType<typeof getDatabase>,
+  lessonId: string,
+  signIds: string[],
+) {
+  db.prepare("DELETE FROM lesson_signs WHERE lessonId = ?").run(lessonId);
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO lesson_signs (lessonId, signId, sortOrder) VALUES (?, ?, ?)",
+  );
+  signIds.forEach((signId, index) => insert.run(lessonId, signId, index));
+}
+
+function getSignPublishBlockers(db: ReturnType<typeof getDatabase>, signId: string) {
+  const row = db
+    .prepare(
+      `
+        SELECT
+          MAX(CASE WHEN sm.id IS NOT NULL THEN 1 ELSE 0 END) AS hasVideo,
+          COUNT(DISTINCT ls.lessonId) AS lessonCount,
+          COUNT(DISTINCT CASE WHEN qq.status IN ('active', 'published') THEN qq.id END) AS quizQuestionCount,
+          md.instruction,
+          md.commonMistakes,
+          md.practiceTips
+        FROM signs s
+        LEFT JOIN sign_media sm ON sm.signId = s.id AND sm.isPrimary = 1
+        LEFT JOIN sign_metadata md ON md.signId = s.id
+        LEFT JOIN lesson_signs ls ON ls.signId = s.id
+        LEFT JOIN quiz_questions qq ON qq.signId = s.id
+        WHERE s.id = ?
+        GROUP BY s.id
+      `,
+    )
+    .get(signId) as Record<string, unknown> | undefined;
+
+  if (!row) return ["sign not found"];
+
+  return [
+    Number(row.hasVideo) !== 1 && "missing video",
+    !(
+      String(row.instruction || "").trim() ||
+      jsonArray(row.commonMistakes).length > 0 ||
+      jsonArray(row.practiceTips).length > 0
+    ) && "missing metadata",
+    Number(row.quizQuestionCount) < 2 && "needs at least 2 active quiz questions",
+    Number(row.lessonCount) === 0 && "not assigned to a lesson",
+  ].filter(Boolean) as string[];
 }
 
 export default router;

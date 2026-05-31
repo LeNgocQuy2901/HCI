@@ -8,6 +8,8 @@ import videoRoutes from "./routes/video";
 import learningRoutes from "./routes/learning";
 import contentRoutes from "./routes/content";
 import adminAnalyticsRoutes from "./routes/admin-analytics";
+import adminRoutes from "./routes/admin";
+import feedbackRoutes from "./routes/feedback";
 
 export function createServer() {
   const app = express();
@@ -37,8 +39,12 @@ export function createServer() {
   // Content management routes
   app.use("/api/content", contentRoutes);
 
+  // Feedback routes
+  app.use("/api/feedback", feedbackRoutes);
+
   // Admin analytics routes
   app.use("/api/admin/analytics", adminAnalyticsRoutes);
+  app.use("/api/admin", adminRoutes);
 
   // Video routes (Google Drive proxy)
   app.use("/api", videoRoutes);

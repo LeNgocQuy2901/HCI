@@ -62,6 +62,10 @@ router.post("/login", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    if (user.status === "suspended") {
+      return res.status(403).json({ error: "Account has been suspended" });
+    }
+
     const passwordMatch = await userService.verifyPassword(
       data.password,
       user.password,
@@ -84,6 +88,7 @@ router.post("/login", async (req: Request, res: Response) => {
       fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       role: user.role,
+      status: user.status,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

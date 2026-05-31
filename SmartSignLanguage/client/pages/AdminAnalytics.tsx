@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { AdminHeader, AdminMetric } from "@/components/AdminChrome";
 import { useAuthStore } from "@/hooks/use-auth";
 import { categoryLabels } from "@shared/vocabulary";
-import { BarChart3, FileWarning, Target } from "lucide-react";
+import { BarChart3, Download, FileWarning, Target } from "lucide-react";
 
 type AdminAnalyticsOverview = {
   mostDifficultSigns: Array<{
@@ -66,6 +68,50 @@ export default function AdminAnalytics() {
     void loadOverview();
   }, [token, user?.role]);
 
+  const exportOverview = () => {
+    if (!overview) return;
+    const rows = [
+      ...overview.mostDifficultSigns.map((item) => ({
+        section: "most_difficult_signs",
+        label: item.word || item.signId,
+        metric: item.attempts > 0 ? Math.round((item.correct / item.attempts) * 100) : 0,
+        detail: item.category,
+      })),
+      ...overview.lessonCompletionRate.map((item) => ({
+        section: "lesson_completion",
+        label: item.title,
+        metric: item.completionRate,
+        detail: `${item.completed}/${item.started}`,
+      })),
+      ...overview.quizFailRate.map((item) => ({
+        section: "quiz_fail_rate",
+        label: item.lessonId,
+        metric: item.failRate,
+        detail: `${item.attempts} attempts`,
+      })),
+      ...overview.recognitionFailRate.map((item) => ({
+        section: "recognition_fail_rate",
+        label: item.expectedWord,
+        metric: item.failRate,
+        detail: `${item.attempts} attempts`,
+      })),
+    ];
+    const csv = [
+      "section,label,metric,detail",
+      ...rows.map((row) =>
+        [row.section, row.label, row.metric, row.detail]
+          .map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`)
+          .join(","),
+      ),
+    ].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "admin-analytics.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (!isAuthenticated || user?.role !== "admin") {
     return (
       <Layout>
@@ -84,16 +130,22 @@ export default function AdminAnalytics() {
   return (
     <Layout>
       <div className="ssl-app-page container max-w-7xl mx-auto py-10 px-4 space-y-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-7 w-7" />
-            <h1 className="text-3xl font-bold">Admin Analytics</h1>
-          </div>
-          <p className="text-muted-foreground">
-            Find hard signs, lesson drop-off, quiz failures, recognition issues,
-            and content that needs improvement.
-          </p>
-        </div>
+        <AdminHeader
+          title="Admin Analytics"
+          description="Monitor lesson drop-off, quiz failures, recognition issues, and content gaps from one review surface."
+          icon={<BarChart3 className="h-4 w-4" />}
+          action={
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={exportOverview}
+              disabled={!overview}
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          }
+        />
 
         {!overview ? (
           <Card className="p-6 text-muted-foreground">
@@ -101,6 +153,29 @@ export default function AdminAnalytics() {
           </Card>
         ) : (
           <>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <AdminMetric
+                label="Hard signs"
+                value={overview.mostDifficultSigns.length}
+                detail="lowest accuracy"
+              />
+              <AdminMetric
+                label="Lesson reports"
+                value={overview.lessonCompletionRate.length}
+                detail="completion tracked"
+              />
+              <AdminMetric
+                label="Quiz issues"
+                value={overview.quizFailRate.length}
+                detail="failed attempts"
+              />
+              <AdminMetric
+                label="Content gaps"
+                value={overview.contentNeedingImprovement.length}
+                detail="needs attention"
+              />
+            </div>
+
             <div className="grid lg:grid-cols-2 gap-6">
               <AnalyticsCard
                 title="Most Difficult Signs"
@@ -138,7 +213,9 @@ export default function AdminAnalytics() {
                     <div className="flex justify-between text-sm">
                       <span className="font-medium">{item.title}</span>
                       <span className="text-muted-foreground">
-                        {item.completed}/{item.started}
+                        {item.started > 0
+                          ? `${item.completed}/${item.started}`
+                          : "No activity yet"}
                       </span>
                     </div>
                     <Progress
@@ -227,7 +304,7 @@ function AnalyticsCard({
   children: ReactNode;
 }) {
   return (
-    <Card className="p-6 space-y-4">
+    <Card className="rounded-lg p-5 shadow-sm space-y-4">
       <div className="flex items-center gap-2">
         {icon}
         <h2 className="text-xl font-semibold">{title}</h2>
@@ -247,7 +324,7 @@ function Row({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border p-3">
+    <div className="flex items-center justify-between gap-3 rounded-md border bg-background p-3">
       <div>
         <p className="font-medium">{title}</p>
         {detail && <p className="text-xs text-muted-foreground">{detail}</p>}
