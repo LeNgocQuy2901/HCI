@@ -4,6 +4,13 @@ import { driveVideoMap } from "../../shared/google-drive";
 import path from "path";
 const router = Router();
 
+function resolveServiceAccountKeyPath() {
+  return path.resolve(
+    process.cwd(),
+    "service-account-key.json",
+  );
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 let _auth: InstanceType<typeof google.auth.GoogleAuth> | null = null;
@@ -15,7 +22,7 @@ function getAuth() {
 
 
   _auth = new google.auth.GoogleAuth({
-    keyFile: path.join(process.cwd(), "service-account-key.json"),
+    keyFile: resolveServiceAccountKeyPath(),
     scopes: ["https://www.googleapis.com/auth/drive.readonly"],
   });
 

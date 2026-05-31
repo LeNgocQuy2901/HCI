@@ -34,10 +34,9 @@ export interface Course {
   lessons: Lesson[];
 }
 
-const takeCategoryCards = (category: Category, count: number) =>
+const takeCategoryCards = (category: Category) =>
   vocabularyCards
     .filter((card) => card.category === category)
-    .slice(0, count)
     .map((card) => card.id);
 
 const createLesson = (
@@ -46,30 +45,45 @@ const createLesson = (
   level: CourseLevel,
   category: Category,
   order: number,
-  targetCardCount = 8,
-): Lesson => ({
-  id,
-  title,
-  level,
-  category,
-  order,
-  targetCardCount,
-  requiredQuizScore: 70,
-  recognitionRequired: true,
-  description: `Learn core ${categoryLabels[category].toLowerCase()} signs, then pass the quiz and recognition practice.`,
-  cardIds: takeCategoryCards(category, targetCardCount),
-});
+): Lesson => {
+  const cardIds = takeCategoryCards(category);
+
+  return {
+    id,
+    title,
+    level,
+    category,
+    order,
+    targetCardCount: cardIds.length,
+    requiredQuizScore: 70,
+    recognitionRequired: false,
+    description: `Learn core ${categoryLabels[category].toLowerCase()} signs, then pass the quiz.`,
+    cardIds,
+  };
+};
 
 export const courses: Course[] = [
   {
     id: "beginner",
     title: "Beginner",
-    description: "Build basic recognition and everyday vocabulary.",
+    description: "Build everyday vocabulary with guided sign lessons.",
     lessons: [
-      createLesson("beginner-greetings", "Greetings", "beginner", "greeting", 1, 6),
-      createLesson("beginner-family", "Family", "beginner", "family", 2, 8),
-      createLesson("beginner-colors", "Colors", "beginner", "colors", 3, 8),
-      createLesson("beginner-food", "Food & Drink", "beginner", "food-drink", 4, 8),
+      createLesson(
+        "beginner-greetings",
+        "Greetings",
+        "beginner",
+        "greeting",
+        1,
+      ),
+      createLesson("beginner-family", "Family", "beginner", "family", 2),
+      createLesson("beginner-colors", "Colors", "beginner", "colors", 3),
+      createLesson(
+        "beginner-food",
+        "Food & Drink",
+        "beginner",
+        "food-drink",
+        4,
+      ),
     ],
   },
   {
@@ -77,21 +91,70 @@ export const courses: Course[] = [
     title: "Intermediate",
     description: "Move into actions, questions, emotions, and daily use.",
     lessons: [
-      createLesson("intermediate-actions", "Common Verbs", "intermediate", "action-verbs", 5, 10),
-      createLesson("intermediate-emotions", "Emotions", "intermediate", "emotions-feelings", 6, 10),
-      createLesson("intermediate-school", "School", "intermediate", "education-school", 7, 8),
-      createLesson("intermediate-travel", "Travel", "intermediate", "travel-transportation", 8, 8),
+      createLesson(
+        "intermediate-actions",
+        "Common Verbs",
+        "intermediate",
+        "action-verbs",
+        5,
+      ),
+      createLesson(
+        "intermediate-emotions",
+        "Emotions",
+        "intermediate",
+        "emotions-feelings",
+        6,
+      ),
+      createLesson(
+        "intermediate-school",
+        "School",
+        "intermediate",
+        "education-school",
+        7,
+      ),
+      createLesson(
+        "intermediate-travel",
+        "Travel",
+        "intermediate",
+        "travel-transportation",
+        8,
+      ),
     ],
   },
   {
     id: "advanced",
     title: "Advanced",
-    description: "Practice specialized topics and conversation building blocks.",
+    description:
+      "Practice specialized topics and conversation building blocks.",
     lessons: [
-      createLesson("advanced-health", "Body & Health", "advanced", "body-health", 9, 10),
-      createLesson("advanced-places", "Places", "advanced", "places-buildings", 10, 10),
-      createLesson("advanced-technology", "Technology", "advanced", "technology-computer", 11, 8),
-      createLesson("advanced-community", "Deaf Community", "advanced", "deaf-community-asl", 12, 8),
+      createLesson(
+        "advanced-health",
+        "Body & Health",
+        "advanced",
+        "body-health",
+        9,
+      ),
+      createLesson(
+        "advanced-places",
+        "Places",
+        "advanced",
+        "places-buildings",
+        10,
+      ),
+      createLesson(
+        "advanced-technology",
+        "Technology",
+        "advanced",
+        "technology-computer",
+        11,
+      ),
+      createLesson(
+        "advanced-community",
+        "Deaf Community",
+        "advanced",
+        "deaf-community-asl",
+        12,
+      ),
     ],
   },
 ];

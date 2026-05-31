@@ -21,7 +21,7 @@ try {
 
 export function initializeDatabase() {
   const db = new Database(dbPath);
-  
+
   // Enable foreign keys
   db.pragma("foreign_keys = ON");
 
@@ -39,9 +39,9 @@ export function initializeDatabase() {
     )
   `);
 
-  const userColumns = db
-    .prepare("PRAGMA table_info(users)")
-    .all() as Array<{ name: string }>;
+  const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{
+    name: string;
+  }>;
   const existingUserColumns = new Set(userColumns.map((column) => column.name));
   if (!existingUserColumns.has("role")) {
     db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
@@ -74,12 +74,30 @@ export function initializeDatabase() {
     .all() as Array<{ name: string }>;
   const existingColumns = new Set(columns.map((column) => column.name));
   const migrations = [
-    ["interval", "ALTER TABLE learning_progress ADD COLUMN interval INTEGER NOT NULL DEFAULT 0"],
-    ["difficulty", "ALTER TABLE learning_progress ADD COLUMN difficulty INTEGER NOT NULL DEFAULT 1"],
-    ["easeFactor", "ALTER TABLE learning_progress ADD COLUMN easeFactor REAL NOT NULL DEFAULT 2.5"],
-    ["nextReviewDate", "ALTER TABLE learning_progress ADD COLUMN nextReviewDate TEXT"],
-    ["correctAttempts", "ALTER TABLE learning_progress ADD COLUMN correctAttempts INTEGER NOT NULL DEFAULT 0"],
-    ["understood", "ALTER TABLE learning_progress ADD COLUMN understood INTEGER NOT NULL DEFAULT 0"],
+    [
+      "interval",
+      "ALTER TABLE learning_progress ADD COLUMN interval INTEGER NOT NULL DEFAULT 0",
+    ],
+    [
+      "difficulty",
+      "ALTER TABLE learning_progress ADD COLUMN difficulty INTEGER NOT NULL DEFAULT 1",
+    ],
+    [
+      "easeFactor",
+      "ALTER TABLE learning_progress ADD COLUMN easeFactor REAL NOT NULL DEFAULT 2.5",
+    ],
+    [
+      "nextReviewDate",
+      "ALTER TABLE learning_progress ADD COLUMN nextReviewDate TEXT",
+    ],
+    [
+      "correctAttempts",
+      "ALTER TABLE learning_progress ADD COLUMN correctAttempts INTEGER NOT NULL DEFAULT 0",
+    ],
+    [
+      "understood",
+      "ALTER TABLE learning_progress ADD COLUMN understood INTEGER NOT NULL DEFAULT 0",
+    ],
   ] as const;
 
   migrations.forEach(([column, sql]) => {
@@ -153,10 +171,22 @@ export function initializeDatabase() {
     recognitionColumns.map((column) => column.name),
   );
   const recognitionMigrations = [
-    ["attemptCount", "ALTER TABLE user_recognition_practice ADD COLUMN attemptCount INTEGER NOT NULL DEFAULT 1"],
-    ["durationMs", "ALTER TABLE user_recognition_practice ADD COLUMN durationMs INTEGER NOT NULL DEFAULT 0"],
-    ["stabilityScore", "ALTER TABLE user_recognition_practice ADD COLUMN stabilityScore REAL NOT NULL DEFAULT 0"],
-    ["passedThreshold", "ALTER TABLE user_recognition_practice ADD COLUMN passedThreshold INTEGER NOT NULL DEFAULT 0"],
+    [
+      "attemptCount",
+      "ALTER TABLE user_recognition_practice ADD COLUMN attemptCount INTEGER NOT NULL DEFAULT 1",
+    ],
+    [
+      "durationMs",
+      "ALTER TABLE user_recognition_practice ADD COLUMN durationMs INTEGER NOT NULL DEFAULT 0",
+    ],
+    [
+      "stabilityScore",
+      "ALTER TABLE user_recognition_practice ADD COLUMN stabilityScore REAL NOT NULL DEFAULT 0",
+    ],
+    [
+      "passedThreshold",
+      "ALTER TABLE user_recognition_practice ADD COLUMN passedThreshold INTEGER NOT NULL DEFAULT 0",
+    ],
   ] as const;
 
   recognitionMigrations.forEach(([column, sql]) => {
@@ -252,9 +282,24 @@ export function initializeDatabase() {
     )
   `);
 
-  addColumnIfMissing(db, "signs", "status", "ALTER TABLE signs ADD COLUMN status TEXT NOT NULL DEFAULT 'published'");
-  addColumnIfMissing(db, "lessons", "status", "ALTER TABLE lessons ADD COLUMN status TEXT NOT NULL DEFAULT 'published'");
-  addColumnIfMissing(db, "quiz_questions", "status", "ALTER TABLE quiz_questions ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
+  addColumnIfMissing(
+    db,
+    "signs",
+    "status",
+    "ALTER TABLE signs ADD COLUMN status TEXT NOT NULL DEFAULT 'published'",
+  );
+  addColumnIfMissing(
+    db,
+    "lessons",
+    "status",
+    "ALTER TABLE lessons ADD COLUMN status TEXT NOT NULL DEFAULT 'published'",
+  );
+  addColumnIfMissing(
+    db,
+    "quiz_questions",
+    "status",
+    "ALTER TABLE quiz_questions ADD COLUMN status TEXT NOT NULL DEFAULT 'active'",
+  );
 
   seedContentDatabase(db);
 
@@ -275,16 +320,21 @@ function seedContentDatabase(db: Database.Database) {
   `);
 
   const insertMedia = db.prepare(`
-    INSERT OR IGNORE INTO sign_media (
+    INSERT INTO sign_media (
       id, signId, type, url, source, isPrimary, createdAt, updatedAt
     )
     VALUES (
       @id, @signId, 'video', @url, @source, 1, @createdAt, @updatedAt
     )
+    ON CONFLICT(id) DO UPDATE SET
+      url = excluded.url,
+      source = excluded.source,
+      isPrimary = excluded.isPrimary,
+      updatedAt = excluded.updatedAt
   `);
 
   const insertLesson = db.prepare(`
-    INSERT OR IGNORE INTO lessons (
+    INSERT INTO lessons (
       id, title, level, category, description, orderIndex, targetCardCount,
       requiredQuizScore, recognitionRequired, status, createdAt, updatedAt
     )
@@ -292,6 +342,17 @@ function seedContentDatabase(db: Database.Database) {
       @id, @title, @level, @category, @description, @orderIndex, @targetCardCount,
       @requiredQuizScore, @recognitionRequired, @status, @createdAt, @updatedAt
     )
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      level = excluded.level,
+      category = excluded.category,
+      description = excluded.description,
+      orderIndex = excluded.orderIndex,
+      targetCardCount = excluded.targetCardCount,
+      requiredQuizScore = excluded.requiredQuizScore,
+      recognitionRequired = excluded.recognitionRequired,
+      status = excluded.status,
+      updatedAt = excluded.updatedAt
   `);
 
   const insertLessonSign = db.prepare(`
@@ -319,15 +380,19 @@ function seedContentDatabase(db: Database.Database) {
     )
   `);
 
-  const buildOptions = (card: (typeof vocabularyCards)[number], lessonCardIds: string[]) => {
+  const buildOptions = (
+    card: (typeof vocabularyCards)[number],
+    lessonCardIds: string[],
+  ) => {
     const lessonOptions = vocabularyCards
       .filter((item) => lessonCardIds.includes(item.id) && item.id !== card.id)
       .map((item) => item.word);
     const fallbackOptions = vocabularyCards
       .filter((item) => item.category === card.category && item.id !== card.id)
       .map((item) => item.word);
-    const options = Array.from(new Set([...lessonOptions, ...fallbackOptions]))
-      .slice(0, 3);
+    const options = Array.from(
+      new Set([...lessonOptions, ...fallbackOptions]),
+    ).slice(0, 3);
 
     while (options.length < 3) {
       const filler = vocabularyCards.find(
@@ -451,9 +516,9 @@ function addColumnIfMissing(
   column: string,
   sql: string,
 ) {
-  const columns = db
-    .prepare(`PRAGMA table_info(${table})`)
-    .all() as Array<{ name: string }>;
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{
+    name: string;
+  }>;
   if (!columns.some((item) => item.name === column)) {
     db.exec(sql);
   }

@@ -42,7 +42,7 @@ export interface RecognitionPracticeResult {
 const calculateSM2 = (
   quality: number, // 0-5 rating
   easeFactor: number,
-  interval: number
+  interval: number,
 ): { easeFactor: number; interval: number } => {
   let newEF = easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02);
   newEF = Math.max(1.3, newEF);
@@ -70,7 +70,7 @@ interface LearningStore {
   updateProgress: (
     cardId: string,
     userId: string,
-    quality: number // 0-5
+    quality: number, // 0-5
   ) => void;
   markCardUnderstood: (cardId: string, userId: string) => void;
   unmarkCardUnderstood: (cardId: string, userId: string) => void;
@@ -88,13 +88,10 @@ interface LearningStore {
   // Review scheduling
   getDueCards: (userId: string, limit?: number) => VocabularyCard[];
   getNewCards: (userId: string, limit?: number) => VocabularyCard[];
-  getCardsByCategory: (
-    category: string,
-    userId?: string
-  ) => VocabularyCard[];
+  getCardsByCategory: (category: string, userId?: string) => VocabularyCard[];
   getCardsByDifficulty: (
     difficulty: Difficulty,
-    userId?: string
+    userId?: string,
   ) => VocabularyCard[];
   getWeakCards: (userId: string, limit?: number) => VocabularyCard[];
 
@@ -123,7 +120,10 @@ interface LearningStore {
   ) => UserLessonProgress | undefined;
 
   // Streak tracking
-  streaks: Map<string, { current: number; longest: number; lastReviewDate: string }>;
+  streaks: Map<
+    string,
+    { current: number; longest: number; lastReviewDate: string }
+  >;
   updateStreak: (userId: string) => void;
   getStreak: (userId: string) => { current: number; longest: number };
 
@@ -143,7 +143,8 @@ type LearningEventPayload = {
     | "quiz_submitted"
     | "recognition_attempted"
     | "card_reviewed"
-    | "video_watched";
+    | "video_watched"
+    | "study_session";
   lessonId?: string;
   cardId?: string;
   signId?: string;
@@ -190,7 +191,7 @@ export const useLearningStore = create<LearningStore>()(
       addProgress: (cardId, userId) => {
         const store = get();
         const key = `${userId}:${cardId}`;
-        
+
         if (!store.progress.has(key)) {
           const now = new Date().toISOString();
           store.progress.set(key, {
@@ -207,7 +208,6 @@ export const useLearningStore = create<LearningStore>()(
             updatedAt: now,
           });
         }
-
       },
 
       updateProgress: (cardId, userId, quality) => {
@@ -219,11 +219,13 @@ export const useLearningStore = create<LearningStore>()(
           const { easeFactor, interval } = calculateSM2(
             quality,
             current.easeFactor,
-            current.interval
+            current.interval,
           );
 
           const nextReviewDate = new Date();
-          nextReviewDate.setDate(nextReviewDate.getDate() + interval);
+          if (quality >= 3) {
+            nextReviewDate.setDate(nextReviewDate.getDate() + interval);
+          }
 
           const updated: SRSProgress = {
             ...current,
@@ -233,13 +235,11 @@ export const useLearningStore = create<LearningStore>()(
             nextReviewDate: nextReviewDate.toISOString(),
             attempts: current.attempts + 1,
             correctAttempts:
-              quality >= 3 ? current.correctAttempts + 1 : current.correctAttempts,
+              quality >= 3
+                ? current.correctAttempts + 1
+                : current.correctAttempts,
             status:
-              quality >= 4
-                ? "mastered"
-                : quality >= 3
-                  ? "learning"
-                  : "new",
+              quality >= 4 ? "mastered" : quality >= 3 ? "learning" : "new",
             lastReviewedDate: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
@@ -277,7 +277,7 @@ export const useLearningStore = create<LearningStore>()(
       getUnderstoodCards: (userId) => {
         const store = get();
         return vocabularyCards.filter((card) =>
-          store.understoodCards.has(`${userId}:${card.id}`)
+          store.understoodCards.has(`${userId}:${card.id}`),
         );
       },
 
@@ -294,14 +294,14 @@ export const useLearningStore = create<LearningStore>()(
       getProgressStats: (userId) => {
         const store = get();
         const userProgress = Array.from(store.progress.values()).filter(
-          (p) => p.userId === userId
+          (p) => p.userId === userId,
         );
 
         const masteredProgressCount = userProgress.filter(
-          (p) => p.status === "mastered"
+          (p) => p.status === "mastered",
         ).length;
         const understoodCount = Array.from(store.understoodCards.keys()).filter(
-          (key) => key.startsWith(`${userId}:`)
+          (key) => key.startsWith(`${userId}:`),
         ).length;
         const masteredCount = Math.max(masteredProgressCount, understoodCount);
         const streak = store.getStreak(userId);
@@ -310,7 +310,7 @@ export const useLearningStore = create<LearningStore>()(
         const todayReviews = userProgress.filter(
           (p) =>
             p.lastReviewedDate &&
-            new Date(p.lastReviewedDate).toDateString() === today
+            new Date(p.lastReviewedDate).toDateString() === today,
         ).length;
 
         const nextReview = userProgress
@@ -318,7 +318,7 @@ export const useLearningStore = create<LearningStore>()(
           .sort(
             (a, b) =>
               new Date(a.nextReviewDate).getTime() -
-              new Date(b.nextReviewDate).getTime()
+              new Date(b.nextReviewDate).getTime(),
           )[0];
 
         return {
@@ -336,8 +336,12 @@ export const useLearningStore = create<LearningStore>()(
         const now = new Date();
         const userProgress = Array.from(store.progress.values())
           .filter((p) => p.userId === userId && p.status !== "mastered")
-          .filter((p) => new Date(p.nextReviewDate) <= now)
-          .sort((a, b) => new Date(a.nextReviewDate).getTime() - new Date(b.nextReviewDate).getTime())
+          .filter((p) => new Date(p.nextReviewDate) <= now || p.difficulty < 3)
+          .sort(
+            (a, b) =>
+              new Date(a.nextReviewDate).getTime() -
+              new Date(b.nextReviewDate).getTime(),
+          )
           .slice(0, limit);
 
         return userProgress
@@ -348,7 +352,7 @@ export const useLearningStore = create<LearningStore>()(
       getNewCards: (userId, limit = 10) => {
         const store = get();
         const userProgress = Array.from(store.progress.values()).filter(
-          (p) => p.userId === userId
+          (p) => p.userId === userId,
         );
         const knownCardIds = new Set(userProgress.map((p) => p.cardId));
 
@@ -372,7 +376,9 @@ export const useLearningStore = create<LearningStore>()(
 
       getCardsByDifficulty: (difficulty, userId) => {
         const store = get();
-        const filtered = vocabularyCards.filter((c) => c.difficulty === difficulty);
+        const filtered = vocabularyCards.filter(
+          (c) => c.difficulty === difficulty,
+        );
 
         if (!userId) return filtered;
 
@@ -386,17 +392,35 @@ export const useLearningStore = create<LearningStore>()(
       getWeakCards: (userId, limit = 8) => {
         const store = get();
         return Array.from(store.progress.values())
-          .filter((item) => item.userId === userId && item.attempts > 0)
+          .filter(
+            (item) =>
+              item.userId === userId &&
+              item.attempts > 0 &&
+              item.status !== "mastered" &&
+              !store.understoodCards.has(`${userId}:${item.cardId}`),
+          )
           .map((item) => {
             const card = vocabularyCards.find((c) => c.id === item.cardId);
             const accuracy =
               item.attempts > 0 ? item.correctAttempts / item.attempts : 1;
-            return { card, accuracy, attempts: item.attempts };
+            return {
+              card,
+              accuracy,
+              attempts: item.attempts,
+              lastQuality: item.difficulty,
+            };
           })
-          .filter((item): item is { card: VocabularyCard; accuracy: number; attempts: number } =>
-            Boolean(item.card),
+          .filter(
+            (
+              item,
+            ): item is {
+              card: VocabularyCard;
+              accuracy: number;
+              attempts: number;
+              lastQuality: number;
+            } => Boolean(item.card),
           )
-          .filter((item) => item.accuracy < 0.7 || item.attempts >= 2)
+          .filter((item) => item.accuracy < 0.7 || item.lastQuality < 3)
           .sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts)
           .slice(0, limit)
           .map((item) => item.card);
@@ -449,7 +473,8 @@ export const useLearningStore = create<LearningStore>()(
           recognitionAttempts: current?.recognitionAttempts ?? 0,
           recognitionCorrect: current?.recognitionCorrect ?? 0,
           startedAt: current?.startedAt || now,
-          completedAt: step === "completed" ? now : current?.completedAt ?? null,
+          completedAt:
+            step === "completed" ? now : (current?.completedAt ?? null),
           updatedAt: now,
         });
         void get().syncToServer(userId);
@@ -464,14 +489,14 @@ export const useLearningStore = create<LearningStore>()(
         store.lessonProgress.set(key, {
           lessonId,
           userId,
-          status: "in-progress",
-          currentStep: passed ? "recognition" : "quiz",
+          status: passed ? "completed" : "in-progress",
+          currentStep: passed ? "completed" : "quiz",
           quizScore: score,
           quizPassed: passed,
           recognitionAttempts: current?.recognitionAttempts ?? 0,
           recognitionCorrect: current?.recognitionCorrect ?? 0,
           startedAt: current?.startedAt || now,
-          completedAt: current?.completedAt ?? null,
+          completedAt: passed ? now : (current?.completedAt ?? null),
           updatedAt: now,
         });
         void trackLearningEvent({
@@ -510,7 +535,11 @@ export const useLearningStore = create<LearningStore>()(
       },
 
       saveRecognitionPracticeResult: async (userId, result) => {
-        get().recordLessonRecognition(result.lessonId, userId, result.isCorrect);
+        get().recordLessonRecognition(
+          result.lessonId,
+          userId,
+          result.isCorrect,
+        );
         const progress = get().getLessonProgress(result.lessonId, userId);
         if (result.isCorrect && progress?.quizPassed) {
           get().completeLesson(result.lessonId, userId);
@@ -755,10 +784,10 @@ export const useLearningStore = create<LearningStore>()(
               ...data.state,
               progress: new Map(Object.entries(data.state.progress || {})),
               understoodCards: new Map(
-                Object.entries(data.state.understoodCards || {})
+                Object.entries(data.state.understoodCards || {}),
               ),
               lessonProgress: new Map(
-                Object.entries(data.state.lessonProgress || {})
+                Object.entries(data.state.lessonProgress || {}),
               ),
               streaks: new Map(Object.entries(data.state.streaks || {})),
             },
@@ -777,6 +806,6 @@ export const useLearningStore = create<LearningStore>()(
         },
         removeItem: (name) => localStorage.removeItem(name),
       },
-    }
-  )
+    },
+  ),
 );

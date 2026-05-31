@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { authMiddleware } from "../middleware/auth";
 import { getDatabase } from "../db";
+import { vocabularyCards } from "../../shared/vocabulary";
 
 const router = Router();
 
@@ -71,6 +72,7 @@ const learningEventSchema = z.object({
     "recognition_attempted",
     "card_reviewed",
     "video_watched",
+    "study_session",
   ]),
   lessonId: z.string().optional(),
   cardId: z.string().optional(),
@@ -133,8 +135,7 @@ function saveLearningEvent(
     signId: event.signId || event.cardId || null,
     quizQuestionId: event.quizQuestionId || null,
     durationMs: event.durationMs || 0,
-    isCorrect:
-      event.isCorrect === undefined ? null : event.isCorrect ? 1 : 0,
+    isCorrect: event.isCorrect === undefined ? null : event.isCorrect ? 1 : 0,
     score: event.score ?? null,
     metadataJson: JSON.stringify(event.metadata || {}),
     createdAt,
@@ -165,7 +166,8 @@ const getSafeQuizQuestionText = (type: string, question: string) => {
 
 router.post("/events", authMiddleware, (req: Request, res: Response) => {
   const parsed = learningEventSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.errors });
 
   const db = getDatabase();
   try {
@@ -183,8 +185,12 @@ router.get("/analytics/me", authMiddleware, (req: Request, res: Response) => {
   const db = getDatabase();
   try {
     const userId = req.user!.userId;
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const weekAgo = new Date(
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const monthAgo = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     const eventCounts = db
       .prepare(
@@ -266,7 +272,7 @@ router.get("/analytics/me", authMiddleware, (req: Request, res: Response) => {
           SELECT COUNT(DISTINCT substr(createdAt, 1, 10)) AS days
           FROM user_learning_events
           WHERE userId = ?
-            AND eventType IN ('card_reviewed', 'quiz_submitted', 'recognition_attempted')
+            AND eventType IN ('card_reviewed', 'quiz_submitted', 'recognition_attempted', 'study_session')
             AND createdAt >= ?
         `,
       )
@@ -294,7 +300,8 @@ router.get("/analytics/me", authMiddleware, (req: Request, res: Response) => {
         firstAccuracy:
           firstRecognition.length > 0
             ? Math.round(
-                (firstRecognition.filter((row) => Number(row.isCorrect) === 1).length /
+                (firstRecognition.filter((row) => Number(row.isCorrect) === 1)
+                  .length /
                   firstRecognition.length) *
                   100,
               )
@@ -302,13 +309,15 @@ router.get("/analytics/me", authMiddleware, (req: Request, res: Response) => {
         recentAccuracy:
           recentRecognition.length > 0
             ? Math.round(
-                (recentRecognition.filter((row) => Number(row.isCorrect) === 1).length /
+                (recentRecognition.filter((row) => Number(row.isCorrect) === 1)
+                  .length /
                   recentRecognition.length) *
                   100,
               )
             : 0,
         confidenceDelta: Math.round(
-          (avg(recentRecognition, "confidence") - avg(firstRecognition, "confidence")) *
+          (avg(recentRecognition, "confidence") -
+            avg(firstRecognition, "confidence")) *
             100,
         ),
         stabilityDelta: Math.round(
@@ -423,15 +432,22 @@ router.get("/published-content", (_req: Request, res: Response) => {
       )
       .all() as Array<{ lessonId: string; signId: string }>;
 
-    const signs = signRows.map((row) => ({
-      id: String(row.id),
-      word: String(row.word),
-      category: String(row.category),
-      difficulty: String(row.difficulty),
-      videoUrl: String(row.videoUrl || ""),
-      description: String(row.description || ""),
-      example: row.example ? String(row.example) : undefined,
-    }));
+    const localVideoBySignId = new Map(
+      vocabularyCards.map((card) => [card.id, card.videoUrl]),
+    );
+
+    const signs = signRows.map((row) => {
+      const id = String(row.id);
+      return {
+        id,
+        word: String(row.word),
+        category: String(row.category),
+        difficulty: String(row.difficulty),
+        videoUrl: localVideoBySignId.get(id) || String(row.videoUrl || ""),
+        description: String(row.description || ""),
+        example: row.example ? String(row.example) : undefined,
+      };
+    });
 
     const lessons = lessonRows.map((row) => ({
       id: String(row.id),

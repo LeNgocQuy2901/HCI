@@ -30,7 +30,7 @@ export default function ProgressTracker({
           <div className="text-2xl font-bold text-primary">
             {stats.masteredWords}
           </div>
-          <p className="text-xs text-muted-foreground">Mastered</p>
+          <p className="text-xs text-muted-foreground">Learned</p>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-orange-500">
@@ -48,7 +48,7 @@ export default function ProgressTracker({
           <div className="text-2xl font-bold text-green-500">
             {Math.round(masteryPercentage)}%
           </div>
-          <p className="text-xs text-muted-foreground">Completed</p>
+          <p className="text-xs text-muted-foreground">Learned</p>
         </Card>
       </div>
     );
@@ -70,7 +70,7 @@ export default function ProgressTracker({
           </div>
           <Progress value={masteryPercentage} className="h-3" />
           <p className="text-sm text-muted-foreground">
-            {Math.round(masteryPercentage)}% vocabulary mastered
+            {Math.round(masteryPercentage)}% vocabulary learned
           </p>
         </div>
       </Card>
@@ -112,14 +112,14 @@ export default function ProgressTracker({
           </div>
         </Card>
 
-        {/* Mastered Words */}
+        {/* Learned Words */}
         <Card className="p-6">
           <div className="flex items-start gap-4">
             <div className="h-16 w-16 bg-green-100 rounded-2xl flex items-center justify-center">
               <Award className="h-7 w-7 text-green-600" />
             </div>
             <div className="min-h-16">
-              <p className="text-sm text-muted-foreground">Mastered Words</p>
+              <p className="text-sm text-muted-foreground">Learned Words</p>
               <p className="text-3xl font-bold">{stats.masteredWords}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Keep up the pace.
