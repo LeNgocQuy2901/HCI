@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLearningStore } from "@/hooks/use-learning-store";
 import { courses, lessons, type Lesson } from "@shared/curriculum";
-import { getSignMetadata } from "@shared/sign-metadata";
 import {
   categories,
   categoryLabels,
@@ -51,22 +50,6 @@ const getAccuracy = (progress: SRSProgress[]) => {
 const getProgressStatusLabel = (status: SRSProgress["status"]) =>
   status === "mastered" ? "learned" : status;
 
-type RecognitionPracticeHistoryItem = {
-  id: string;
-  lessonId: string;
-  cardId: string;
-  expectedWord: string;
-  predictedWord: string;
-  isCorrect: boolean;
-  confidence: number;
-  attemptCount: number;
-  durationMs: number;
-  stabilityScore: number;
-  passedThreshold: boolean;
-  suggestion?: string;
-  createdAt: string;
-};
-
 type LearnerAnalytics = {
   studyTimeThisWeekMs: number;
   accuracyTrend: Array<{
@@ -80,13 +63,6 @@ type LearnerAnalytics = {
     correct: number;
     averageScore?: number;
   }>;
-  recognitionImprovement: {
-    attempts: number;
-    firstAccuracy: number;
-    recentAccuracy: number;
-    confidenceDelta: number;
-    stabilityDelta: number;
-  };
   reviewConsistency: {
     activeDaysThisWeek: number;
     percent: number;
@@ -99,9 +75,6 @@ const formatMinutes = (durationMs: number) =>
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuthStore();
   const learningStore = useLearningStore();
-  const [recognitionHistory, setRecognitionHistory] = useState<
-    RecognitionPracticeHistoryItem[]
-  >([]);
   const [analytics, setAnalytics] = useState<LearnerAnalytics | null>(null);
   const [dashboardCards, setDashboardCards] =
     useState<VocabType[]>(vocabularyCards);
@@ -131,53 +104,6 @@ export default function Dashboard() {
       ? Math.round((stats.masteredWords / stats.totalWords) * 100)
       : 0;
   const accuracy = getAccuracy(allProgress);
-  const recognitionAccuracy = useMemo(() => {
-    if (recognitionHistory.length === 0) return 0;
-    const correct = recognitionHistory.filter((item) => item.isCorrect).length;
-    return Math.round((correct / recognitionHistory.length) * 100);
-  }, [recognitionHistory]);
-  const weakRecognitionSigns = useMemo(() => {
-    const grouped = new Map<
-      string,
-      {
-        expectedWord: string;
-        attempts: number;
-        correct: number;
-        avgConfidence: number;
-        avgStability: number;
-      }
-    >();
-
-    recognitionHistory.forEach((item) => {
-      const current = grouped.get(item.cardId) || {
-        expectedWord: item.expectedWord,
-        attempts: 0,
-        correct: 0,
-        avgConfidence: 0,
-        avgStability: 0,
-      };
-      current.attempts += 1;
-      current.correct += item.isCorrect ? 1 : 0;
-      current.avgConfidence += item.confidence;
-      current.avgStability += item.stabilityScore || 0;
-      grouped.set(item.cardId, current);
-    });
-
-    return Array.from(grouped.entries())
-      .map(([cardId, item]) => ({
-        cardId,
-        ...item,
-        accuracy: item.attempts > 0 ? item.correct / item.attempts : 0,
-        avgConfidence:
-          item.attempts > 0 ? item.avgConfidence / item.attempts : 0,
-        avgStability: item.attempts > 0 ? item.avgStability / item.attempts : 0,
-      }))
-      .filter((item) => item.accuracy < 0.7 || item.avgConfidence < 0.75)
-      .sort(
-        (a, b) => a.accuracy - b.accuracy || a.avgConfidence - b.avgConfidence,
-      )
-      .slice(0, 6);
-  }, [recognitionHistory]);
   const publishedCardIds = new Set(dashboardCards.map((card) => card.id));
   const dueCards = learningStore
     .getDueCards(userId, 50)
@@ -322,49 +248,25 @@ export default function Dashboard() {
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
-    if (!isAuthenticated || !token) {
-      setRecognitionHistory([]);
-      return;
-    }
+    if (!isAuthenticated || !token) return;
 
     let cancelled = false;
-    async function loadRecognitionHistory() {
+    async function loadAnalytics() {
       try {
-        const [historyResponse, analyticsResponse] = await Promise.all([
-          fetch("/api/learning/recognition-practice/history?limit=20", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-          fetch("/api/learning/analytics/me", {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        ]);
-
-        if (historyResponse.ok) {
-          const data = await historyResponse.json();
-          if (!cancelled) {
-            setRecognitionHistory(data.results || []);
-          }
-        }
-
-        if (analyticsResponse.ok) {
-          const data = await analyticsResponse.json();
-          if (!cancelled) {
-            setAnalytics(data);
-          }
+        const response = await fetch("/api/learning/analytics/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (!cancelled) setAnalytics(data);
         }
       } catch (error) {
         console.error("Failed to load learning analytics:", error);
       }
     }
 
-    loadRecognitionHistory();
-    return () => {
-      cancelled = true;
-    };
+    void loadAnalytics();
+    return () => { cancelled = true; };
   }, [isAuthenticated]);
 
   return (
@@ -392,9 +294,6 @@ export default function Dashboard() {
           <div className="flex gap-3">
             <Button variant="outline" asChild>
               <Link to="/learn">Continue learning</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/recognition">Practice recognition</Link>
             </Button>
           </div>
         </div>
@@ -465,16 +364,6 @@ export default function Dashboard() {
             </p>
           </Card>
           <Card className="p-5">
-            <p className="text-sm text-muted-foreground">
-              Recognition improvement
-            </p>
-            <p className="text-2xl font-bold">
-              {analytics
-                ? `${analytics.recognitionImprovement.recentAccuracy - analytics.recognitionImprovement.firstAccuracy}%`
-                : "0%"}
-            </p>
-          </Card>
-          <Card className="p-5">
             <p className="text-sm text-muted-foreground">Review consistency</p>
             <p className="text-2xl font-bold">
               {analytics?.reviewConsistency.percent || 0}%
@@ -516,36 +405,24 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  More quiz and recognition attempts will reveal weak topics.
+                  Complete more quizzes to reveal weak topics.
                 </p>
               )}
             </Card>
 
             <Card className="p-6 space-y-4">
-              <h2 className="text-xl font-semibold">Recognition Improvement</h2>
+              <h2 className="text-xl font-semibold">Review Consistency</h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">First attempts</p>
-                  <p className="text-lg font-semibold">
-                    {analytics.recognitionImprovement.firstAccuracy}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Recent attempts</p>
-                  <p className="text-lg font-semibold">
-                    {analytics.recognitionImprovement.recentAccuracy}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Confidence delta</p>
-                  <p className="text-lg font-semibold">
-                    {analytics.recognitionImprovement.confidenceDelta}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Active days</p>
+                  <p className="text-muted-foreground">Active days this week</p>
                   <p className="text-lg font-semibold">
                     {analytics.reviewConsistency.activeDaysThisWeek}/7
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Consistency</p>
+                  <p className="text-lg font-semibold">
+                    {analytics.reviewConsistency.percent}%
                   </p>
                 </div>
               </div>
@@ -608,10 +485,7 @@ export default function Dashboard() {
                 <p className="text-muted-foreground">Weak words</p>
                 <p className="text-lg font-semibold">{weakCards.length}</p>
               </div>
-              <div>
-                <p className="text-muted-foreground">Recognition</p>
-                <p className="text-lg font-semibold">{recognitionAccuracy}%</p>
-              </div>
+
               <div>
                 <p className="text-muted-foreground">Sync</p>
                 <p className="text-lg font-semibold">
@@ -762,153 +636,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <Card className="p-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">
-                Recognition Practice History
-              </h2>
-            </div>
-            <Badge variant="outline">{recognitionAccuracy}% accuracy</Badge>
-          </div>
-          {recognitionHistory.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {recognitionHistory.slice(0, 8).map((item) => (
-                <div key={item.id} className="rounded-md border p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium">Target: {item.expectedWord}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Detected: {item.predictedWord} ·{" "}
-                        {Math.round(item.confidence * 100)}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Attempts: {item.attemptCount} · Stability:{" "}
-                        {Math.round((item.stabilityScore || 0) * 100)}%
-                      </p>
-                    </div>
-                    <Badge variant={item.isCorrect ? "default" : "secondary"}>
-                      {item.isCorrect ? "Correct" : "Retry"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Recognition practice attempts will appear after using lesson
-              camera practice.
-            </p>
-          )}
-        </Card>
-
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Weak Recognition Signs</h2>
-          </div>
-          {weakRecognitionSigns.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {weakRecognitionSigns.map((item) => (
-                <div key={item.cardId} className="rounded-md border p-3">
-                  <p className="font-medium">{item.expectedWord}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Recognition accuracy {Math.round(item.accuracy * 100)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Avg confidence {Math.round(item.avgConfidence * 100)}% ·
-                    stability {Math.round(item.avgStability * 100)}%
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Weak recognition signs will appear after camera practice attempts.
-            </p>
-          )}
-        </Card>
-
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Recommended Review</h2>
-          </div>
-          {weakRecognitionSigns.length > 0 ? (
-            <div className="space-y-3">
-              {weakRecognitionSigns.slice(0, 3).map((item) => {
-                const card = dashboardCards.find(
-                  (vocab) => vocab.id === item.cardId,
-                );
-                const metadata = card ? getSignMetadata(card) : null;
-
-                return (
-                  <div key={item.cardId} className="rounded-md border p-3">
-                    <p className="font-medium">
-                      Practice again: {item.expectedWord}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata?.commonMistakes[0] ||
-                        "This sign needs more camera practice."}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Tip:{" "}
-                      {metadata?.practiceTips[0] ||
-                        "Slow down and keep the hand centered in frame."}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : weakCards.length > 0 ? (
-            <div className="space-y-3">
-              {weakCards.slice(0, 3).map((card) => {
-                const metadata = getSignMetadata(card);
-                return (
-                  <div key={card.id} className="rounded-md border p-3">
-                    <p className="font-medium">Review: {card.word}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {metadata.instruction}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Complete more lessons and camera practice to get targeted review
-              recommendations.
-            </p>
-          )}
-        </Card>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-5">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">Topics</h2>
-            </div>
-            <div className="space-y-4">
-              {categoryRows.map((row) => (
-                <div key={row.category} className="space-y-2">
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <div>
-                      <p className="font-medium">{row.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {row.learning} learning, {row.total - row.mastered} left
-                      </p>
-                    </div>
-                    <span className="text-muted-foreground">
-                      {row.mastered}/{row.total}
-                    </span>
-                  </div>
-                  <Progress value={row.percent} className="h-2" />
-                </div>
-              ))}
-            </div>
-          </Card>
-
           <Card className="p-6 space-y-5">
             <div className="flex items-center gap-2">
               <CalendarClock className="h-5 w-5" />
