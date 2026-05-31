@@ -69,6 +69,22 @@ export default function Layout({ children }: LayoutProps) {
       .slice(0, 2);
   };
 
+  const UserAvatar = ({ size = "h-9 w-9" }: { size?: string }) => (
+    <div
+      className={`${size} overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-xs text-white font-bold shadow-md shadow-violet-950/10`}
+    >
+      {user?.avatarUrl ? (
+        <img
+          src={user.avatarUrl}
+          alt={`${user.fullName} avatar`}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        getInitials(user?.fullName)
+      )}
+    </div>
+  );
+
   const handleLogout = async () => {
     await logout();
     setMobileMenuOpen(false);
@@ -176,9 +192,7 @@ export default function Layout({ children }: LayoutProps) {
                       asChild
                     >
                       <Link to="/profile">
-                        <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
-                          {getInitials(user.fullName)}
-                        </div>
+                        <UserAvatar />
                       </Link>
                     </Button>
                     <DropdownMenuTrigger asChild>
@@ -254,9 +268,7 @@ export default function Layout({ children }: LayoutProps) {
                   asChild
                 >
                   <Link to="/profile">
-                    <div className="w-7 h-7 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
-                      {getInitials(user.fullName)}
-                    </div>
+                    <UserAvatar size="h-7 w-7" />
                   </Link>
                 </Button>
               ) : null}

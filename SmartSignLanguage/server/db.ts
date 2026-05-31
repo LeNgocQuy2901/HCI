@@ -33,6 +33,7 @@ export function initializeDatabase() {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       fullName TEXT,
+      avatarUrl TEXT NOT NULL DEFAULT '/img/avatar/1.jfif',
       role TEXT NOT NULL DEFAULT 'user',
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
@@ -45,6 +46,11 @@ export function initializeDatabase() {
   const existingUserColumns = new Set(userColumns.map((column) => column.name));
   if (!existingUserColumns.has("role")) {
     db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
+  }
+  if (!existingUserColumns.has("avatarUrl")) {
+    db.exec(
+      "ALTER TABLE users ADD COLUMN avatarUrl TEXT NOT NULL DEFAULT '/img/avatar/1.jfif'",
+    );
   }
 
   // Create learning progress table

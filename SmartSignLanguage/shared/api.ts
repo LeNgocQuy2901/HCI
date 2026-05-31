@@ -19,6 +19,7 @@ export interface User {
   email: string;
   username: string;
   fullName: string;
+  avatarUrl: string;
   role: "user" | "admin";
   createdAt: string;
   updatedAt: string;
@@ -48,6 +49,10 @@ export interface UpdateProfileRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface UpdateAvatarRequest {
+  avatarUrl: string;
 }
 
 /**

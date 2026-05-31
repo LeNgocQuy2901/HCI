@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,8 +18,14 @@ import {
   LogOut,
   Loader2,
   Mail,
+  Upload,
   User as UserIcon,
 } from "lucide-react";
+
+const defaultAvatars = Array.from(
+  { length: 24 },
+  (_, index) => `/img/avatar/${index + 1}.jfif`,
+);
 
 const profileSchema = z.object({
   fullName: z
@@ -62,6 +68,48 @@ async function getResponseError(response: Response, fallback: string) {
   return fallback;
 }
 
+function resizeAvatar(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () =>
+      reject(new Error("Unable to read the selected image"));
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () =>
+        reject(new Error("The selected file is not a valid image"));
+      image.onload = () => {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Unable to process the selected image"));
+          return;
+        }
+
+        const sourceSize = Math.min(image.width, image.height);
+        const sourceX = (image.width - sourceSize) / 2;
+        const sourceY = (image.height - sourceSize) / 2;
+        context.drawImage(
+          image,
+          sourceX,
+          sourceY,
+          sourceSize,
+          sourceSize,
+          0,
+          0,
+          size,
+          size,
+        );
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      image.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -69,6 +117,11 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(
+    user?.avatarUrl || defaultAvatars[0],
+  );
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register: registerProfile,
@@ -114,6 +167,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (user) {
+      setAvatarUrl(user.avatarUrl || defaultAvatars[0]);
       resetProfile({
         fullName: user.fullName,
         email: user.email,
@@ -121,6 +175,71 @@ export default function Profile() {
       });
     }
   }, [user, resetProfile]);
+
+  const saveAvatar = async () => {
+    setIsSavingAvatar(true);
+    try {
+      const response = await fetch("/api/auth/me/avatar", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+        body: JSON.stringify({ avatarUrl }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Unable to update avatar"),
+        );
+      }
+
+      const result = await response.json();
+      useAuthStore.setState({ user: result.user });
+      useAuthStore.getState().saveToStorage();
+      toast({ title: "Success", description: "Avatar updated successfully" });
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Unable to update avatar"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  };
+
+  const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Error",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Please select an image smaller than 5 MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setAvatarUrl(await resizeAvatar(file));
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Unable to process avatar"),
+        variant: "destructive",
+      });
+    }
+  };
 
   const onProfileSubmit = async (data: ProfileFormData) => {
     if (!user) return;
@@ -239,8 +358,12 @@ export default function Profile() {
           <Card className="mx-auto w-full max-w-2xl rounded-[26px] border-white/70 bg-white/75 p-6 shadow-xl shadow-violet-950/5 backdrop-blur dark:border-white/10 dark:bg-slate-900/65">
             <div className="space-y-6">
               <div className="flex items-center space-x-4 pb-6 border-b">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
-                  <UserIcon className="h-8 w-8 text-white" />
+                <div className="h-16 w-16 overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center shadow-md">
+                  <img
+                    src={user.avatarUrl || defaultAvatars[0]}
+                    alt={`${user.fullName} avatar`}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold">{user.fullName}</h1>
@@ -250,6 +373,75 @@ export default function Profile() {
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </div>
+
+              <section className="space-y-4 border-t pt-6">
+                <div>
+                  <h2 className="text-lg font-semibold">Choose Your Avatar</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Pick a default avatar or upload a square photo from your
+                    device.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-5 sm:flex-row">
+                  <img
+                    src={avatarUrl}
+                    alt="Selected avatar preview"
+                    className="h-28 w-28 rounded-[26px] object-cover shadow-lg shadow-violet-950/10"
+                  />
+                  <div className="flex-1 space-y-3">
+                    <div className="grid max-h-44 grid-cols-6 gap-2 overflow-y-auto pr-1 sm:grid-cols-8">
+                      {defaultAvatars.map((defaultAvatar) => (
+                        <button
+                          key={defaultAvatar}
+                          type="button"
+                          onClick={() => setAvatarUrl(defaultAvatar)}
+                          className={`overflow-hidden rounded-xl border-2 transition hover:-translate-y-0.5 ${
+                            avatarUrl === defaultAvatar
+                              ? "border-violet-500 shadow-md shadow-violet-500/20"
+                              : "border-transparent"
+                          }`}
+                          aria-label={`Select avatar ${defaultAvatar}`}
+                        >
+                          <img
+                            src={defaultAvatar}
+                            alt=""
+                            className="aspect-square w-full object-cover"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => avatarInputRef.current?.click()}
+                      >
+                        <Upload className="h-4 w-4" />
+                        Upload From Device
+                      </Button>
+                      <Button
+                        type="button"
+                        className="gap-2"
+                        disabled={isSavingAvatar}
+                        onClick={saveAvatar}
+                      >
+                        {isSavingAvatar && (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        )}
+                        Save Avatar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
               <div className="space-y-1 text-sm">
                 <p className="text-muted-foreground">Member Since</p>

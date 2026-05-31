@@ -6,6 +6,7 @@ import {
   loginSchema,
   updateProfileSchema,
   changePasswordSchema,
+  updateAvatarSchema,
   User,
 } from "../models/user";
 import { generateToken } from "../auth";
@@ -81,6 +82,7 @@ router.post("/login", async (req: Request, res: Response) => {
       email: user.email,
       username: user.username,
       fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
       role: user.role,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -188,6 +190,36 @@ router.put(
 
       console.error("Change password error:", error);
       return res.status(500).json({ error: "Failed to change password" });
+    }
+  },
+);
+
+// PUT /api/auth/me/avatar
+router.put(
+  "/me/avatar",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const data = updateAvatarSchema.parse(req.body);
+      const updatedUser = await userService.updateAvatar(
+        req.user!.userId,
+        data.avatarUrl,
+      );
+
+      return res.status(200).json({
+        message: "Avatar updated successfully",
+        user: updatedUser,
+      });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: error.errors });
+      }
+      if (error.message === "User not found") {
+        return res.status(404).json({ error: error.message });
+      }
+
+      console.error("Update avatar error:", error);
+      return res.status(500).json({ error: "Failed to update avatar" });
     }
   },
 );

@@ -40,11 +40,26 @@ export const changePasswordSchema = z.object({
     .max(100, "New password must be at most 100 characters"),
 });
 
+const defaultAvatarPattern = /^\/img\/avatar\/(?:[1-9]|1\d|2[0-4])\.jfif$/;
+const uploadedAvatarPattern = /^data:image\/(?:jpeg|png|webp);base64,/;
+
+export const updateAvatarSchema = z.object({
+  avatarUrl: z
+    .string()
+    .max(450_000, "Avatar image is too large")
+    .refine(
+      (value) =>
+        defaultAvatarPattern.test(value) || uploadedAvatarPattern.test(value),
+      "Invalid avatar image",
+    ),
+});
+
 export interface User {
   id: string;
   email: string;
   username: string;
   fullName: string;
+  avatarUrl: string;
   role: "user" | "admin";
   createdAt: string;
   updatedAt: string;
@@ -106,17 +121,29 @@ export class UserService {
     const role = this.resolveInitialRole(email);
 
     const stmt = this.db.prepare(`
-      INSERT INTO users (id, email, username, password, fullName, role, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, email, username, password, fullName, avatarUrl, role, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(id, email, username, hashedPassword, fullName, role, now, now);
+    const avatarUrl = "/img/avatar/1.jfif";
+    stmt.run(
+      id,
+      email,
+      username,
+      hashedPassword,
+      fullName,
+      avatarUrl,
+      role,
+      now,
+      now,
+    );
 
     return {
       id,
       email,
       username,
       fullName,
+      avatarUrl,
       role,
       createdAt: now,
       updatedAt: now,
@@ -145,7 +172,7 @@ export class UserService {
   async getUserById(id: string): Promise<User | null> {
     const user = this.db
       .prepare(
-        "SELECT id, email, username, fullName, role, createdAt, updatedAt FROM users WHERE id = ?",
+        "SELECT id, email, username, fullName, avatarUrl, role, createdAt, updatedAt FROM users WHERE id = ?",
       )
       .get(id) as User | undefined;
 
@@ -218,6 +245,18 @@ export class UserService {
     this.db
       .prepare("UPDATE users SET password = ?, updatedAt = ? WHERE id = ?")
       .run(hashedPassword, new Date().toISOString(), id);
+  }
+
+  async updateAvatar(id: string, avatarUrl: string): Promise<User> {
+    const result = this.db
+      .prepare("UPDATE users SET avatarUrl = ?, updatedAt = ? WHERE id = ?")
+      .run(avatarUrl, new Date().toISOString(), id);
+
+    if (result.changes === 0) {
+      throw new Error("User not found");
+    }
+
+    return (await this.getUserById(id)) as User;
   }
 
   async deleteUser(id: string): Promise<void> {
