@@ -117,6 +117,11 @@
 }
 
 @layer utilities {
+  .ssl-page-shell {
+    width: min(100%, 80rem);
+    margin-inline: auto;
+  }
+
   .ssl-app-page {
     min-height: 100vh;
     background:
@@ -194,10 +199,17 @@
         rgba(246, 242, 255, 0.8)
       );
     padding: 1.5rem;
+    min-height: clamp(10.5rem, 14vw, 11.5rem);
     box-shadow:
       0 22px 54px rgba(76, 29, 149, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(22px);
+  }
+
+  @media (max-width: 767px) {
+    .ssl-page-hero {
+      min-height: auto;
+    }
   }
 
   .dark .ssl-page-hero {

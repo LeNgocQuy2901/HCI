@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { PremiumPageHeader } from "@/components/PremiumPage";
 import VocabularyCardFlip from "@/components/VocabularyCardFlip";
@@ -50,6 +51,19 @@ import { useToast } from "@/hooks/use-toast";
 
 type Tab = "path" | "learn" | "review" | "quiz" | "stats";
 type QuizContext = { type: "lesson"; lessonId: string } | { type: "free" };
+
+const tabPaths: Record<Tab, string> = {
+  path: "/learn",
+  learn: "/learn/lesson",
+  review: "/learn/review",
+  quiz: "/learn/quiz",
+  stats: "/learn/stats",
+};
+
+const getTabFromPath = (pathname: string): Tab =>
+  (Object.entries(tabPaths).find(([, path]) => path === pathname)?.[0] as
+    | Tab
+    | undefined) || "path";
 
 const buildQuiz = (
   cards: VocabType[],
@@ -104,10 +118,14 @@ const uniqueQuestionsByCard = (
 export default function Learn() {
   const { toast } = useToast();
   const { user } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
   const learningStore = useLearningStore();
   const userId = user?.id || "guest";
 
-  const [activeTab, setActiveTab] = useState<Tab>("path");
+  const [activeTab, setActiveTab] = useState<Tab>(() =>
+    getTabFromPath(location.pathname),
+  );
   const [selectedLessonId, setSelectedLessonId] = useState(
     lessons[0]?.id || "",
   );
@@ -124,6 +142,20 @@ export default function Learn() {
   const [localQuizScores, setLocalQuizScores] = useState<
     Record<string, number>
   >({});
+
+  useEffect(() => {
+    const nextTab = getTabFromPath(location.pathname);
+    setActiveTab(nextTab);
+
+    if (location.pathname !== tabPaths[nextTab]) {
+      navigate(tabPaths[nextTab], { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  const navigateToTab = (tab: Tab) => {
+    setActiveTab(tab);
+    navigate(tabPaths[tab]);
+  };
 
   useEffect(() => {
     const loadPublishedContent = async () => {
@@ -353,7 +385,7 @@ export default function Learn() {
     learningStore.startLesson(lesson.id, userId);
     setSelectedLessonId(lesson.id);
     setCurrentCardIndex(0);
-    setActiveTab("learn");
+    navigateToTab("learn");
   };
 
   const handleMarkCorrect = () => {
@@ -506,7 +538,7 @@ export default function Learn() {
         setQuizQuestions([]);
         // Force re-render so progress/quiz score display updates immediately
         setRefreshKey((k) => k + 1);
-        setActiveTab("learn");
+        navigateToTab("learn");
         return;
       }
     } else {
@@ -569,30 +601,30 @@ export default function Learn() {
 
   return (
     <Layout>
-      <div className="ssl-app-page">
+      <div className="ssl-app-page px-4">
         <div
-          className={`container max-w-7xl mx-auto px-4 ${
+          className={`ssl-page-shell ${
             activeTab === "learn" || activeTab === "quiz"
               ? "py-4 space-y-4"
               : "py-7 space-y-8"
           }`}
         >
+          <PremiumPageHeader
+            eyebrow="Personalized learning path"
+            title="Learn Sign Language"
+            description="Follow structured visual lessons, practice at your own pace, and build confidence one milestone at a time."
+            icon={<BookOpen className="h-6 w-6" />}
+          />
+
           {activeTab !== "learn" && activeTab !== "quiz" && (
             <>
-              <PremiumPageHeader
-                eyebrow="Personalized learning path"
-                title="Learn Sign Language"
-                description="Follow structured visual lessons, practice at your own pace, and build confidence one milestone at a time."
-                icon={<BookOpen className="h-6 w-6" />}
-              />
-
               <ProgressTracker stats={stats} compact={true} />
             </>
           )}
 
           <Tabs
             value={activeTab}
-            onValueChange={(value) => setActiveTab(value as Tab)}
+            onValueChange={(value) => navigateToTab(value as Tab)}
           >
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="path" className="gap-2">

@@ -672,7 +672,7 @@ export default function Translate() {
   return (
     <Layout>
       <main className="ssl-app-page px-4 py-5 md:py-7">
-        <div className="container mx-auto">
+        <div className="ssl-page-shell">
           <PremiumPageHeader
             eyebrow="AI communication studio"
             title="Text to Sign Translation"

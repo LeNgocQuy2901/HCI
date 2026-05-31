@@ -1121,7 +1121,7 @@ export default function Recognition() {
   return (
     <Layout>
       <div className="ssl-app-page px-4 py-5 md:py-7">
-        <div className="container mx-auto">
+        <div className="ssl-page-shell">
           <PremiumPageHeader
             eyebrow="Live gesture intelligence"
             title="Realtime Sign Recognition"

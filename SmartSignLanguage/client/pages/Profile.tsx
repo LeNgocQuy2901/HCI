@@ -348,7 +348,7 @@ export default function Profile() {
   return (
     <Layout>
       <div className="ssl-app-page px-4 py-7">
-        <div className="mx-auto max-w-4xl space-y-5">
+        <div className="ssl-page-shell space-y-5">
           <PremiumPageHeader
             eyebrow="Personal account"
             title="Your Profile"

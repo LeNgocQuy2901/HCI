@@ -81,8 +81,8 @@ export default function Lookup() {
 
   return (
     <Layout>
-      <div className="ssl-app-page">
-        <div className="container mx-auto px-4 py-7 space-y-6">
+      <div className="ssl-app-page px-4">
+        <div className="ssl-page-shell py-7 space-y-6">
           <PremiumPageHeader
             eyebrow="Visual vocabulary library"
             title="Sign Video Lookup"

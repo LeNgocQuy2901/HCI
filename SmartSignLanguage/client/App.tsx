@@ -63,7 +63,7 @@ function AppContent() {
           >
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/learn" element={<Learn />} />
+              <Route path="/learn/*" element={<Learn />} />
               <Route path="/lookup" element={<Lookup />} />
               <Route path="/translate" element={<Translate />} />
               <Route path="/recognition" element={<Recognition />} />
