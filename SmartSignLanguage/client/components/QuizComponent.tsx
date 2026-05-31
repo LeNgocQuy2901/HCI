@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   QuizQuestion,
@@ -37,53 +37,6 @@ interface QuizComponentProps {
     answers: number[];
     incorrectCardIds: string[];
   }) => void;
-}
-
-function FloatingClayDecorations({
-  celebrate = false,
-}: {
-  celebrate?: boolean;
-}) {
-  const decorations = [
-    { className: "left-[4%] top-[8%] bg-pink-200", delay: 0, size: "h-8 w-8" },
-    {
-      className: "right-[7%] top-[14%] bg-cyan-200",
-      delay: 0.4,
-      size: "h-7 w-7",
-    },
-    {
-      className: "bottom-[20%] left-[6%] bg-yellow-200",
-      delay: 0.8,
-      size: "h-6 w-6",
-    },
-    {
-      className: "bottom-[10%] right-[8%] bg-violet-200",
-      delay: 1.2,
-      size: "h-9 w-9",
-    },
-  ];
-
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
-      {decorations.map((decoration) => (
-        <motion.span
-          key={decoration.className}
-          className={`absolute rounded-full border border-white/70 shadow-[inset_0_2px_4px_rgba(255,255,255,.8),0_8px_18px_rgba(124,58,237,.12)] ${decoration.className} ${decoration.size}`}
-          animate={{
-            y: celebrate ? [0, -16, 0] : [0, -8, 0],
-            rotate: [0, 8, -5, 0],
-            scale: celebrate ? [1, 1.15, 1] : [1, 1.04, 1],
-          }}
-          transition={{
-            duration: celebrate ? 1.4 : 4,
-            delay: decoration.delay,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
-    </div>
-  );
 }
 
 function HandMascot({ isCorrect }: { isCorrect: boolean }) {
@@ -149,7 +102,6 @@ export default function QuizComponent({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [submitted, setSubmitted] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const completedRef = useRef(false);
 
@@ -201,15 +153,6 @@ export default function QuizComponent({
 
   const isAnswerCorrect =
     selectedAnswers[currentIndex] === current.correctAnswerIndex;
-
-  useEffect(() => {
-    if (submitted && isAnswerCorrect) {
-      setShowCelebration(true);
-      const timer = setTimeout(() => setShowCelebration(false), 900);
-      return () => clearTimeout(timer);
-    }
-    return undefined;
-  }, [submitted, isAnswerCorrect, currentIndex]);
 
   const particles = Array.from({ length: 14 }, (_, index) => ({
     angle: (Math.PI * 2 * index) / 14,
@@ -348,7 +291,6 @@ export default function QuizComponent({
           transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
         >
           <Card className="relative p-8 space-y-6 rounded-[32px] border-2 border-white/80 dark:border-slate-700 bg-gradient-to-br from-violet-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 overflow-hidden shadow-[0_22px_55px_rgba(124,58,237,.14),inset_0_2px_0_rgba(255,255,255,.8)]">
-            <FloatingClayDecorations celebrate={showCelebration} />
             <AnimatePresence>
               {submitted && <HandMascot isCorrect={isAnswerCorrect} />}
             </AnimatePresence>
