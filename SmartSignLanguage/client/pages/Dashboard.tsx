@@ -26,7 +26,9 @@ import {
   Flame,
   GraduationCap,
   ListChecks,
+  PlayCircle,
   Target,
+  X,
 } from "lucide-react";
 
 const formatDate = (date?: string) => {
@@ -81,6 +83,8 @@ export default function Dashboard() {
   const [dashboardLessons, setDashboardLessons] = useState<Lesson[]>(lessons);
   const userId = user?.id || "guest";
 
+  const [selectedVideoCard, setSelectedVideoCard] = useState<VocabType | null>(null);
+
   const stats = learningStore.getProgressStats(userId);
   const allProgress = Array.from(learningStore.progress.values()).filter(
     (item) => item.userId === userId,
@@ -99,9 +103,10 @@ export default function Dashboard() {
     (item) => item.status === "learning",
   ).length;
   const reviewedCount = allProgress.filter((item) => item.attempts > 0).length;
+  const totalWords = dashboardCards.length || stats.totalWords;
   const masteryPercentage =
-    stats.totalWords > 0
-      ? Math.round((stats.masteredWords / stats.totalWords) * 100)
+    totalWords > 0
+      ? Math.round((masteredIds.size / totalWords) * 100)
       : 0;
   const accuracy = getAccuracy(allProgress);
   const publishedCardIds = new Set(dashboardCards.map((card) => card.id));
@@ -117,6 +122,26 @@ export default function Dashboard() {
       if (!progress || progress.status === "new" || progress.status === "mastered") return false;
       return new Date(progress.nextReviewDate) <= now;
   });
+
+  // Also include cards that are past due (overdue) — same as dueCards since getDueCards returns all due
+  // Separate into: due today vs overdue (more than 1 day late)
+  const reviewQueueCards = (() => {
+    const allProgressArr = Array.from(learningStore.progress.values()).filter(
+      (p) => p.userId === userId && p.status !== "new" && p.status !== "mastered",
+    );
+    return allProgressArr
+      .filter((p) => publishedCardIds.has(p.cardId))
+      .map((p) => {
+        const card = vocabularyCards.find((c) => c.id === p.cardId) as VocabType | undefined;
+        if (!card) return null;
+        const dueDate = new Date(p.nextReviewDate);
+        const msOverdue = now.getTime() - dueDate.getTime();
+        const daysOverdue = Math.floor(msOverdue / (1000 * 60 * 60 * 24));
+        return { card, progress: p, dueDate, daysOverdue };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+      .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+  })();
 
 
   const weakCards = learningStore
@@ -314,7 +339,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm text-muted-foreground">Learned</p>
-                <p className="text-3xl font-bold">{stats.masteredWords}</p>
+                <p className="text-3xl font-bold">{masteredIds.size}</p>
               </div>
               <Award className="h-9 w-9 text-emerald-600" />
             </div>
@@ -363,9 +388,9 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">Accuracy trend</p>
             <p className="text-2xl font-bold">
               {analytics?.accuracyTrend?.[analytics.accuracyTrend.length - 1]
-                ?.averageScore
+                ?.averageScore != null
                 ? `${Math.round(analytics.accuracyTrend[analytics.accuracyTrend.length - 1].averageScore)}%`
-                : `${accuracy}%`}
+                : "—"}
             </p>
           </Card>
           <Card className="p-5">
@@ -517,7 +542,7 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-xl font-semibold">Overall Progress</h2>
                 <p className="text-sm text-muted-foreground">
-                  {stats.masteredWords} of {stats.totalWords} vocabulary items
+                  {masteredIds.size} of {totalWords} vocabulary items
                   learned
                 </p>
               </div>
@@ -630,15 +655,23 @@ export default function Dashboard() {
                       : 0;
 
                   return (
-                    <div key={card.id} className="rounded-md border p-3">
-                      <p className="font-medium">{card.word}</p>
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => setSelectedVideoCard(card)}
+                      className="rounded-md border p-3 text-left hover:bg-muted/50 transition-colors group cursor-pointer w-full"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium">{card.word}</p>
+                        <PlayCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-0.5" />
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {categoryLabels[card.category]}
                       </p>
                       <Badge variant="secondary" className="mt-2">
                         {accuracyValue}% accuracy
                       </Badge>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -650,52 +683,69 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {(() => {
-          
-          const now = new Date();
-          const reviewDueCards = dueCards; 
+        {reviewQueueCards.length > 0 && (
+          <Card className="p-6 space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5" />
+                <h2 className="text-xl font-semibold">Review Queue</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {reviewQueueCards.filter((i) => i.daysOverdue > 0).length > 0 && (
+                  <Badge variant="destructive">
+                    {reviewQueueCards.filter((i) => i.daysOverdue > 0).length} overdue
+                  </Badge>
+                )}
+                <Badge variant="outline">
+                  {reviewQueueCards.filter((i) => i.daysOverdue >= 0).length} due
+                </Badge>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {reviewQueueCards.slice(0, 8).map(({ card, progress: prog, dueDate, daysOverdue }) => {
+                const accuracyPct = prog.attempts > 0
+                  ? Math.round((prog.correctAttempts / prog.attempts) * 100)
+                  : 0;
+                const isOverdue = daysOverdue > 0;
+                const isDueToday = daysOverdue === 0 || (daysOverdue < 0 && dueDate.getTime() <= now.getTime());
+                const isFuture = dueDate.getTime() > now.getTime();
 
-          return reviewDueCards.length > 0 ? (
-            <Card className="p-6 space-y-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <CalendarClock className="h-5 w-5" />
-                  <h2 className="text-xl font-semibold">Review Queue</h2>
-                </div>
-                <Badge variant="outline">{reviewDueCards.length} due</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {reviewDueCards.slice(0, 8).map((card) => {
-                  const progress = progressByCard.get(card.id)!;
-                  const accuracyPct = progress.attempts > 0
-                    ? Math.round((progress.correctAttempts / progress.attempts) * 100)
-                    : 0;
-                  return (
-                    <div
-                      key={card.id}
-                      className="flex items-center justify-between gap-4 rounded-md border p-3"
-                    >
-                      <div>
+                return (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => setSelectedVideoCard(card)}
+                    className={`flex items-center justify-between gap-4 rounded-md border p-3 text-left hover:bg-muted/50 transition-colors group cursor-pointer w-full ${
+                      isOverdue ? "border-destructive/40 bg-destructive/5" : ""
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-1.5">
                         <p className="font-medium">{card.word}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {categoryLabels[card.category]}
-                        </p>
+                        <PlayCircle className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
                       </div>
-                      <div className="text-right">
-                        <Badge variant={accuracyPct >= 70 ? "outline" : "secondary"}>
-                          {accuracyPct}%
-                        </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Due {formatDate(progress.nextReviewDate)}
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {categoryLabels[card.category]}
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-            </Card>
-          ) : null;
-        })()}
+                    <div className="text-right shrink-0">
+                      <Badge variant={accuracyPct >= 70 ? "outline" : "secondary"}>
+                        {accuracyPct}%
+                      </Badge>
+                      <p className={`text-xs mt-1 ${isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                        {isOverdue
+                          ? `${daysOverdue}d overdue`
+                          : isFuture
+                            ? `Due ${formatDate(prog.nextReviewDate)}`
+                            : "Due today"}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-6">
           <Card className="p-6 space-y-5">
@@ -777,6 +827,50 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Video modal */}
+      {selectedVideoCard && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => setSelectedVideoCard(null)}
+        >
+          <div
+            className="bg-background rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <div>
+                <p className="font-semibold text-lg">{selectedVideoCard.word}</p>
+                <p className="text-xs text-muted-foreground">{categoryLabels[selectedVideoCard.category]}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedVideoCard(null)}
+                className="rounded-md p-1 hover:bg-muted transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              {selectedVideoCard.videoUrl ? (
+                <video
+                  key={selectedVideoCard.id}
+                  src={selectedVideoCard.videoUrl}
+                  autoPlay
+                  loop
+                  controls
+                  className="w-full rounded-lg aspect-video bg-black"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center aspect-video rounded-lg bg-muted text-muted-foreground gap-2">
+                  <PlayCircle className="h-10 w-10" />
+                  <p className="text-sm">No video available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
