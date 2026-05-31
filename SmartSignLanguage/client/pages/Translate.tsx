@@ -4,14 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Loader2,
-  Pause,
-  Play,
-  RotateCcw,
-  Sparkles,
-  Type,
-} from "lucide-react";
+import { Loader2, Pause, Play, RotateCcw, Sparkles, Type } from "lucide-react";
 
 type Point = { x: number; y: number; z?: number; v?: number };
 type SignFrame = {
@@ -677,7 +670,11 @@ export default function Translate() {
                 placeholder="Example: hello, thank you, good morning"
               />
               <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                <p className="text-muted-foreground" role="status" aria-live="polite">
+                <p
+                  className="text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
                   {actionHint}
                 </p>
                 <span className="shrink-0 text-muted-foreground">
@@ -854,13 +851,15 @@ export default function Translate() {
                 <div className="flex flex-wrap gap-3">
                   <Button
                     size="lg"
-                  onClick={() => {
-                    setIsPlaying((current) => !current);
-                    setHasCompleted(false);
-                  }}
+                    onClick={() => {
+                      setIsPlaying((current) => !current);
+                      setHasCompleted(false);
+                    }}
                     disabled={!landmarkData || animation.frames.length === 0}
                     className="gap-2"
-                    aria-label={isPlaying ? "Pause animation" : "Play animation"}
+                    aria-label={
+                      isPlaying ? "Pause animation" : "Play animation"
+                    }
                   >
                     {isPlaying ? (
                       <Pause className="h-4 w-4" />
