@@ -178,7 +178,13 @@ export default function Dashboard() {
       )
       .slice(0, 6);
   }, [recognitionHistory]);
-  const weakCards = learningStore.getWeakCards(userId, 6);
+  const publishedCardIds = new Set(dashboardCards.map((card) => card.id));
+  const dueCards = learningStore
+    .getDueCards(userId, 50)
+    .filter((card) => publishedCardIds.has(card.id));
+  const weakCards = learningStore
+    .getWeakCards(userId, 6)
+    .filter((card) => publishedCardIds.has(card.id));
   const completedLessons = dashboardLessons.filter(
     (lesson) =>
       learningStore.getLessonProgress(lesson.id, userId)?.status ===
@@ -199,6 +205,20 @@ export default function Dashboard() {
     dashboardLessons.length > 0
       ? Math.round((completedLessons.length / dashboardLessons.length) * 100)
       : 0;
+
+  const getDashboardLessonMastery = (lesson: Lesson) => {
+    const mastered = lesson.cardIds.filter((cardId) =>
+      learningStore.understoodCards.has(`${userId}:${cardId}`),
+    ).length;
+    return {
+      mastered,
+      total: lesson.cardIds.length,
+      percent:
+        lesson.cardIds.length > 0
+          ? Math.round((mastered / lesson.cardIds.length) * 100)
+          : 0,
+    };
+  };
 
   const dashboardCourses = courses.map((course) => ({
     ...course,
@@ -466,15 +486,19 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6 space-y-4">
               <h2 className="text-xl font-semibold">Weakest Topics</h2>
-              {analytics.weakestTopics.length > 0 ? (
+              {analytics.weakestTopics.filter((t) => t.attempts > 0 && Math.round((Number(t.correct || 0) / t.attempts) * 100) < 100).length > 0 ? (
                 <div className="space-y-3">
-                  {analytics.weakestTopics.map((topic) => {
-                    const accuracyValue =
-                      topic.attempts > 0
-                        ? Math.round(
-                            (Number(topic.correct || 0) / topic.attempts) * 100,
-                          )
-                        : 0;
+                  {[...analytics.weakestTopics]
+                    .map((topic) => ({
+                      ...topic,
+                      accuracyValue: topic.attempts > 0
+                        ? Math.round((Number(topic.correct || 0) / topic.attempts) * 100)
+                        : 0,
+                    }))
+                    .filter((topic) => topic.attempts > 0 && topic.accuracyValue < 100)
+                    .sort((a, b) => a.accuracyValue - b.accuracyValue)
+                    .map((topic) => {
+                    const { accuracyValue } = topic;
                     return (
                       <div key={topic.category} className="space-y-2">
                         <div className="flex justify-between text-sm">
@@ -575,9 +599,9 @@ export default function Dashboard() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Today's review</p>
+                <p className="text-muted-foreground">Due for review</p>
                 <p className="text-lg font-semibold">
-                  {stats.totalReviewsToday}
+                  {dueCards.length}
                 </p>
               </div>
               <div>
@@ -618,9 +642,9 @@ export default function Dashboard() {
                 <p className="text-lg font-semibold">{reviewedCount}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Today</p>
+                <p className="text-muted-foreground">Due today</p>
                 <p className="text-lg font-semibold">
-                  {stats.totalReviewsToday}
+                  {dueCards.length}
                 </p>
               </div>
               <div>
@@ -676,15 +700,25 @@ export default function Dashboard() {
                   (completed / course.lessons.length) * 100,
                 );
 
+                const mastery = course.lessons.reduce(
+                    (acc, lesson) => {
+                      const m = getDashboardLessonMastery(lesson);
+                      return { mastered: acc.mastered + m.mastered, total: acc.total + m.total };
+                    },
+                    { mastered: 0, total: 0 },
+                  );
+                const masteryPercent = mastery.total > 0
+                    ? Math.round((mastery.mastered / mastery.total) * 100)
+                    : 0;
                 return (
                   <div key={course.id} className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="font-medium">{course.title}</span>
                       <span className="text-muted-foreground">
-                        {completed}/{course.lessons.length}
+                        {mastery.mastered}/{mastery.total} words · {completed}/{course.lessons.length} lessons
                       </span>
                     </div>
-                    <Progress value={percent} className="h-2" />
+                    <Progress value={masteryPercent} className="h-2" />
                   </div>
                 );
               })}
