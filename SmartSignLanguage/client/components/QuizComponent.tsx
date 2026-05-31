@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   QuizQuestion,
   VocabularyCard,
@@ -8,7 +9,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Play, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Play,
+  CheckCircle2,
+  XCircle,
+  Sparkles,
+  Hand,
+  Star,
+} from "lucide-react";
 import { categoryLabels, difficultyLabels } from "@shared/vocabulary";
 
 const quizTypeLabels: Record<string, string> = {
@@ -29,6 +37,109 @@ interface QuizComponentProps {
     answers: number[];
     incorrectCardIds: string[];
   }) => void;
+}
+
+function FloatingClayDecorations({
+  celebrate = false,
+}: {
+  celebrate?: boolean;
+}) {
+  const decorations = [
+    { className: "left-[4%] top-[8%] bg-pink-200", delay: 0, size: "h-8 w-8" },
+    {
+      className: "right-[7%] top-[14%] bg-cyan-200",
+      delay: 0.4,
+      size: "h-7 w-7",
+    },
+    {
+      className: "bottom-[20%] left-[6%] bg-yellow-200",
+      delay: 0.8,
+      size: "h-6 w-6",
+    },
+    {
+      className: "bottom-[10%] right-[8%] bg-violet-200",
+      delay: 1.2,
+      size: "h-9 w-9",
+    },
+  ];
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[32px]">
+      {decorations.map((decoration) => (
+        <motion.span
+          key={decoration.className}
+          className={`absolute rounded-full border border-white/70 shadow-[inset_0_2px_4px_rgba(255,255,255,.8),0_8px_18px_rgba(124,58,237,.12)] ${decoration.className} ${decoration.size}`}
+          animate={{
+            y: celebrate ? [0, -16, 0] : [0, -8, 0],
+            rotate: [0, 8, -5, 0],
+            scale: celebrate ? [1, 1.15, 1] : [1, 1.04, 1],
+          }}
+          transition={{
+            duration: celebrate ? 1.4 : 4,
+            delay: decoration.delay,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function HandMascot({ isCorrect }: { isCorrect: boolean }) {
+  return (
+    <motion.div
+      className="pointer-events-none absolute -right-3 -top-8 z-20 hidden sm:block"
+      initial={{ opacity: 0, scale: 0.5, rotate: -12, y: 18 }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        rotate: isCorrect ? [0, -8, 8, 0] : [0, -5, 5, 0],
+        y: isCorrect ? [0, -12, 0] : [0, -5, 0],
+      }}
+      exit={{ opacity: 0, scale: 0.7, y: -10 }}
+      transition={{
+        duration: isCorrect ? 0.9 : 0.7,
+        ease: "easeOut",
+      }}
+    >
+      <div
+        className={`relative flex h-24 w-24 items-center justify-center rounded-[34px] border-4 border-white shadow-[inset_0_5px_10px_rgba(255,255,255,.8),0_18px_30px_rgba(124,58,237,.18)] ${
+          isCorrect
+            ? "bg-gradient-to-br from-emerald-200 via-cyan-100 to-yellow-100"
+            : "bg-gradient-to-br from-pink-200 via-violet-100 to-cyan-100"
+        }`}
+      >
+        <Hand
+          className={`h-12 w-12 ${
+            isCorrect ? "text-emerald-600" : "text-violet-500"
+          }`}
+          strokeWidth={2.4}
+        />
+        <span className="absolute left-7 top-6 h-2 w-2 rounded-full bg-slate-700" />
+        <span className="absolute right-7 top-6 h-2 w-2 rounded-full bg-slate-700" />
+        <span
+          className={`absolute bottom-5 left-1/2 h-2 w-5 -translate-x-1/2 rounded-full border-b-2 ${
+            isCorrect ? "border-emerald-700" : "border-violet-700"
+          }`}
+        />
+      </div>
+      <motion.div
+        className="absolute -left-5 -top-2 text-yellow-400"
+        animate={{ rotate: [0, 18, -12, 0], scale: [1, 1.28, 1] }}
+        transition={{ duration: 1.2, repeat: Infinity }}
+      >
+        <Star className="h-7 w-7 fill-current" />
+      </motion.div>
+      <motion.div
+        className="absolute -right-2 bottom-2 text-pink-400"
+        animate={{ y: [0, -8, 0], rotate: [0, -15, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+      >
+        <Sparkles className="h-6 w-6" />
+      </motion.div>
+    </motion.div>
+  );
 }
 
 export default function QuizComponent({
@@ -100,14 +211,11 @@ export default function QuizComponent({
     return undefined;
   }, [submitted, isAnswerCorrect, currentIndex]);
 
-  const fireworkBursts = [
-    { left: "15%", top: "15%", delay: "0ms" },
-    { left: "45%", top: "12%", delay: "90ms" },
-    { left: "75%", top: "18%", delay: "160ms" },
-    { left: "22%", top: "52%", delay: "120ms" },
-    { left: "60%", top: "48%", delay: "40ms" },
-    { left: "82%", top: "62%", delay: "190ms" },
-  ];
+  const particles = Array.from({ length: 14 }, (_, index) => ({
+    angle: (Math.PI * 2 * index) / 14,
+    distance: 48 + (index % 4) * 14,
+    delay: (index % 5) * 0.025,
+  }));
 
   const correctAnswers = questions.filter(
     (question, index) => question.correctAnswerIndex === selectedAnswers[index],
@@ -127,7 +235,12 @@ export default function QuizComponent({
         : 0;
 
     return (
-      <div className="w-full max-w-3xl mx-auto space-y-6 font-kids">
+      <motion.div
+        className="w-full max-w-3xl mx-auto space-y-6 font-kids"
+        initial={{ opacity: 0, y: 24, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      >
         <Card className="p-8 space-y-6 rounded-3xl border border-slate-200/70 dark:border-slate-800">
           <div className="space-y-2 text-center">
             <Badge variant="secondary">Quiz Result</Badge>
@@ -193,7 +306,7 @@ export default function QuizComponent({
             <Button onClick={finishQuiz}>Finish Quiz</Button>
           </div>
         </Card>
-      </div>
+      </motion.div>
     );
   }
 
@@ -207,151 +320,246 @@ export default function QuizComponent({
           </h3>
           <Badge>{Math.round(progress)}% complete</Badge>
         </div>
-        <Progress value={progress} className="h-2" />
+        <div className="relative h-3 overflow-visible rounded-full bg-violet-100/80 shadow-inner dark:bg-slate-800">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-violet-400 via-pink-300 via-yellow-300 to-emerald-400 shadow-[0_0_14px_rgba(52,211,153,.35)]"
+            initial={false}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          />
+          <motion.div
+            className="absolute top-1/2 text-yellow-400 drop-shadow-sm"
+            initial={false}
+            animate={{ left: `calc(${progress}% - 10px)`, y: "-50%" }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Star className="h-5 w-5 fill-current" />
+          </motion.div>
+        </div>
       </div>
 
       {/* Question Card */}
-      <Card className="relative p-8 space-y-6 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-gradient-to-br from-sky-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 overflow-hidden">
-        {showCelebration && (
-          <div className="quiz-fireworks" aria-hidden="true">
-            {fireworkBursts.map((burst, index) => (
-              <span
-                key={index}
-                className="quiz-firework"
-                style={{
-                  left: burst.left,
-                  top: burst.top,
-                  animationDelay: burst.delay,
-                }}
-              />
-            ))}
-          </div>
-        )}
-        {/* Question Type Badge */}
-        <div className="flex gap-2">
-          <Badge variant="secondary">
-            {quizTypeLabels[current.type] || "Quiz"}
-          </Badge>
-          <Badge variant="outline">
-            {difficultyLabels[current.difficulty]}
-          </Badge>
-        </div>
-
-        {/* Video Preview */}
-        {currentCard && (
-          <div className="space-y-4">
-            <div className="w-full max-w-xl mx-auto rounded-lg overflow-hidden bg-black flex items-center justify-center">
-              <video
-                key={currentCard.id}
-                className="w-full h-auto max-h-72 bg-black"
-                controls
-                autoPlay
-                loop
-                muted
-                preload="metadata"
-                playsInline
-              >
-                <source
-                  key={currentCard.videoUrl}
-                  src={currentCard.videoUrl}
-                  type="video/mp4"
-                />
-                <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
-                  <div className="text-center">
-                    <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No video</p>
-                  </div>
-                </div>
-              </video>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current.id}
+          initial={{ opacity: 0, x: 24, scale: 0.985 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: -24, scale: 0.985 }}
+          transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Card className="relative p-8 space-y-6 rounded-[32px] border-2 border-white/80 dark:border-slate-700 bg-gradient-to-br from-violet-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 overflow-hidden shadow-[0_22px_55px_rgba(124,58,237,.14),inset_0_2px_0_rgba(255,255,255,.8)]">
+            <FloatingClayDecorations celebrate={showCelebration} />
+            <AnimatePresence>
+              {submitted && <HandMascot isCorrect={isAnswerCorrect} />}
+            </AnimatePresence>
+            {/* Question Type Badge */}
+            <div className="flex gap-2">
+              <Badge variant="secondary">
+                {quizTypeLabels[current.type] || "Quiz"}
+              </Badge>
+              <Badge variant="outline">
+                {difficultyLabels[current.difficulty]}
+              </Badge>
             </div>
 
-            <div className="text-center space-y-2">
-              <Badge variant="outline">
-                {categoryLabels[currentCard.category]}
-              </Badge>
-              <p className="text-sm text-muted-foreground">
-                {currentCard.description}
+            {/* Video Preview */}
+            {currentCard && (
+              <div className="space-y-4">
+                <div className="w-full max-w-xl mx-auto rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                  <video
+                    key={currentCard.id}
+                    className="w-full h-auto max-h-72 bg-black"
+                    controls
+                    autoPlay
+                    loop
+                    muted
+                    preload="metadata"
+                    playsInline
+                  >
+                    <source
+                      key={currentCard.videoUrl}
+                      src={currentCard.videoUrl}
+                      type="video/mp4"
+                    />
+                    <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
+                      <div className="text-center">
+                        <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No video</p>
+                      </div>
+                    </div>
+                  </video>
+                </div>
+
+                <div className="text-center space-y-2">
+                  <Badge variant="outline">
+                    {categoryLabels[currentCard.category]}
+                  </Badge>
+                  <p className="text-sm text-muted-foreground">
+                    {currentCard.description}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Question */}
+            <div className="text-center">
+              <p className="text-lg font-semibold text-foreground">
+                {current.question}
               </p>
             </div>
-          </div>
-        )}
 
-        {/* Question */}
-        <div className="text-center">
-          <p className="text-lg font-semibold text-foreground">
-            {current.question}
-          </p>
-        </div>
+            {/* Options */}
+            <div className="grid grid-cols-1 gap-3">
+              {current.options.map((option, index) => {
+                const isSelected = selectedAnswers[currentIndex] === index;
+                const isCorrect = index === current.correctAnswerIndex;
+                const showResult = submitted && (isSelected || isCorrect);
+                const showCorrect = submitted && isCorrect;
+                const showWrong = submitted && isSelected && !isCorrect;
 
-        {/* Options */}
-        <div className="grid grid-cols-1 gap-3">
-          {current.options.map((option, index) => {
-            const isSelected = selectedAnswers[currentIndex] === index;
-            const isCorrect = index === current.correctAnswerIndex;
-            const showResult = submitted && (isSelected || isCorrect);
+                return (
+                  <motion.button
+                    key={index}
+                    type="button"
+                    className={`relative flex h-auto w-full items-center justify-start overflow-visible rounded-2xl border-2 px-4 py-4 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+                      showCorrect
+                        ? "border-emerald-300 bg-emerald-100 text-emerald-900 shadow-[inset_0_3px_5px_rgba(255,255,255,.75),0_0_0_4px_rgba(52,211,153,.12),0_10px_24px_rgba(52,211,153,.24)] dark:bg-emerald-400/15 dark:text-emerald-100"
+                        : showWrong
+                          ? "border-rose-200 bg-rose-100 text-rose-900 shadow-[inset_0_3px_5px_rgba(255,255,255,.72),0_0_0_4px_rgba(251,113,133,.09),0_10px_22px_rgba(251,113,133,.16)] dark:bg-rose-400/15 dark:text-rose-100"
+                          : isSelected
+                            ? "border-violet-400 bg-violet-500 text-white shadow-[inset_0_3px_4px_rgba(255,255,255,.24),0_10px_20px_rgba(139,92,246,.2)]"
+                            : "border-white bg-white/85 text-slate-800 shadow-[inset_0_2px_3px_rgba(255,255,255,.9),0_8px_18px_rgba(124,58,237,.08)] hover:border-violet-200 hover:bg-violet-50/80 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-violet-400/60 dark:hover:bg-violet-400/10"
+                    }`}
+                    onClick={() => handleSelectAnswer(index)}
+                    disabled={submitted}
+                    whileHover={
+                      submitted
+                        ? undefined
+                        : { y: -4, scale: 1.018, rotateX: 3, rotateY: -2 }
+                    }
+                    whileTap={submitted ? undefined : { scale: 0.985 }}
+                    animate={
+                      showWrong
+                        ? { x: [0, -5, 4, -3, 2, 0] }
+                        : showCorrect
+                          ? { scale: [1, 1.045, 1] }
+                          : { x: 0, scale: 1 }
+                    }
+                    transition={{ duration: showWrong ? 0.42 : 0.35 }}
+                  >
+                    {showCorrect && isSelected && (
+                      <div className="pointer-events-none absolute inset-0">
+                        {particles.map((particle, particleIndex) => (
+                          <motion.span
+                            key={particleIndex}
+                            className={`absolute left-7 top-1/2 h-2 w-2 rounded-full ${
+                              particleIndex % 3 === 0
+                                ? "bg-yellow-300"
+                                : particleIndex % 3 === 1
+                                  ? "bg-pink-300"
+                                  : "bg-emerald-400"
+                            }`}
+                            initial={{ opacity: 0, x: 0, y: 0, scale: 0.4 }}
+                            animate={{
+                              opacity: [0, 1, 0],
+                              x: Math.cos(particle.angle) * particle.distance,
+                              y: Math.sin(particle.angle) * particle.distance,
+                              scale: [0.4, 1, 0.2],
+                            }}
+                            transition={{
+                              duration: 0.72,
+                              delay: particle.delay,
+                              ease: "easeOut",
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="flex-shrink-0">
+                        {showCorrect && (
+                          <motion.div
+                            initial={{ scale: 0, rotate: -100 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 18,
+                            }}
+                          >
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
+                          </motion.div>
+                        )}
+                        {showWrong && (
+                          <motion.div
+                            initial={{ scale: 0, rotate: 90 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 420,
+                              damping: 18,
+                            }}
+                          >
+                            <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-300" />
+                          </motion.div>
+                        )}
+                        {!showResult && (
+                          <div
+                            className={`h-5 w-5 rounded-full border-2 ${
+                              isSelected
+                                ? "border-white bg-white"
+                                : "border-muted-foreground"
+                            }`}
+                          />
+                        )}
+                      </div>
+                      <span className="text-sm">{option}</span>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
 
-            return (
-              <Button
-                key={index}
-                variant={isSelected ? "default" : "outline"}
-                className={`justify-start text-left h-auto py-4 px-4 ${
-                  showResult && isCorrect
-                    ? "bg-green-500 hover:bg-green-600 border-green-500"
-                    : showResult && isSelected && !isCorrect
-                      ? "bg-red-500 hover:bg-red-600 border-red-500"
-                      : ""
-                }`}
-                onClick={() => handleSelectAnswer(index)}
-                disabled={submitted}
-              >
-                <div className="flex items-center gap-3 w-full">
-                  <div className="flex-shrink-0">
-                    {showResult && isCorrect && (
-                      <CheckCircle2 className="h-5 w-5 text-white" />
+            {/* Feedback */}
+            <AnimatePresence>
+              {submitted && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className={`rounded-xl border p-4 ${
+                    isAnswerCorrect
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100"
+                      : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {isAnswerCorrect ? (
+                      <Sparkles className="h-5 w-5 text-emerald-600" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-rose-600" />
                     )}
-                    {showResult && isSelected && !isCorrect && (
-                      <XCircle className="h-5 w-5 text-white" />
-                    )}
-                    {!showResult && (
-                      <div
-                        className={`h-5 w-5 rounded-full border-2 ${
-                          isSelected
-                            ? "border-white bg-white"
-                            : "border-muted-foreground"
-                        }`}
-                      />
-                    )}
+                    <p className="font-semibold">
+                      {isAnswerCorrect
+                        ? "Great job!"
+                        : "Nice try! Let's learn together."}
+                    </p>
                   </div>
-                  <span className="text-sm">{option}</span>
-                </div>
-              </Button>
-            );
-          })}
-        </div>
-
-        {/* Feedback */}
-        {submitted && (
-          <div
-            className={`p-4 rounded-lg ${
-              isAnswerCorrect
-                ? "bg-green-50 border border-green-200 text-green-800"
-                : "bg-red-50 border border-red-200 text-red-800"
-            }`}
-          >
-            <p className="font-semibold mb-1">
-              {isAnswerCorrect ? "Correct" : "Incorrect"}
-            </p>
-            <p className="text-sm">
-              {isAnswerCorrect
-                ? current.explanation || "Great job! Your answer is correct."
-                : `The correct answer is: ${current.options[current.correctAnswerIndex]}`}
-            </p>
-            {!isAnswerCorrect && current.explanation && (
-              <p className="text-sm mt-2">{current.explanation}</p>
-            )}
-          </div>
-        )}
-      </Card>
+                  <p className="mt-1 text-sm">
+                    {isAnswerCorrect
+                      ? current.explanation ||
+                        "Great job! Your answer is correct."
+                      : `The correct answer is: ${current.options[current.correctAnswerIndex]}`}
+                  </p>
+                  {!isAnswerCorrect && current.explanation && (
+                    <p className="text-sm mt-2">{current.explanation}</p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Card>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Action Buttons */}
       <div className="flex gap-4 justify-end">

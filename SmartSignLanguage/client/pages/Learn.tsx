@@ -37,19 +37,12 @@ import {
   BarChart3,
   BookOpen,
   CheckCircle2,
-  Clock,
   Gift,
-  Hand,
   HelpCircle,
-  Home,
   Map,
-  Palette,
-  PawPrint,
   PlayCircle,
-  Smile,
   Sparkles,
   Target,
-  Utensils,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -271,27 +264,23 @@ export default function Learn() {
   const getLessonProgress = (lessonId: string) =>
     learningStore.getLessonProgress(lessonId, userId);
 
-  const getLessonIcon = (category: Category) => {
-    switch (category) {
-      case "greeting":
-        return Hand;
-      case "family":
-        return Home;
-      case "colors":
-        return Palette;
-      case "animals":
-        return PawPrint;
-      case "food-drink":
-        return Utensils;
-      case "time-calendar":
-        return Clock;
-      case "emotions-feelings":
-        return Smile;
-      case "sports-activities":
-        return Gift;
-      default:
-        return Sparkles;
-    }
+  const topicImages: Record<Category, string> = {
+    greeting: "/img/topic/greeting.png",
+    "action-verbs": "/img/topic/Common Verbs.png",
+    family: "/img/topic/Family.png",
+    animals: "/img/topic/Animals.png",
+    colors: "/img/topic/Colors.png",
+    "body-health": "/img/topic/Body & Health.png",
+    "deaf-community-asl": "/img/topic/Deaf Community & ASL.png",
+    "nature-weather": "/img/topic/Nature & Weather.png",
+    "time-calendar": "/img/topic/Time & Calendar.png",
+    "sports-activities": "/img/topic/Sports & Activities.png",
+    "education-school": "/img/topic/School.png",
+    "emotions-feelings": "/img/topic/Emotions.png",
+    "food-drink": "/img/topic/Food & Drink.png",
+    "places-buildings": "/img/topic/Places.png",
+    "travel-transportation": "/img/topic/Travel.png",
+    "technology-computer": "/img/topic/Technology.png",
   };
 
   const categoryCardStyles: Record<Category, string> = {
@@ -625,9 +614,9 @@ export default function Learn() {
                     <Map className="h-6 w-6 text-sky-600" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold">Adventure Path</h2>
+                    <h2 className="text-2xl font-bold">Topic Learning</h2>
                     <p className="text-sm text-muted-foreground">
-                      Tap a station to play.
+                      Choose a topic card to start learning.
                     </p>
                   </div>
                 </div>
@@ -647,121 +636,116 @@ export default function Learn() {
                     </div>
                   </div>
 
-                  <div className="relative pl-8">
-                    <div className="absolute left-3 top-2 bottom-2 w-[4px] rounded-full bg-gradient-to-b from-sky-200 via-emerald-200 to-amber-200 dark:from-slate-700 dark:via-slate-700 dark:to-slate-800" />
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {course.lessons.map((lesson) => {
+                      const progress = getLessonProgress(lesson.id);
+                      const mastery = getLessonMastery(lesson);
+                      // Merge localQuizScores so path updates immediately after quiz
+                      const mergedProgress = progress
+                        ? {
+                            ...progress,
+                            quizScore:
+                              localQuizScores[lesson.id] ?? progress.quizScore,
+                            quizPassed:
+                              (localQuizScores[lesson.id] ??
+                                progress.quizScore ??
+                                0) >= lesson.requiredQuizScore
+                                ? true
+                                : progress.quizPassed,
+                            status:
+                              (localQuizScores[lesson.id] ??
+                                progress.quizScore ??
+                                0) >= lesson.requiredQuizScore
+                                ? ("completed" as const)
+                                : progress.status,
+                          }
+                        : progress;
+                      const completionPercent = getLessonCompletionPercent(
+                        lesson,
+                        mastery,
+                        mergedProgress,
+                      );
+                      const quizScore =
+                        localQuizScores[lesson.id] ?? progress?.quizScore;
+                      const completed = mergedProgress?.status === "completed";
+                      const isNext = !completed;
 
-                    <div className="space-y-6">
-                      {course.lessons.map((lesson) => {
-                        const progress = getLessonProgress(lesson.id);
-                        const mastery = getLessonMastery(lesson);
-                        // Merge localQuizScores so path updates immediately after quiz
-                        const mergedProgress = progress
-                          ? {
-                              ...progress,
-                              quizScore:
-                                localQuizScores[lesson.id] ??
-                                progress.quizScore,
-                              quizPassed:
-                                (localQuizScores[lesson.id] ??
-                                  progress.quizScore ??
-                                  0) >= lesson.requiredQuizScore
-                                  ? true
-                                  : progress.quizPassed,
-                              status:
-                                (localQuizScores[lesson.id] ??
-                                  progress.quizScore ??
-                                  0) >= lesson.requiredQuizScore
-                                  ? ("completed" as const)
-                                  : progress.status,
-                            }
-                          : progress;
-                        const completionPercent = getLessonCompletionPercent(
-                          lesson,
-                          mastery,
-                          mergedProgress,
-                        );
-                        const quizScore =
-                          localQuizScores[lesson.id] ?? progress?.quizScore;
-                        const completed =
-                          mergedProgress?.status === "completed";
-                        const isNext = !completed;
-                        const LessonIcon = getLessonIcon(lesson.category);
+                      const badgeClasses = completed
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200";
 
-                        const badgeClasses = completed
-                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200";
+                      const cardClasses = completed
+                        ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/20"
+                        : "border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20";
 
-                        const cardClasses = completed
-                          ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/20"
-                          : "border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20";
-
-                        return (
-                          <button
-                            key={lesson.id}
-                            type="button"
-                            onClick={() => startLesson(lesson)}
-                            className={`group w-full text-left rounded-3xl border p-5 transition-transform hover:-translate-y-1 hover:shadow-lg ${cardClasses}`}
-                          >
-                            <div className="flex items-start gap-4">
-                              <div className="relative">
-                                <div
-                                  className={`h-12 w-12 rounded-2xl flex items-center justify-center bg-white/90 dark:bg-slate-900 shadow-sm border border-white/70 dark:border-slate-800 ${
-                                    isNext ? "animate-pulse" : ""
-                                  }`}
-                                >
-                                  <LessonIcon className="h-6 w-6 text-sky-600" />
-                                </div>
-                                <div className="absolute -right-2 -bottom-2">
-                                  {completed ? (
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                  ) : (
-                                    <PlayCircle className="h-4 w-4 text-amber-500" />
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex-1 space-y-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <h4 className="text-lg font-semibold">
-                                    {lesson.title}
-                                  </h4>
-                                  <span
-                                    className={`px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClasses}`}
-                                  >
-                                    {categoryLabels[lesson.category]}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1 h-2 rounded-full bg-white/80 dark:bg-slate-800 overflow-hidden">
-                                    <div
-                                      className="h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 to-amber-400"
-                                      style={{ width: `${completionPercent}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
-                                    {completionPercent}%
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                                  <span className="inline-flex items-center gap-1">
-                                    <Gift className="h-3 w-3" />
-                                    {mastery.mastered}/{mastery.total} learned
-                                  </span>
-                                  <span className="inline-flex items-center gap-1">
-                                    <HelpCircle className="h-3 w-3" />
-                                    {quizScore == null
-                                      ? "Quiz --"
-                                      : `${quizScore}% quiz`}
-                                  </span>
-                                </div>
-                              </div>
+                      return (
+                        <button
+                          key={lesson.id}
+                          type="button"
+                          onClick={() => startLesson(lesson)}
+                          className={`group overflow-hidden w-full text-left rounded-3xl border transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 ${cardClasses}`}
+                        >
+                          <div className="relative aspect-[16/9] overflow-hidden bg-white/80 dark:bg-slate-900">
+                            <img
+                              src={topicImages[lesson.category]}
+                              alt={`${lesson.title} topic`}
+                              loading="lazy"
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-white/10" />
+                            <div
+                              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-white/90 shadow-md ${
+                                isNext ? "animate-pulse" : ""
+                              }`}
+                            >
+                              {completed ? (
+                                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                              ) : (
+                                <PlayCircle className="h-5 w-5 text-amber-500" />
+                              )}
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
+                          </div>
+
+                          <div className="space-y-3 p-5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-lg font-semibold">
+                                {lesson.title}
+                              </h4>
+                              <span
+                                className={`px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClasses}`}
+                              >
+                                {categoryLabels[lesson.category]}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1 h-2 rounded-full bg-white/80 dark:bg-slate-800 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 to-amber-400"
+                                  style={{ width: `${completionPercent}%` }}
+                                />
+                              </div>
+                              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                {completionPercent}%
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                              <span className="inline-flex items-center gap-1">
+                                <Gift className="h-3 w-3" />
+                                {mastery.mastered}/{mastery.total} learned
+                              </span>
+                              <span className="inline-flex items-center gap-1">
+                                <HelpCircle className="h-3 w-3" />
+                                {quizScore == null
+                                  ? "Quiz --"
+                                  : `${quizScore}% quiz`}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </section>
               ))}
