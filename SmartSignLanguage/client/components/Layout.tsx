@@ -46,14 +46,11 @@ export default function Layout({ children }: LayoutProps) {
     { href: "/lookup", label: "Lookup" },
   ];
 
-  // Add Profile link only if authenticated
-  if (isAuthenticated) {
-    navLinks.push({ href: "/profile", label: "Profile" });
-  }
-
   const isActivePath = (href: string) => {
     if (href === "/") return location.pathname === "/";
-    return location.pathname === href || location.pathname.startsWith(`${href}/`);
+    return (
+      location.pathname === href || location.pathname.startsWith(`${href}/`)
+    );
   };
 
   const adminLinks = [
@@ -148,7 +145,11 @@ export default function Layout({ children }: LayoutProps) {
                     {adminLinks.map((link) => {
                       const Icon = link.icon;
                       return (
-                        <DropdownMenuItem key={link.href} className="gap-2" asChild>
+                        <DropdownMenuItem
+                          key={link.href}
+                          className="gap-2"
+                          asChild
+                        >
                           <Link to={link.href}>
                             <Icon size={16} />
                             <span>{link.label}</span>
@@ -166,20 +167,28 @@ export default function Layout({ children }: LayoutProps) {
               <ThemeToggle />
               {isAuthenticated && user ? (
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="gap-3 h-11 px-4"
+                      size="icon"
+                      className="h-11 w-11 rounded-full"
+                      aria-label="View profile"
+                      asChild
                     >
-                      <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
-                        {getInitials(user.fullName)}
-                      </div>
-                      <span className="text-base font-medium hidden sm:inline">
-                        {user.fullName}
-                      </span>
+                      <Link to="/profile">
+                        <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
+                          {getInitials(user.fullName)}
+                        </div>
+                      </Link>
                     </Button>
-                  </DropdownMenuTrigger>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-11 px-3">
+                        <span className="text-base font-medium">
+                          {user.fullName}
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </div>
                   <DropdownMenuContent align="end" className="w-56">
                     <div className="px-2 py-1.5 text-sm">
                       <p className="font-semibold text-foreground">
@@ -237,10 +246,18 @@ export default function Layout({ children }: LayoutProps) {
             <div className="md:hidden flex items-center gap-2">
               <ThemeToggle />
               {isAuthenticated && user ? (
-                <Button variant="ghost" size="sm" className="gap-2 h-11 px-3">
-                  <div className="w-7 h-7 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
-                    {getInitials(user.fullName)}
-                  </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 h-11 px-3"
+                  aria-label="View profile"
+                  asChild
+                >
+                  <Link to="/profile">
+                    <div className="w-7 h-7 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-xs text-white font-bold">
+                      {getInitials(user.fullName)}
+                    </div>
+                  </Link>
                 </Button>
               ) : null}
               <button

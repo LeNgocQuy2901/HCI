@@ -4,14 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Loader2,
-  Pause,
-  Play,
-  RotateCcw,
-  Sparkles,
-  Type,
-} from "lucide-react";
+import { Loader2, Pause, Play, RotateCcw, Sparkles, Type } from "lucide-react";
 
 type Point = { x: number; y: number; z?: number; v?: number };
 type SignFrame = {
@@ -34,6 +27,7 @@ const LANDMARK_DATA_URL = "/data/combined_avg_landmarks.json";
 const FRAME_INTERVAL_MS = 55;
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 640;
+const MAX_HAND_SEGMENT_LENGTH = 0.25;
 const RIGHT_HAND_ONLY_SIGNS = new Set([
   "hello",
   "thank",
@@ -405,19 +399,63 @@ function drawConnections(
   width: number,
   height: number,
   color: string,
+  connectedRoot?: number,
 ) {
+  const isVisiblePoint = (point?: Point) =>
+    point &&
+    Number.isFinite(point.x) &&
+    Number.isFinite(point.y) &&
+    point.x >= 0 &&
+    point.x <= 1 &&
+    point.y >= 0 &&
+    point.y <= 1;
+  const drawableConnections = connections.filter(([from, to]) => {
+    const fromPoint = points[from];
+    const toPoint = points[to];
+    if (!isVisiblePoint(fromPoint) || !isVisiblePoint(toPoint)) return false;
+    if (connectedRoot === undefined) return true;
+    return (
+      Math.hypot(fromPoint.x - toPoint.x, fromPoint.y - toPoint.y) <=
+      MAX_HAND_SEGMENT_LENGTH
+    );
+  });
+  const visibleIndexes = new Set<number>();
+
+  if (connectedRoot === undefined) {
+    points.forEach((point, index) => {
+      if (isVisiblePoint(point)) visibleIndexes.add(index);
+    });
+  } else if (isVisiblePoint(points[connectedRoot])) {
+    visibleIndexes.add(connectedRoot);
+    let addedPoint = true;
+    while (addedPoint) {
+      addedPoint = false;
+      drawableConnections.forEach(([from, to]) => {
+        if (visibleIndexes.has(from) && !visibleIndexes.has(to)) {
+          visibleIndexes.add(to);
+          addedPoint = true;
+        }
+        if (visibleIndexes.has(to) && !visibleIndexes.has(from)) {
+          visibleIndexes.add(from);
+          addedPoint = true;
+        }
+      });
+    }
+  }
+
   context.strokeStyle = color;
   context.lineWidth = 3;
   context.beginPath();
-  connections.forEach(([from, to]) => {
-    if (!points[from] || !points[to]) return;
+  drawableConnections.forEach(([from, to]) => {
+    if (!visibleIndexes.has(from) || !visibleIndexes.has(to)) return;
     context.moveTo(points[from].x * width, points[from].y * height);
     context.lineTo(points[to].x * width, points[to].y * height);
   });
   context.stroke();
 
   context.fillStyle = color;
-  points.forEach((point) => {
+  points.forEach((point, index) => {
+    if (!visibleIndexes.has(index)) return;
     context.beginPath();
     context.arc(point.x * width, point.y * height, 4, 0, Math.PI * 2);
     context.fill();
@@ -465,6 +503,7 @@ function drawFrame(canvas: HTMLCanvasElement, frame?: SignFrame) {
       width,
       height,
       "#38bdf8",
+      0,
     );
   }
   if (drawRightHand) {
@@ -475,6 +514,7 @@ function drawFrame(canvas: HTMLCanvasElement, frame?: SignFrame) {
       width,
       height,
       "#f97316",
+      0,
     );
   }
 
@@ -545,7 +585,6 @@ export default function Translate() {
 
   useEffect(() => {
     setFrameIndex(0);
-    setIsPlaying(false);
     setHasCompleted(false);
   }, [generatedInput]);
 
@@ -615,6 +654,7 @@ export default function Translate() {
       setGeneratedInput(draftInput.trim());
       setFrameIndex(0);
       setIsGenerating(false);
+      lastTickRef.current = performance.now();
       setIsPlaying(true);
     }, 180);
   };
@@ -623,6 +663,7 @@ export default function Translate() {
     setDraftInput(sample);
     setGeneratedInput(sample);
     setFrameIndex(0);
+    lastTickRef.current = performance.now();
     setIsPlaying(true);
     setHasCompleted(false);
   };
@@ -677,7 +718,11 @@ export default function Translate() {
                 placeholder="Example: hello, thank you, good morning"
               />
               <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                <p className="text-muted-foreground" role="status" aria-live="polite">
+                <p
+                  className="text-muted-foreground"
+                  role="status"
+                  aria-live="polite"
+                >
                   {actionHint}
                 </p>
                 <span className="shrink-0 text-muted-foreground">
@@ -854,13 +899,26 @@ export default function Translate() {
                 <div className="flex flex-wrap gap-3">
                   <Button
                     size="lg"
-                  onClick={() => {
-                    setIsPlaying((current) => !current);
-                    setHasCompleted(false);
-                  }}
+                    onClick={() => {
+                      if (isPlaying) {
+                        setIsPlaying(false);
+                        return;
+                      }
+                      if (
+                        hasCompleted ||
+                        frameIndex >= animation.frames.length - 1
+                      ) {
+                        setFrameIndex(0);
+                      }
+                      lastTickRef.current = performance.now();
+                      setIsPlaying(true);
+                      setHasCompleted(false);
+                    }}
                     disabled={!landmarkData || animation.frames.length === 0}
                     className="gap-2"
-                    aria-label={isPlaying ? "Pause animation" : "Play animation"}
+                    aria-label={
+                      isPlaying ? "Pause animation" : "Play animation"
+                    }
                   >
                     {isPlaying ? (
                       <Pause className="h-4 w-4" />
@@ -874,7 +932,8 @@ export default function Translate() {
                     variant="outline"
                     onClick={() => {
                       setFrameIndex(0);
-                      setIsPlaying(false);
+                      lastTickRef.current = performance.now();
+                      setIsPlaying(true);
                       setHasCompleted(false);
                     }}
                     disabled={!landmarkData || animation.frames.length === 0}
