@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Layout from "@/components/Layout";
+import { PremiumPageHeader } from "@/components/PremiumPage";
 import { useCamera } from "@/hooks/use-camera";
 import { useHandDetection } from "@/hooks/use-hand-detection";
 import { useAuthStore } from "@/hooks/use-auth";
@@ -1119,484 +1120,519 @@ export default function Recognition() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-4 md:py-5">
-        <header className="mb-5 rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-500 p-5 text-white shadow-lg">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                Realtime Sign Recognition
-              </h1>
-              <p className="mt-2 text-sm text-white/90 md:text-base">
-                Recognize signs from your camera or an uploaded image.
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center md:min-w-[360px]">
-              <div className="rounded-lg bg-white/15 px-3 py-2">
-                <p className="text-xs text-white/80">Recognitions</p>
-                <p className="text-lg font-bold">{stats.totalRecognitions}</p>
-              </div>
-              <div className="rounded-lg bg-white/15 px-3 py-2">
-                <p className="text-xs text-white/80">Avg confidence</p>
-                <p className="text-lg font-bold">
-                  {(stats.averageConfidence * 100).toFixed(0)}%
-                </p>
-              </div>
-              <div className="rounded-lg bg-white/15 px-3 py-2">
-                <p className="text-xs text-white/80">Mode</p>
-                <p className="truncate text-lg font-bold">
-                  {
-                    RECOGNITION_MODES.find(
-                      (mode) => mode.value === recognitionMode,
-                    )?.label
-                  }
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {isLessonPractice && practiceState.expectedWord && (
-          <Card className="mb-6 p-5 border-primary/30 bg-primary/5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <Badge variant="outline" className="mb-2">
-                  Practice Lesson Sign
-                </Badge>
-                <h2 className="text-2xl font-bold">
-                  Target sign: {practiceState.expectedWord}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Result is saved when the AI detects the target with at least{" "}
-                  {Math.round(LESSON_PRACTICE_CONFIDENCE * 100)}% confidence.
-                </p>
-                {practiceFeedback && (
-                  <p className="mt-3 text-sm font-medium">{practiceFeedback}</p>
-                )}
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <Badge variant="secondary">
-                    Attempts: {practiceAttempts.length}/{PRACTICE_MAX_ATTEMPTS}
-                  </Badge>
-                  <Badge variant="secondary">
-                    Correct:{" "}
+      <div className="ssl-app-page px-4 py-5 md:py-7">
+        <div className="container mx-auto">
+          <PremiumPageHeader
+            eyebrow="Live gesture intelligence"
+            title="Realtime Sign Recognition"
+            description="Use your camera or upload an image to receive immediate, landmark-powered sign recognition feedback."
+            icon={<Camera className="h-6 w-6" />}
+            aside={
+              <div className="grid grid-cols-3 gap-2 text-center md:min-w-[360px]">
+                <div className="rounded-xl border border-white/70 bg-white/55 px-3 py-2 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Recognitions
+                  </p>
+                  <p className="text-lg font-bold text-slate-950 dark:text-white">
+                    {stats.totalRecognitions}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/70 bg-white/55 px-3 py-2 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Avg confidence
+                  </p>
+                  <p className="text-lg font-bold text-slate-950 dark:text-white">
+                    {(stats.averageConfidence * 100).toFixed(0)}%
+                  </p>
+                </div>
+                <div className="rounded-xl border border-white/70 bg-white/55 px-3 py-2 backdrop-blur dark:border-white/10 dark:bg-white/5">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Mode
+                  </p>
+                  <p className="truncate text-lg font-bold text-slate-950 dark:text-white">
                     {
-                      practiceAttempts.filter((attempt) => attempt.isCorrect)
-                        .length
+                      RECOGNITION_MODES.find(
+                        (mode) => mode.value === recognitionMode,
+                      )?.label
                     }
-                    /{PRACTICE_REQUIRED_CORRECT}
-                  </Badge>
+                  </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" asChild>
-                  <Link to="/learn">Watch Demo Again</Link>
-                </Button>
-                <Button variant="outline" onClick={handleReset}>
-                  Retry
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    if (practiceState.lessonId) {
-                      learningStore.recordLessonRecognition(
-                        practiceState.lessonId,
-                        userId,
-                        false,
-                      );
-                      setPracticeFeedback(
-                        "Marked for review. This sign will stay in your practice queue.",
-                      );
-                    }
-                  }}
-                >
-                  Mark for Review
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
+            }
+          />
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(340px,1fr)]">
-          <section className="space-y-4">
-            <div>
-              <h2 className="mb-2 text-xl font-semibold">
-                Recognition Workspace
-              </h2>
-              <Card className="overflow-hidden bg-black shadow-sm">
-                <div className="relative bg-black">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="hidden"
-                  />
-                  <canvas
-                    ref={canvasRef}
-                    className="w-full h-auto max-h-[430px]"
-                    style={{ aspectRatio: "640/480" }}
-                  />
-
-                  <div className="absolute top-4 left-4">
-                    <Badge
-                      variant={
-                        isRunning
-                          ? "default"
-                          : isActive || uploadedVideoName
-                            ? "outline"
-                            : "secondary"
-                      }
-                      className={
-                        isRunning
-                          ? "bg-green-500 text-white"
-                          : isActive || uploadedVideoName
-                            ? "bg-yellow-500 text-white"
-                            : ""
-                      }
-                    >
-                      <Zap className="h-3 w-3 mr-1" />
-                      {isRunning
-                        ? "Recognizing"
-                        : isActive || uploadedVideoName
-                          ? "Ready"
-                          : "Standby"}
+          <div className="mt-5">
+            {isLessonPractice && practiceState.expectedWord && (
+              <Card className="mb-6 p-5 border-primary/30 bg-primary/5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <Badge variant="outline" className="mb-2">
+                      Practice Lesson Sign
                     </Badge>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            {error && (
-              <Card className="border-red-200 bg-red-50">
-                <div className="flex items-start gap-3 p-4">
-                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-red-900 text-sm">
-                      Camera Error
-                    </p>
-                    <p className="text-red-800 text-sm">{error}</p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {!serverConnected && serverError && (
-              <Card className="border-yellow-200 bg-yellow-50">
-                <div className="flex items-start gap-3 p-4">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold text-yellow-900 text-sm">
-                      Recognition Unavailable
-                    </p>
-                    <p className="text-yellow-800 text-sm">
-                      Recognition is not ready yet. Please try again in a
-                      moment.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-          </section>
-
-          <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
-            <Card className="overflow-hidden shadow-sm">
-              <div className="space-y-2.5 p-3">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
-                    <Camera className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Recognition Controls
+                    <h2 className="text-2xl font-bold">
+                      Target sign: {practiceState.expectedWord}
                     </h2>
-                    <p className="text-xs text-muted-foreground">
-                      Choose a source and model before starting.
+                    <p className="text-sm text-muted-foreground">
+                      Result is saved when the AI detects the target with at
+                      least {Math.round(LESSON_PRACTICE_CONFIDENCE * 100)}%
+                      confidence.
                     </p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="mb-1.5 text-sm font-medium">
-                    Choose input source
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant={
-                        recognitionSource === "camera" ? "default" : "outline"
-                      }
-                      onClick={() => handleSourceChange("camera")}
-                      className="h-9 gap-2"
-                    >
-                      <Camera className="h-4 w-4" />
-                      Camera
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={
-                        recognitionSource === "upload" ? "default" : "outline"
-                      }
-                      onClick={() => {
-                        if (recognitionSource !== "upload") {
-                          handleSourceChange("upload");
-                        }
-                        fileInputRef.current?.click();
-                      }}
-                      className="h-9 gap-2"
-                    >
-                      <ImageIcon className="h-4 w-4" />
-                      Upload file
-                    </Button>
-                  </div>
-                </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleMediaUpload}
-                />
-
-                {recognitionSource === "upload" && (
-                  <div className="rounded-md border border-dashed p-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">
-                        {uploadedVideoName || "No image selected"}
+                    {practiceFeedback && (
+                      <p className="mt-3 text-sm font-medium">
+                        {practiceFeedback}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        Choose a JPG/PNG image for Alphabet and Numbers.
-                      </p>
-                      {uploadedVideoError && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {uploadedVideoError}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <p className="mb-1.5 text-sm font-medium">Recognition mode</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {RECOGNITION_MODES.map((mode) => {
-                      const isSelected = recognitionMode === mode.value;
-                      const isUploadWordsDisabled =
-                        recognitionSource === "upload" &&
-                        mode.value === "words";
-                      return (
-                        <Button
-                          key={mode.value}
-                          type="button"
-                          variant={isSelected ? "default" : "outline"}
-                          disabled={isUploadWordsDisabled}
-                          onClick={() => handleModeChange(mode.value)}
-                          className="h-9"
-                        >
-                          {mode.label}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 border-t p-3">
-                {!isRunning ? (
-                  <Button
-                    onClick={handleStart}
-                    disabled={
-                      !serverConnected ||
-                      (recognitionSource === "upload" && !uploadedVideoName)
-                    }
-                    className="gap-2"
-                    size="default"
-                  >
-                    <Play className="h-4 w-4" />
-                    Start Recognition
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleStop}
-                    variant="destructive"
-                    className="gap-2"
-                    size="default"
-                  >
-                    <Square className="h-4 w-4" />
-                    Stop Recognition
-                  </Button>
-                )}
-
-                <Button
-                  onClick={handleReset}
-                  variant="outline"
-                  className="gap-2"
-                  size="default"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Reset Session
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="p-4 shadow-sm">
-              <div className="mb-3 flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
-                  <Zap className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">Latest Result</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Most recent prediction from the active session.
-                  </p>
-                </div>
-              </div>
-
-              {latestResult ? (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Gesture</p>
-                    <p className="text-4xl font-bold tracking-tight">
-                      {latestResult.gesture}
-                    </p>
-                  </div>
-                  <div>
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span className="text-muted-foreground">Confidence</span>
-                      <span className="font-semibold">
-                        {(latestResult.confidence * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-primary transition-all"
-                        style={{ width: `${latestResult.confidence * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Hands</span>
-                    <Badge variant="outline">{latestResult.handedness}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(latestResult.timestamp).toLocaleTimeString()}
-                  </p>
-                </div>
-              ) : (
-                <div className="py-5 text-center text-muted-foreground">
-                  <Camera className="mx-auto mb-2 h-8 w-8 opacity-50" />
-                  <p>No result yet. Start recognition and show your hand.</p>
-                </div>
-              )}
-            </Card>
-          </aside>
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-          <Card className="p-5 shadow-sm">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold">Recognition History</h2>
-              {results.length > 0 && (
-                <Badge variant="secondary">{results.length} results</Badge>
-              )}
-            </div>
-            {results.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Recognition results will appear here during the session.
-              </p>
-            ) : (
-              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-                {results.map((result, index) => (
-                  <div
-                    key={`${result.timestamp}-${index}`}
-                    className="flex items-center justify-between rounded-lg bg-muted p-3 transition-colors hover:bg-muted/80"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{result.gesture}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {result.handedness}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant="outline">
-                        {(result.confidence * 100).toFixed(1)}%
+                    )}
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      <Badge variant="secondary">
+                        Attempts: {practiceAttempts.length}/
+                        {PRACTICE_MAX_ATTEMPTS}
                       </Badge>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {new Date(result.timestamp).toLocaleTimeString()}
+                      <Badge variant="secondary">
+                        Correct:{" "}
+                        {
+                          practiceAttempts.filter(
+                            (attempt) => attempt.isCorrect,
+                          ).length
+                        }
+                        /{PRACTICE_REQUIRED_CORRECT}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" asChild>
+                      <Link to="/learn">Watch Demo Again</Link>
+                    </Button>
+                    <Button variant="outline" onClick={handleReset}>
+                      Retry
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (practiceState.lessonId) {
+                          learningStore.recordLessonRecognition(
+                            practiceState.lessonId,
+                            userId,
+                            false,
+                          );
+                          setPracticeFeedback(
+                            "Marked for review. This sign will stay in your practice queue.",
+                          );
+                        }
+                      }}
+                    >
+                      Mark for Review
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(340px,1fr)]">
+              <section className="space-y-4">
+                <div>
+                  <h2 className="mb-2 text-xl font-semibold">
+                    Recognition Workspace
+                  </h2>
+                  <Card className="overflow-hidden bg-black shadow-sm">
+                    <div className="relative bg-black">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="hidden"
+                      />
+                      <canvas
+                        ref={canvasRef}
+                        className="w-full h-auto max-h-[430px]"
+                        style={{ aspectRatio: "640/480" }}
+                      />
+
+                      <div className="absolute top-4 left-4">
+                        <Badge
+                          variant={
+                            isRunning
+                              ? "default"
+                              : isActive || uploadedVideoName
+                                ? "outline"
+                                : "secondary"
+                          }
+                          className={
+                            isRunning
+                              ? "bg-green-500 text-white"
+                              : isActive || uploadedVideoName
+                                ? "bg-yellow-500 text-white"
+                                : ""
+                          }
+                        >
+                          <Zap className="h-3 w-3 mr-1" />
+                          {isRunning
+                            ? "Recognizing"
+                            : isActive || uploadedVideoName
+                              ? "Ready"
+                              : "Standby"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {error && (
+                  <Card className="border-red-200 bg-red-50">
+                    <div className="flex items-start gap-3 p-4">
+                      <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-red-900 text-sm">
+                          Camera Error
+                        </p>
+                        <p className="text-red-800 text-sm">{error}</p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {!serverConnected && serverError && (
+                  <Card className="border-yellow-200 bg-yellow-50">
+                    <div className="flex items-start gap-3 p-4">
+                      <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-yellow-900 text-sm">
+                          Recognition Unavailable
+                        </p>
+                        <p className="text-yellow-800 text-sm">
+                          Recognition is not ready yet. Please try again in a
+                          moment.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </section>
+
+              <aside className="space-y-3 lg:sticky lg:top-20 lg:self-start">
+                <Card className="overflow-hidden shadow-sm">
+                  <div className="space-y-2.5 p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                        <Camera className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-semibold">
+                          Recognition Controls
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                          Choose a source and model before starting.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="mb-1.5 text-sm font-medium">
+                        Choose input source
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant={
+                            recognitionSource === "camera"
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() => handleSourceChange("camera")}
+                          className="h-9 gap-2"
+                        >
+                          <Camera className="h-4 w-4" />
+                          Camera
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={
+                            recognitionSource === "upload"
+                              ? "default"
+                              : "outline"
+                          }
+                          onClick={() => {
+                            if (recognitionSource !== "upload") {
+                              handleSourceChange("upload");
+                            }
+                            fileInputRef.current?.click();
+                          }}
+                          className="h-9 gap-2"
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                          Upload file
+                        </Button>
+                      </div>
+                    </div>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleMediaUpload}
+                    />
+
+                    {recognitionSource === "upload" && (
+                      <div className="rounded-md border border-dashed p-4">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">
+                            {uploadedVideoName || "No image selected"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Choose a JPG/PNG image for Alphabet and Numbers.
+                          </p>
+                          {uploadedVideoError && (
+                            <p className="mt-1 text-sm text-red-600">
+                              {uploadedVideoError}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="mb-1.5 text-sm font-medium">
+                        Recognition mode
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {RECOGNITION_MODES.map((mode) => {
+                          const isSelected = recognitionMode === mode.value;
+                          const isUploadWordsDisabled =
+                            recognitionSource === "upload" &&
+                            mode.value === "words";
+                          return (
+                            <Button
+                              key={mode.value}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              disabled={isUploadWordsDisabled}
+                              onClick={() => handleModeChange(mode.value)}
+                              className="h-9"
+                            >
+                              {mode.label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 border-t p-3">
+                    {!isRunning ? (
+                      <Button
+                        onClick={handleStart}
+                        disabled={
+                          !serverConnected ||
+                          (recognitionSource === "upload" && !uploadedVideoName)
+                        }
+                        className="gap-2"
+                        size="default"
+                      >
+                        <Play className="h-4 w-4" />
+                        Start Recognition
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleStop}
+                        variant="destructive"
+                        className="gap-2"
+                        size="default"
+                      >
+                        <Square className="h-4 w-4" />
+                        Stop Recognition
+                      </Button>
+                    )}
+
+                    <Button
+                      onClick={handleReset}
+                      variant="outline"
+                      className="gap-2"
+                      size="default"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Reset Session
+                    </Button>
+                  </div>
+                </Card>
+
+                <Card className="p-4 shadow-sm">
+                  <div className="mb-3 flex items-start gap-3">
+                    <div className="rounded-lg bg-primary/10 p-2.5 text-primary">
+                      <Zap className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold">Latest Result</h2>
+                      <p className="text-xs text-muted-foreground">
+                        Most recent prediction from the active session.
                       </p>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
 
-          <Card className="p-5 shadow-sm">
-            <div className="mb-4 flex items-start gap-3">
-              <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                <TrendingUp className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold">Session Stats</h2>
-                <p className="text-sm text-muted-foreground">
-                  Results update automatically while recognition is running.
-                </p>
-              </div>
+                  {latestResult ? (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Gesture</p>
+                        <p className="text-4xl font-bold tracking-tight">
+                          {latestResult.gesture}
+                        </p>
+                      </div>
+                      <div>
+                        <div className="mb-2 flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            Confidence
+                          </span>
+                          <span className="font-semibold">
+                            {(latestResult.confidence * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted">
+                          <div
+                            className="h-2 rounded-full bg-primary transition-all"
+                            style={{
+                              width: `${latestResult.confidence * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Hands</span>
+                        <Badge variant="outline">
+                          {latestResult.handedness}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(latestResult.timestamp).toLocaleTimeString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="py-5 text-center text-muted-foreground">
+                      <Camera className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                      <p>
+                        No result yet. Start recognition and show your hand.
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              </aside>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Total Recognitions
-                </p>
-                <p className="text-3xl font-bold">{stats.totalRecognitions}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Average Confidence
-                </p>
-                <p className="text-3xl font-bold">
-                  {(stats.averageConfidence * 100).toFixed(1)}%
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Unique Gestures</p>
-                <p className="text-3xl font-bold">{stats.uniqueGestures}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  Session Duration
-                </p>
-                <p className="text-3xl font-bold">
-                  {Math.floor(stats.sessionDuration / 60)}m{" "}
-                  {stats.sessionDuration % 60}s
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
 
-        <Card className="mt-6 p-5 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold">Advanced Options</h2>
-          <div className="space-y-3">
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={showBoundingBox}
-                onChange={(e) => setShowBoundingBox(e.target.checked)}
-                className="h-4 w-4 rounded"
-              />
-              <span className="text-sm font-medium">Show Bounding Boxes</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={showLandmarks}
-                onChange={(e) => setShowLandmarks(e.target.checked)}
-                className="h-4 w-4 rounded"
-              />
-              <span className="text-sm font-medium">Show Landmarks</span>
-            </label>
+            <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+              <Card className="p-5 shadow-sm">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h2 className="text-xl font-semibold">Recognition History</h2>
+                  {results.length > 0 && (
+                    <Badge variant="secondary">{results.length} results</Badge>
+                  )}
+                </div>
+                {results.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Recognition results will appear here during the session.
+                  </p>
+                ) : (
+                  <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                    {results.map((result, index) => (
+                      <div
+                        key={`${result.timestamp}-${index}`}
+                        className="flex items-center justify-between rounded-lg bg-muted p-3 transition-colors hover:bg-muted/80"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold">
+                            {result.gesture}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {result.handedness}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge variant="outline">
+                            {(result.confidence * 100).toFixed(1)}%
+                          </Badge>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {new Date(result.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card className="p-5 shadow-sm">
+                <div className="mb-4 flex items-start gap-3">
+                  <div className="rounded-xl bg-primary/10 p-3 text-primary">
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Session Stats</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Results update automatically while recognition is running.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Total Recognitions
+                    </p>
+                    <p className="text-3xl font-bold">
+                      {stats.totalRecognitions}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Average Confidence
+                    </p>
+                    <p className="text-3xl font-bold">
+                      {(stats.averageConfidence * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Unique Gestures
+                    </p>
+                    <p className="text-3xl font-bold">{stats.uniqueGestures}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Session Duration
+                    </p>
+                    <p className="text-3xl font-bold">
+                      {Math.floor(stats.sessionDuration / 60)}m{" "}
+                      {stats.sessionDuration % 60}s
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <Card className="mt-6 p-5 shadow-sm">
+              <h2 className="mb-4 text-xl font-semibold">Advanced Options</h2>
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={showBoundingBox}
+                    onChange={(e) => setShowBoundingBox(e.target.checked)}
+                    className="h-4 w-4 rounded"
+                  />
+                  <span className="text-sm font-medium">
+                    Show Bounding Boxes
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={showLandmarks}
+                    onChange={(e) => setShowLandmarks(e.target.checked)}
+                    className="h-4 w-4 rounded"
+                  />
+                  <span className="text-sm font-medium">Show Landmarks</span>
+                </label>
+              </div>
+            </Card>
           </div>
-        </Card>
+        </div>
       </div>
     </Layout>
   );

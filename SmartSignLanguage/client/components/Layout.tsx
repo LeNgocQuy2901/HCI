@@ -98,7 +98,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Navigation Bar */}
-      <nav className="border-b border-border bg-background sticky top-0 z-50 shadow-sm">
+      <nav className="sticky top-0 z-50 border-b border-white/70 bg-white/75 shadow-[0_10px_35px_rgba(76,29,149,.06)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/75">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             {/* Logo */}
@@ -106,7 +106,7 @@ export default function Layout({ children }: LayoutProps) {
               <img
                 src="/img/logo2.png"
                 alt="Smart Sign Language logo"
-                className="w-10 h-10 rounded-xl object-contain shadow-sm"
+                className="w-10 h-10 rounded-xl object-cover shadow-md shadow-violet-950/10"
               />
               <span className="hidden sm:inline font-bold text-2xl text-foreground tracking-tight">
                 Smart Sign Language
@@ -122,7 +122,7 @@ export default function Layout({ children }: LayoutProps) {
                   aria-current={isActivePath(link.href) ? "page" : undefined}
                   className={`relative whitespace-nowrap rounded-full px-3 py-2 text-sm lg:text-base font-semibold transition-colors ${
                     isActivePath(link.href)
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-violet-100/80 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
@@ -282,7 +282,7 @@ export default function Layout({ children }: LayoutProps) {
                   aria-current={isActivePath(link.href) ? "page" : undefined}
                   className={`block rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                     isActivePath(link.href)
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-violet-100/80 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}

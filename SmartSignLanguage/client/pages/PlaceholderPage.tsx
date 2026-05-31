@@ -19,8 +19,8 @@ export default function PlaceholderPage({
   features = [],
 }: PlaceholderPageProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4">
-      <div className="max-w-2xl text-center space-y-8">
+    <div className="ssl-app-page flex min-h-screen flex-col items-center justify-center px-4 py-12">
+      <div className="ssl-premium-card max-w-2xl space-y-8 rounded-[28px] border border-white/70 bg-white/70 p-8 text-center backdrop-blur dark:border-white/10 dark:bg-slate-900/65">
         {/* Icon */}
         <div className="flex justify-center">{icon}</div>
 

@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Layout from "@/components/Layout";
+import { PremiumPageHeader } from "@/components/PremiumPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -214,7 +215,7 @@ export default function Profile() {
   if (isLoading) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="ssl-app-page flex min-h-screen items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </Layout>
@@ -227,191 +228,203 @@ export default function Profile() {
 
   return (
     <Layout>
-      <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-2xl p-6">
-          <div className="space-y-6">
-            <div className="flex items-center space-x-4 pb-6 border-b">
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
-                <UserIcon className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">{user.fullName}</h1>
-                <p className="text-sm text-muted-foreground">
-                  @{user.username}
-                </p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-            </div>
-
-            <div className="space-y-1 text-sm">
-              <p className="text-muted-foreground">Member Since</p>
-              <p>
-                {new Date(user.createdAt).toLocaleDateString("vi-VN", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" asChild>
-                <Link to="/learn" className="gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Learn
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/dashboard" className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Dashboard
-                </Link>
-              </Button>
-            </div>
-
-            <form
-              onSubmit={handleProfileSubmit(onProfileSubmit)}
-              className="space-y-4"
-            >
-              <div className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Personal Information</h2>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  {...registerProfile("fullName")}
-                />
-                {profileErrors.fullName && (
-                  <p className="text-sm text-destructive">
-                    {profileErrors.fullName.message}
+      <div className="ssl-app-page px-4 py-7">
+        <div className="mx-auto max-w-4xl space-y-5">
+          <PremiumPageHeader
+            eyebrow="Personal account"
+            title="Your Profile"
+            description="Keep your personal details current and manage your account security from one calm, private workspace."
+            icon={<UserIcon className="h-6 w-6" />}
+          />
+          <Card className="mx-auto w-full max-w-2xl rounded-[26px] border-white/70 bg-white/75 p-6 shadow-xl shadow-violet-950/5 backdrop-blur dark:border-white/10 dark:bg-slate-900/65">
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4 pb-6 border-b">
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
+                  <UserIcon className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">{user.fullName}</h1>
+                  <p className="text-sm text-muted-foreground">
+                    @{user.username}
                   </p>
-                )}
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  {...registerProfile("email")}
-                />
-                {profileErrors.email && (
-                  <p className="text-sm text-destructive">
-                    {profileErrors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="profileCurrentPassword">Current Password</Label>
-                <Input
-                  id="profileCurrentPassword"
-                  type="password"
-                  autoComplete="current-password"
-                  {...registerProfile("currentPassword")}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Required only when changing your email address.
+              <div className="space-y-1 text-sm">
+                <p className="text-muted-foreground">Member Since</p>
+                <p>
+                  {new Date(user.createdAt).toLocaleDateString("vi-VN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
                 </p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving changes...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </form>
-
-            <form
-              onSubmit={handlePasswordSubmit(onPasswordSubmit)}
-              className="space-y-4 border-t pt-6"
-            >
-              <div className="flex items-center gap-2">
-                <KeyRound className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Change Password</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" asChild>
+                  <Link to="/learn" className="gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Learn
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/dashboard" className="gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </Button>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  autoComplete="current-password"
-                  {...registerPassword("currentPassword")}
-                />
-                {passwordErrors.currentPassword && (
-                  <p className="text-sm text-destructive">
-                    {passwordErrors.currentPassword.message}
+              <form
+                onSubmit={handleProfileSubmit(onProfileSubmit)}
+                className="space-y-4"
+              >
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">
+                    Personal Information
+                  </h2>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    {...registerProfile("fullName")}
+                  />
+                  {profileErrors.fullName && (
+                    <p className="text-sm text-destructive">
+                      {profileErrors.fullName.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    {...registerProfile("email")}
+                  />
+                  {profileErrors.email && (
+                    <p className="text-sm text-destructive">
+                      {profileErrors.email.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profileCurrentPassword">
+                    Current Password
+                  </Label>
+                  <Input
+                    id="profileCurrentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    {...registerProfile("currentPassword")}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required only when changing your email address.
                   </p>
-                )}
-              </div>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  {...registerPassword("newPassword")}
-                />
-                {passwordErrors.newPassword && (
-                  <p className="text-sm text-destructive">
-                    {passwordErrors.newPassword.message}
-                  </p>
-                )}
-              </div>
+                <Button type="submit" className="w-full" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving changes...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </form>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  {...registerPassword("confirmPassword")}
-                />
-                {passwordErrors.confirmPassword && (
-                  <p className="text-sm text-destructive">
-                    {passwordErrors.confirmPassword.message}
-                  </p>
-                )}
-              </div>
+              <form
+                onSubmit={handlePasswordSubmit(onPasswordSubmit)}
+                className="space-y-4 border-t pt-6"
+              >
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">Change Password</h2>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    {...registerPassword("currentPassword")}
+                  />
+                  {passwordErrors.currentPassword && (
+                    <p className="text-sm text-destructive">
+                      {passwordErrors.currentPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    {...registerPassword("newPassword")}
+                  />
+                  {passwordErrors.newPassword && (
+                    <p className="text-sm text-destructive">
+                      {passwordErrors.newPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    {...registerPassword("confirmPassword")}
+                  />
+                  {passwordErrors.confirmPassword && (
+                    <p className="text-sm text-destructive">
+                      {passwordErrors.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="outline"
+                  className="w-full"
+                  disabled={isChangingPassword}
+                >
+                  {isChangingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Changing password...
+                    </>
+                  ) : (
+                    "Change Password"
+                  )}
+                </Button>
+              </form>
 
               <Button
-                type="submit"
-                variant="outline"
+                variant="destructive"
                 className="w-full"
-                disabled={isChangingPassword}
+                onClick={handleLogout}
               >
-                {isChangingPassword ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Changing password...
-                  </>
-                ) : (
-                  "Change Password"
-                )}
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
               </Button>
-            </form>
-
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={handleLogout}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-        </Card>
+            </div>
+          </Card>
+        </div>
       </div>
     </Layout>
   );

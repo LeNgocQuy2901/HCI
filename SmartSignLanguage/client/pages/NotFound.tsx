@@ -16,8 +16,8 @@ const NotFound = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
+      <div className="ssl-app-page flex min-h-screen items-center justify-center px-4">
+        <div className="ssl-premium-card max-w-md rounded-[28px] border border-white/70 bg-white/70 p-8 text-center backdrop-blur dark:border-white/10 dark:bg-slate-900/65">
           {/* Icon */}
           <div className="inline-block p-4 bg-destructive/10 rounded-full mb-6">
             <AlertCircle size={48} className="text-destructive" />

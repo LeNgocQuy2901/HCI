@@ -69,7 +69,7 @@ export default function AdminAnalytics() {
   if (!isAuthenticated || user?.role !== "admin") {
     return (
       <Layout>
-        <div className="container max-w-7xl mx-auto py-10 px-4">
+        <div className="ssl-app-page container max-w-7xl mx-auto py-10 px-4">
           <Card className="p-6 space-y-2">
             <h1 className="text-2xl font-bold">Admin access required</h1>
             <p className="text-muted-foreground">
@@ -83,7 +83,7 @@ export default function AdminAnalytics() {
 
   return (
     <Layout>
-      <div className="container max-w-7xl mx-auto py-10 px-4 space-y-6">
+      <div className="ssl-app-page container max-w-7xl mx-auto py-10 px-4 space-y-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-7 w-7" />
@@ -96,19 +96,30 @@ export default function AdminAnalytics() {
         </div>
 
         {!overview ? (
-          <Card className="p-6 text-muted-foreground">Loading analytics...</Card>
+          <Card className="p-6 text-muted-foreground">
+            Loading analytics...
+          </Card>
         ) : (
           <>
             <div className="grid lg:grid-cols-2 gap-6">
-              <AnalyticsCard title="Most Difficult Signs" icon={<Target className="h-5 w-5" />}>
+              <AnalyticsCard
+                title="Most Difficult Signs"
+                icon={<Target className="h-5 w-5" />}
+              >
                 {overview.mostDifficultSigns.length > 0 ? (
                   overview.mostDifficultSigns.map((item) => {
                     const accuracy =
                       item.attempts > 0
-                        ? Math.round((Number(item.correct || 0) / item.attempts) * 100)
+                        ? Math.round(
+                            (Number(item.correct || 0) / item.attempts) * 100,
+                          )
                         : 0;
                     return (
-                      <Row key={item.signId} title={item.word || item.signId} detail={categoryLabels[item.category] || item.category}>
+                      <Row
+                        key={item.signId}
+                        title={item.word || item.signId}
+                        detail={categoryLabels[item.category] || item.category}
+                      >
                         <Badge variant="outline">{accuracy}%</Badge>
                       </Row>
                     );
@@ -118,7 +129,10 @@ export default function AdminAnalytics() {
                 )}
               </AnalyticsCard>
 
-              <AnalyticsCard title="Lesson Completion Rate" icon={<BarChart3 className="h-5 w-5" />}>
+              <AnalyticsCard
+                title="Lesson Completion Rate"
+                icon={<BarChart3 className="h-5 w-5" />}
+              >
                 {overview.lessonCompletionRate.map((item) => (
                   <div key={item.lessonId} className="space-y-2">
                     <div className="flex justify-between text-sm">
@@ -127,7 +141,10 @@ export default function AdminAnalytics() {
                         {item.completed}/{item.started}
                       </span>
                     </div>
-                    <Progress value={Number(item.completionRate || 0)} className="h-2" />
+                    <Progress
+                      value={Number(item.completionRate || 0)}
+                      className="h-2"
+                    />
                   </div>
                 ))}
               </AnalyticsCard>
@@ -137,8 +154,14 @@ export default function AdminAnalytics() {
               <AnalyticsCard title="Quiz Fail Rate">
                 {overview.quizFailRate.length > 0 ? (
                   overview.quizFailRate.map((item) => (
-                    <Row key={item.lessonId} title={item.lessonId} detail={`${item.attempts} attempts`}>
-                      <Badge variant="outline">{item.failRate || 0}% fail</Badge>
+                    <Row
+                      key={item.lessonId}
+                      title={item.lessonId}
+                      detail={`${item.attempts} attempts`}
+                    >
+                      <Badge variant="outline">
+                        {item.failRate || 0}% fail
+                      </Badge>
                     </Row>
                   ))
                 ) : (
@@ -149,8 +172,14 @@ export default function AdminAnalytics() {
               <AnalyticsCard title="Recognition Fail Rate">
                 {overview.recognitionFailRate.length > 0 ? (
                   overview.recognitionFailRate.map((item) => (
-                    <Row key={item.signId} title={item.expectedWord} detail={`${item.attempts} attempts`}>
-                      <Badge variant="outline">{item.failRate || 0}% fail</Badge>
+                    <Row
+                      key={item.signId}
+                      title={item.expectedWord}
+                      detail={`${item.attempts} attempts`}
+                    >
+                      <Badge variant="outline">
+                        {item.failRate || 0}% fail
+                      </Badge>
                     </Row>
                   ))
                 ) : (
@@ -158,13 +187,24 @@ export default function AdminAnalytics() {
                 )}
               </AnalyticsCard>
 
-              <AnalyticsCard title="Content Needing Improvement" icon={<FileWarning className="h-5 w-5" />}>
+              <AnalyticsCard
+                title="Content Needing Improvement"
+                icon={<FileWarning className="h-5 w-5" />}
+              >
                 {overview.contentNeedingImprovement.map((item) => (
-                  <Row key={item.signId} title={item.word} detail={categoryLabels[item.category] || item.category}>
+                  <Row
+                    key={item.signId}
+                    title={item.word}
+                    detail={categoryLabels[item.category] || item.category}
+                  >
                     <div className="flex flex-wrap gap-1 justify-end">
                       {!item.hasVideo && <Badge variant="outline">video</Badge>}
-                      {!item.hasMetadata && <Badge variant="outline">metadata</Badge>}
-                      {item.activeQuizQuestions < 2 && <Badge variant="outline">quiz</Badge>}
+                      {!item.hasMetadata && (
+                        <Badge variant="outline">metadata</Badge>
+                      )}
+                      {item.activeQuizQuestions < 2 && (
+                        <Badge variant="outline">quiz</Badge>
+                      )}
                     </div>
                   </Row>
                 ))}
