@@ -13,8 +13,10 @@ import { useAuthStore } from "@/hooks/use-auth";
 import {
   BarChart3,
   BookOpen,
+  KeyRound,
   LogOut,
   Loader2,
+  Mail,
   User as UserIcon,
 } from "lucide-react";
 
@@ -23,9 +25,41 @@ const profileSchema = z.object({
     .string()
     .min(1, "Full name is required")
     .max(100, "Full name must be at most 100 characters"),
+  email: z.string().email("Invalid email address"),
+  currentPassword: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+const passwordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z
+      .string()
+      .min(6, "New password must be at least 6 characters")
+      .max(100, "New password must be at most 100 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+type PasswordFormData = z.infer<typeof passwordSchema>;
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
+async function getResponseError(response: Response, fallback: string) {
+  const result = await response.json();
+  if (typeof result.error === "string") return result.error;
+  if (Array.isArray(result.error)) {
+    return result.error[0]?.message || fallback;
+  }
+  return fallback;
+}
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -33,16 +67,33 @@ export default function Profile() {
   const { user, isAuthenticated, logout, getCurrentUser } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
+    register: registerProfile,
+    handleSubmit: handleProfileSubmit,
+    formState: { errors: profileErrors },
+    reset: resetProfile,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       fullName: user?.fullName || "",
+      email: user?.email || "",
+      currentPassword: "",
+    },
+  });
+
+  const {
+    register: registerPassword,
+    handleSubmit: handlePasswordSubmit,
+    formState: { errors: passwordErrors },
+    reset: resetPassword,
+  } = useForm<PasswordFormData>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   });
 
@@ -62,11 +113,15 @@ export default function Profile() {
 
   useEffect(() => {
     if (user) {
-      reset({ fullName: user.fullName });
+      resetProfile({
+        fullName: user.fullName,
+        email: user.email,
+        currentPassword: "",
+      });
     }
-  }, [user, reset]);
+  }, [user, resetProfile]);
 
-  const onSubmit = async (data: ProfileFormData) => {
+  const onProfileSubmit = async (data: ProfileFormData) => {
     if (!user) return;
 
     setIsSaving(true);
@@ -81,13 +136,19 @@ export default function Profile() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Unable to update profile");
+        throw new Error(
+          await getResponseError(response, "Unable to update profile"),
+        );
       }
 
       const result = await response.json();
-      useAuthStore.setState({ user: result.user });
+      useAuthStore.setState({ user: result.user, token: result.token });
       useAuthStore.getState().saveToStorage();
+      resetProfile({
+        fullName: result.user.fullName,
+        email: result.user.email,
+        currentPassword: "",
+      });
 
       toast({
         title: "Success",
@@ -96,11 +157,48 @@ export default function Profile() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Unable to update profile",
+        description: getErrorMessage(error, "Unable to update profile"),
         variant: "destructive",
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const onPasswordSubmit = async (data: PasswordFormData) => {
+    setIsChangingPassword(true);
+    try {
+      const response = await fetch("/api/auth/me/password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${useAuthStore.getState().token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Unable to change password"),
+        );
+      }
+
+      resetPassword();
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "Unable to change password"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -130,7 +228,7 @@ export default function Profile() {
   return (
     <Layout>
       <div className="min-h-screen flex items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md p-6">
+        <Card className="w-full max-w-2xl p-6">
           <div className="space-y-6">
             <div className="flex items-center space-x-4 pb-6 border-b">
               <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
@@ -171,15 +269,54 @@ export default function Profile() {
               </Button>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={handleProfileSubmit(onProfileSubmit)}
+              className="space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold">Personal Information</h2>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
-                <Input id="fullName" type="text" {...register("fullName")} />
-                {errors.fullName && (
+                <Input
+                  id="fullName"
+                  type="text"
+                  {...registerProfile("fullName")}
+                />
+                {profileErrors.fullName && (
                   <p className="text-sm text-destructive">
-                    {errors.fullName.message}
+                    {profileErrors.fullName.message}
                   </p>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  {...registerProfile("email")}
+                />
+                {profileErrors.email && (
+                  <p className="text-sm text-destructive">
+                    {profileErrors.email.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="profileCurrentPassword">Current Password</Label>
+                <Input
+                  id="profileCurrentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  {...registerProfile("currentPassword")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required only when changing your email address.
+                </p>
               </div>
 
               <Button type="submit" className="w-full" disabled={isSaving}>
@@ -190,6 +327,77 @@ export default function Profile() {
                   </>
                 ) : (
                   "Save Changes"
+                )}
+              </Button>
+            </form>
+
+            <form
+              onSubmit={handlePasswordSubmit(onPasswordSubmit)}
+              className="space-y-4 border-t pt-6"
+            >
+              <div className="flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold">Change Password</h2>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  {...registerPassword("currentPassword")}
+                />
+                {passwordErrors.currentPassword && (
+                  <p className="text-sm text-destructive">
+                    {passwordErrors.currentPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  {...registerPassword("newPassword")}
+                />
+                {passwordErrors.newPassword && (
+                  <p className="text-sm text-destructive">
+                    {passwordErrors.newPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  {...registerPassword("confirmPassword")}
+                />
+                {passwordErrors.confirmPassword && (
+                  <p className="text-sm text-destructive">
+                    {passwordErrors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                variant="outline"
+                className="w-full"
+                disabled={isChangingPassword}
+              >
+                {isChangingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Changing password...
+                  </>
+                ) : (
+                  "Change Password"
                 )}
               </Button>
             </form>

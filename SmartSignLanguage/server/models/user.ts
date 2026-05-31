@@ -3,7 +3,7 @@ import bcryptjs from "bcryptjs";
 import { getDatabase } from "../db";
 
 export const registerSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
   username: z
     .string()
     .min(3, "Username must be at least 3 characters")
@@ -19,8 +19,25 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+});
+
+export const updateProfileSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Invalid email address"),
+  fullName: z
+    .string()
+    .min(1, "Full name is required")
+    .max(100, "Full name must be at most 100 characters"),
+  currentPassword: z.string().optional(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z
+    .string()
+    .min(6, "New password must be at least 6 characters")
+    .max(100, "New password must be at most 100 characters"),
 });
 
 export interface User {
@@ -71,7 +88,7 @@ export class UserService {
     email: string,
     username: string,
     password: string,
-    fullName: string
+    fullName: string,
   ): Promise<User> {
     // Check if user already exists
     const existing = this.db
@@ -111,7 +128,11 @@ export class UserService {
       .prepare("SELECT * FROM users WHERE email = ?")
       .get(email) as UserWithPassword | undefined;
 
-    if (user && this.getConfiguredAdminEmails().has(user.email.toLowerCase()) && user.role !== "admin") {
+    if (
+      user &&
+      this.getConfiguredAdminEmails().has(user.email.toLowerCase()) &&
+      user.role !== "admin"
+    ) {
       this.db
         .prepare("UPDATE users SET role = 'admin', updatedAt = ? WHERE id = ?")
         .run(new Date().toISOString(), user.id);
@@ -124,39 +145,79 @@ export class UserService {
   async getUserById(id: string): Promise<User | null> {
     const user = this.db
       .prepare(
-        "SELECT id, email, username, fullName, role, createdAt, updatedAt FROM users WHERE id = ?"
+        "SELECT id, email, username, fullName, role, createdAt, updatedAt FROM users WHERE id = ?",
       )
       .get(id) as User | undefined;
 
     return user || null;
   }
 
-  async updateUser(id: string, data: Partial<User>): Promise<User> {
+  async updateUser(
+    id: string,
+    data: Pick<User, "email" | "fullName"> & { currentPassword?: string },
+  ): Promise<User> {
     const now = new Date().toISOString();
+    const user = this.db
+      .prepare("SELECT email, password FROM users WHERE id = ?")
+      .get(id) as Pick<UserWithPassword, "email" | "password"> | undefined;
 
-    const updates: string[] = [];
-    const values: any[] = [];
-
-    if (data.fullName) {
-      updates.push("fullName = ?");
-      values.push(data.fullName);
+    if (!user) {
+      throw new Error("User not found");
     }
+    const existing = this.db
+      .prepare("SELECT id FROM users WHERE email = ? AND id != ?")
+      .get(data.email, id);
 
-    if (updates.length === 0) {
-      return (await this.getUserById(id)) as User;
+    if (existing) {
+      throw new Error("Email already exists");
     }
-
-    updates.push("updatedAt = ?");
-    values.push(now);
-    values.push(id);
+    if (data.email !== user.email) {
+      if (!data.currentPassword) {
+        throw new Error("Current password is required to change email");
+      }
+      const passwordMatch = await this.verifyPassword(
+        data.currentPassword,
+        user.password,
+      );
+      if (!passwordMatch) {
+        throw new Error("Current password is incorrect");
+      }
+    }
 
     const stmt = this.db.prepare(
-      `UPDATE users SET ${updates.join(", ")} WHERE id = ?`
+      "UPDATE users SET email = ?, fullName = ?, updatedAt = ? WHERE id = ?",
     );
 
-    stmt.run(...values);
+    stmt.run(data.email, data.fullName, now, id);
 
     return (await this.getUserById(id)) as User;
+  }
+
+  async changePassword(
+    id: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = this.db
+      .prepare("SELECT password FROM users WHERE id = ?")
+      .get(id) as Pick<UserWithPassword, "password"> | undefined;
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const passwordMatch = await this.verifyPassword(
+      currentPassword,
+      user.password,
+    );
+    if (!passwordMatch) {
+      throw new Error("Current password is incorrect");
+    }
+
+    const hashedPassword = await this.hashPassword(newPassword);
+    this.db
+      .prepare("UPDATE users SET password = ?, updatedAt = ? WHERE id = ?")
+      .run(hashedPassword, new Date().toISOString(), id);
   }
 
   async deleteUser(id: string): Promise<void> {

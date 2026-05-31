@@ -4,6 +4,8 @@ import {
   UserService,
   registerSchema,
   loginSchema,
+  updateProfileSchema,
+  changePasswordSchema,
   User,
 } from "../models/user";
 import { generateToken } from "../auth";
@@ -20,7 +22,7 @@ router.post("/register", async (req: Request, res: Response) => {
       data.email,
       data.username,
       data.password,
-      data.fullName
+      data.fullName,
     );
 
     const token = generateToken({
@@ -56,20 +58,16 @@ router.post("/login", async (req: Request, res: Response) => {
     const user = await userService.getUserByEmail(data.email);
 
     if (!user) {
-      return res
-        .status(401)
-        .json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
     const passwordMatch = await userService.verifyPassword(
       data.password,
-      user.password
+      user.password,
     );
 
     if (!passwordMatch) {
-      return res
-        .status(401)
-        .json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
     const token = generateToken({
@@ -122,21 +120,77 @@ router.get("/me", authMiddleware, async (req: Request, res: Response) => {
 // PUT /api/auth/me
 router.put("/me", authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { fullName } = req.body;
+    const data = updateProfileSchema.parse(req.body);
 
     const updatedUser = await userService.updateUser(req.user!.userId, {
-      fullName,
+      email: data.email!,
+      fullName: data.fullName!,
+      currentPassword: data.currentPassword,
+    });
+    const token = generateToken({
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role,
     });
 
     return res.status(200).json({
       message: "User updated successfully",
       user: updatedUser,
+      token,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({ error: error.errors });
+    }
+    if (error.message === "User not found") {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message === "Email already exists") {
+      return res.status(409).json({ error: error.message });
+    }
+    if (
+      error.message === "Current password is required to change email" ||
+      error.message === "Current password is incorrect"
+    ) {
+      return res.status(400).json({ error: error.message });
+    }
+
     console.error("Update user error:", error);
     return res.status(500).json({ error: "Failed to update user" });
   }
 });
+
+// PUT /api/auth/me/password
+router.put(
+  "/me/password",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const data = changePasswordSchema.parse(req.body);
+
+      await userService.changePassword(
+        req.user!.userId,
+        data.currentPassword,
+        data.newPassword,
+      );
+
+      return res.status(200).json({ message: "Password changed successfully" });
+    } catch (error: any) {
+      if (error.name === "ZodError") {
+        return res.status(400).json({ error: error.errors });
+      }
+      if (error.message === "User not found") {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error.message === "Current password is incorrect") {
+        return res.status(400).json({ error: error.message });
+      }
+
+      console.error("Change password error:", error);
+      return res.status(500).json({ error: "Failed to change password" });
+    }
+  },
+);
 
 // POST /api/auth/logout
 router.post("/logout", (req: Request, res: Response) => {

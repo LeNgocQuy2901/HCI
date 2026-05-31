@@ -39,6 +39,17 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface UpdateProfileRequest {
+  email: string;
+  fullName: string;
+  currentPassword?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 /**
  * Auth response types
  */
@@ -52,3 +63,7 @@ export interface UserResponse {
   user: User;
 }
 
+export interface UpdateProfileResponse extends UserResponse {
+  message: string;
+  token: string;
+}
