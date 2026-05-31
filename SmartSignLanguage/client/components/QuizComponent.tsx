@@ -254,7 +254,7 @@ export default function QuizComponent({
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6 font-kids">
+    <div className="w-full max-w-6xl mx-auto space-y-4 font-kids">
       {/* Progress Bar */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -290,7 +290,7 @@ export default function QuizComponent({
           exit={{ opacity: 0, x: -24, scale: 0.985 }}
           transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Card className="relative p-8 space-y-6 rounded-[32px] border-2 border-white/80 dark:border-slate-700 bg-gradient-to-br from-violet-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 overflow-hidden shadow-[0_22px_55px_rgba(124,58,237,.14),inset_0_2px_0_rgba(255,255,255,.8)]">
+          <Card className="relative p-4 space-y-4 rounded-[32px] border-2 border-white/80 dark:border-slate-700 bg-gradient-to-br from-violet-50 via-white to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 overflow-hidden shadow-[0_22px_55px_rgba(124,58,237,.14),inset_0_2px_0_rgba(255,255,255,.8)]">
             <AnimatePresence>
               {submitted && <HandMascot isCorrect={isAnswerCorrect} />}
             </AnimatePresence>
@@ -304,201 +304,209 @@ export default function QuizComponent({
               </Badge>
             </div>
 
-            {/* Video Preview */}
-            {currentCard && (
-              <div className="space-y-4">
-                <div className="w-full max-w-xl mx-auto rounded-lg overflow-hidden bg-black flex items-center justify-center">
-                  <video
-                    key={currentCard.id}
-                    className="w-full h-auto max-h-72 bg-black"
-                    controls
-                    autoPlay
-                    loop
-                    muted
-                    preload="metadata"
-                    playsInline
-                  >
-                    <source
-                      key={currentCard.videoUrl}
-                      src={currentCard.videoUrl}
-                      type="video/mp4"
-                    />
-                    <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
-                      <div className="text-center">
-                        <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No video</p>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] lg:items-start">
+              {/* Video Preview */}
+              {currentCard && (
+                <div className="space-y-3">
+                  <div className="w-full mx-auto rounded-lg overflow-hidden bg-black flex items-center justify-center">
+                    <video
+                      key={currentCard.id}
+                      className="w-full h-auto max-h-64 bg-black lg:max-h-[22rem]"
+                      controls
+                      autoPlay
+                      loop
+                      muted
+                      preload="metadata"
+                      playsInline
+                    >
+                      <source
+                        key={currentCard.videoUrl}
+                        src={currentCard.videoUrl}
+                        type="video/mp4"
+                      />
+                      <div className="flex items-center justify-center h-64 bg-muted text-muted-foreground">
+                        <div className="text-center">
+                          <Play className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No video</p>
+                        </div>
                       </div>
-                    </div>
-                  </video>
-                </div>
+                    </video>
+                  </div>
 
-                <div className="text-center space-y-2">
-                  <Badge variant="outline">
-                    {categoryLabels[currentCard.category]}
-                  </Badge>
-                  <p className="text-sm text-muted-foreground">
-                    {currentCard.description}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Question */}
-            <div className="text-center">
-              <p className="text-lg font-semibold text-foreground">
-                {current.question}
-              </p>
-            </div>
-
-            {/* Options */}
-            <div className="grid grid-cols-1 gap-3">
-              {current.options.map((option, index) => {
-                const isSelected = selectedAnswers[currentIndex] === index;
-                const isCorrect = index === current.correctAnswerIndex;
-                const showResult = submitted && (isSelected || isCorrect);
-                const showCorrect = submitted && isCorrect;
-                const showWrong = submitted && isSelected && !isCorrect;
-
-                return (
-                  <motion.button
-                    key={index}
-                    type="button"
-                    className={`relative flex h-auto w-full items-center justify-start overflow-visible rounded-2xl border-2 px-4 py-4 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed ${
-                      showCorrect
-                        ? "border-emerald-300 bg-emerald-100 text-emerald-900 shadow-[inset_0_3px_5px_rgba(255,255,255,.75),0_0_0_4px_rgba(52,211,153,.12),0_10px_24px_rgba(52,211,153,.24)] dark:bg-emerald-400/15 dark:text-emerald-100"
-                        : showWrong
-                          ? "border-rose-200 bg-rose-100 text-rose-900 shadow-[inset_0_3px_5px_rgba(255,255,255,.72),0_0_0_4px_rgba(251,113,133,.09),0_10px_22px_rgba(251,113,133,.16)] dark:bg-rose-400/15 dark:text-rose-100"
-                          : isSelected
-                            ? "border-violet-400 bg-violet-500 text-white shadow-[inset_0_3px_4px_rgba(255,255,255,.24),0_10px_20px_rgba(139,92,246,.2)]"
-                            : "border-white bg-white/85 text-slate-800 shadow-[inset_0_2px_3px_rgba(255,255,255,.9),0_8px_18px_rgba(124,58,237,.08)] hover:border-violet-200 hover:bg-violet-50/80 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-violet-400/60 dark:hover:bg-violet-400/10"
-                    }`}
-                    onClick={() => handleSelectAnswer(index)}
-                    disabled={submitted}
-                    whileHover={
-                      submitted
-                        ? undefined
-                        : { y: -4, scale: 1.018, rotateX: 3, rotateY: -2 }
-                    }
-                    whileTap={submitted ? undefined : { scale: 0.985 }}
-                    animate={
-                      showWrong
-                        ? { x: [0, -5, 4, -3, 2, 0] }
-                        : showCorrect
-                          ? { scale: [1, 1.045, 1] }
-                          : { x: 0, scale: 1 }
-                    }
-                    transition={{ duration: showWrong ? 0.42 : 0.35 }}
-                  >
-                    {showCorrect && isSelected && (
-                      <div className="pointer-events-none absolute inset-0">
-                        {particles.map((particle, particleIndex) => (
-                          <motion.span
-                            key={particleIndex}
-                            className={`absolute left-7 top-1/2 h-2 w-2 rounded-full ${
-                              particleIndex % 3 === 0
-                                ? "bg-yellow-300"
-                                : particleIndex % 3 === 1
-                                  ? "bg-pink-300"
-                                  : "bg-emerald-400"
-                            }`}
-                            initial={{ opacity: 0, x: 0, y: 0, scale: 0.4 }}
-                            animate={{
-                              opacity: [0, 1, 0],
-                              x: Math.cos(particle.angle) * particle.distance,
-                              y: Math.sin(particle.angle) * particle.distance,
-                              scale: [0.4, 1, 0.2],
-                            }}
-                            transition={{
-                              duration: 0.72,
-                              delay: particle.delay,
-                              ease: "easeOut",
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3 w-full">
-                      <div className="flex-shrink-0">
-                        {showCorrect && (
-                          <motion.div
-                            initial={{ scale: 0, rotate: -100 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 420,
-                              damping: 18,
-                            }}
-                          >
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
-                          </motion.div>
-                        )}
-                        {showWrong && (
-                          <motion.div
-                            initial={{ scale: 0, rotate: 90 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 420,
-                              damping: 18,
-                            }}
-                          >
-                            <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-300" />
-                          </motion.div>
-                        )}
-                        {!showResult && (
-                          <div
-                            className={`h-5 w-5 rounded-full border-2 ${
-                              isSelected
-                                ? "border-white bg-white"
-                                : "border-muted-foreground"
-                            }`}
-                          />
-                        )}
-                      </div>
-                      <span className="text-sm">{option}</span>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-
-            {/* Feedback */}
-            <AnimatePresence>
-              {submitted && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10, scale: 0.985 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className={`rounded-xl border p-4 ${
-                    isAnswerCorrect
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100"
-                      : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    {isAnswerCorrect ? (
-                      <Sparkles className="h-5 w-5 text-emerald-600" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-rose-600" />
-                    )}
-                    <p className="font-semibold">
-                      {isAnswerCorrect
-                        ? "Great job!"
-                        : "Nice try! Let's learn together."}
+                  <div className="text-center space-y-1">
+                    <Badge variant="outline">
+                      {categoryLabels[currentCard.category]}
+                    </Badge>
+                    <p className="text-sm text-muted-foreground">
+                      {currentCard.description}
                     </p>
                   </div>
-                  <p className="mt-1 text-sm">
-                    {isAnswerCorrect
-                      ? current.explanation ||
-                        "Great job! Your answer is correct."
-                      : `The correct answer is: ${current.options[current.correctAnswerIndex]}`}
-                  </p>
-                  {!isAnswerCorrect && current.explanation && (
-                    <p className="text-sm mt-2">{current.explanation}</p>
-                  )}
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
+
+              <div className="space-y-3">
+                {/* Question */}
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-foreground">
+                    {current.question}
+                  </p>
+                </div>
+
+                {/* Options */}
+                <div className="grid grid-cols-1 gap-2">
+                  {current.options.map((option, index) => {
+                    const isSelected = selectedAnswers[currentIndex] === index;
+                    const isCorrect = index === current.correctAnswerIndex;
+                    const showResult = submitted && (isSelected || isCorrect);
+                    const showCorrect = submitted && isCorrect;
+                    const showWrong = submitted && isSelected && !isCorrect;
+
+                    return (
+                      <motion.button
+                        key={index}
+                        type="button"
+                        className={`relative flex h-auto w-full items-center justify-start overflow-visible rounded-2xl border-2 px-4 py-3 text-left text-sm font-medium transition-colors disabled:cursor-not-allowed ${
+                          showCorrect
+                            ? "border-emerald-300 bg-emerald-100 text-emerald-900 shadow-[inset_0_3px_5px_rgba(255,255,255,.75),0_0_0_4px_rgba(52,211,153,.12),0_10px_24px_rgba(52,211,153,.24)] dark:bg-emerald-400/15 dark:text-emerald-100"
+                            : showWrong
+                              ? "border-rose-200 bg-rose-100 text-rose-900 shadow-[inset_0_3px_5px_rgba(255,255,255,.72),0_0_0_4px_rgba(251,113,133,.09),0_10px_22px_rgba(251,113,133,.16)] dark:bg-rose-400/15 dark:text-rose-100"
+                              : isSelected
+                                ? "border-violet-400 bg-violet-500 text-white shadow-[inset_0_3px_4px_rgba(255,255,255,.24),0_10px_20px_rgba(139,92,246,.2)]"
+                                : "border-white bg-white/85 text-slate-800 shadow-[inset_0_2px_3px_rgba(255,255,255,.9),0_8px_18px_rgba(124,58,237,.08)] hover:border-violet-200 hover:bg-violet-50/80 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-violet-400/60 dark:hover:bg-violet-400/10"
+                        }`}
+                        onClick={() => handleSelectAnswer(index)}
+                        disabled={submitted}
+                        whileHover={
+                          submitted
+                            ? undefined
+                            : { y: -4, scale: 1.018, rotateX: 3, rotateY: -2 }
+                        }
+                        whileTap={submitted ? undefined : { scale: 0.985 }}
+                        animate={
+                          showWrong
+                            ? { x: [0, -5, 4, -3, 2, 0] }
+                            : showCorrect
+                              ? { scale: [1, 1.045, 1] }
+                              : { x: 0, scale: 1 }
+                        }
+                        transition={{ duration: showWrong ? 0.42 : 0.35 }}
+                      >
+                        {showCorrect && isSelected && (
+                          <div className="pointer-events-none absolute inset-0">
+                            {particles.map((particle, particleIndex) => (
+                              <motion.span
+                                key={particleIndex}
+                                className={`absolute left-7 top-1/2 h-2 w-2 rounded-full ${
+                                  particleIndex % 3 === 0
+                                    ? "bg-yellow-300"
+                                    : particleIndex % 3 === 1
+                                      ? "bg-pink-300"
+                                      : "bg-emerald-400"
+                                }`}
+                                initial={{ opacity: 0, x: 0, y: 0, scale: 0.4 }}
+                                animate={{
+                                  opacity: [0, 1, 0],
+                                  x:
+                                    Math.cos(particle.angle) *
+                                    particle.distance,
+                                  y:
+                                    Math.sin(particle.angle) *
+                                    particle.distance,
+                                  scale: [0.4, 1, 0.2],
+                                }}
+                                transition={{
+                                  duration: 0.72,
+                                  delay: particle.delay,
+                                  ease: "easeOut",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="flex-shrink-0">
+                            {showCorrect && (
+                              <motion.div
+                                initial={{ scale: 0, rotate: -100 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 420,
+                                  damping: 18,
+                                }}
+                              >
+                                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
+                              </motion.div>
+                            )}
+                            {showWrong && (
+                              <motion.div
+                                initial={{ scale: 0, rotate: 90 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 420,
+                                  damping: 18,
+                                }}
+                              >
+                                <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-300" />
+                              </motion.div>
+                            )}
+                            {!showResult && (
+                              <div
+                                className={`h-5 w-5 rounded-full border-2 ${
+                                  isSelected
+                                    ? "border-white bg-white"
+                                    : "border-muted-foreground"
+                                }`}
+                              />
+                            )}
+                          </div>
+                          <span className="text-sm">{option}</span>
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                {/* Feedback */}
+                <AnimatePresence>
+                  {submitted && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className={`rounded-xl border p-3 ${
+                        isAnswerCorrect
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100"
+                          : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isAnswerCorrect ? (
+                          <Sparkles className="h-5 w-5 text-emerald-600" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-rose-600" />
+                        )}
+                        <p className="font-semibold">
+                          {isAnswerCorrect
+                            ? "Great job!"
+                            : "Nice try! Let's learn together."}
+                        </p>
+                      </div>
+                      <p className="mt-1 text-sm">
+                        {isAnswerCorrect
+                          ? current.explanation ||
+                            "Great job! Your answer is correct."
+                          : `The correct answer is: ${current.options[current.correctAnswerIndex]}`}
+                      </p>
+                      {!isAnswerCorrect && current.explanation && (
+                        <p className="text-sm mt-2">{current.explanation}</p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
           </Card>
         </motion.div>
       </AnimatePresence>

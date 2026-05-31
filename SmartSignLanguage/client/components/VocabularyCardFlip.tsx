@@ -12,6 +12,7 @@ interface VocabularyCardProps {
   onMarkWrong?: () => void;
   onVideoWatched?: () => void;
   showActions?: boolean;
+  compact?: boolean;
 }
 
 export default function VocabularyCardComponent({
@@ -20,6 +21,7 @@ export default function VocabularyCardComponent({
   onMarkWrong,
   onVideoWatched,
   showActions = true,
+  compact = false,
 }: VocabularyCardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [trackedVideo, setTrackedVideo] = useState(false);
@@ -33,7 +35,9 @@ export default function VocabularyCardComponent({
   return (
     <div className="w-full perspective">
       <Card
-        className="min-h-[32rem] cursor-pointer flex flex-col justify-between p-6 transition-all duration-500 transform"
+        className={`cursor-pointer flex flex-col justify-between transition-all duration-500 transform ${
+          compact ? "min-h-[18rem] p-4" : "min-h-[32rem] p-6"
+        }`}
         onClick={() => setIsFlipped(!isFlipped)}
         style={{
           transformStyle: "preserve-3d",
@@ -41,20 +45,38 @@ export default function VocabularyCardComponent({
       >
         {/* Front Side - Word */}
         {!isFlipped && (
-          <div className="flex flex-col items-center justify-center h-full space-y-6 animate-fadeIn">
+          <div
+            className={`flex flex-col items-center justify-center h-full animate-fadeIn ${
+              compact ? "space-y-3" : "space-y-6"
+            }`}
+          >
             <div className="text-center">
-              <Badge className="mb-4">{categoryLabels[card.category]}</Badge>
-              <h2 className="text-5xl font-bold text-foreground mb-2">
+              <Badge className={compact ? "mb-2" : "mb-4"}>
+                {categoryLabels[card.category]}
+              </Badge>
+              <h2
+                className={`font-bold text-foreground mb-2 ${
+                  compact ? "text-4xl" : "text-5xl"
+                }`}
+              >
                 {card.word}
               </h2>
               {card.example && (
-                <p className="text-lg text-muted-foreground mt-4">
+                <p
+                  className={`text-muted-foreground ${
+                    compact ? "text-sm mt-2" : "text-lg mt-4"
+                  }`}
+                >
                   "{card.example}"
                 </p>
               )}
             </div>
 
-            <div className="text-center text-sm text-muted-foreground mt-8">
+            <div
+              className={`text-center text-sm text-muted-foreground ${
+                compact ? "mt-3" : "mt-8"
+              }`}
+            >
               <p>Click to view the sign demo</p>
             </div>
 
@@ -72,7 +94,9 @@ export default function VocabularyCardComponent({
             {/* Video Player */}
             <div className="w-full max-w-2xl rounded-2xl overflow-hidden bg-black flex items-center justify-center shadow-2xl">
               <video
-                className="w-full h-auto max-h-[24rem] bg-black"
+                className={`w-full h-auto bg-black ${
+                  compact ? "max-h-[13rem]" : "max-h-[24rem]"
+                }`}
                 controls
                 autoPlay
                 loop
@@ -100,7 +124,9 @@ export default function VocabularyCardComponent({
 
       {/* Action Buttons */}
       {showActions && (
-        <div className="flex gap-3 mt-3 justify-center">
+        <div
+          className={`flex gap-3 justify-center ${compact ? "mt-2" : "mt-3"}`}
+        >
           <Button
             variant="default"
             className="gap-2"
