@@ -105,9 +105,20 @@ export default function Dashboard() {
       : 0;
   const accuracy = getAccuracy(allProgress);
   const publishedCardIds = new Set(dashboardCards.map((card) => card.id));
+
+  const now = new Date();
   const dueCards = learningStore
     .getDueCards(userId, 50)
-    .filter((card) => publishedCardIds.has(card.id));
+    .filter((card) => {
+      if (!publishedCardIds.has(card.id)) return false;
+      const progress = Array.from(learningStore.progress.values()).find(
+        (p) => p.userId === userId && p.cardId === card.id,
+      );
+      if (!progress || progress.status === "new" || progress.status === "mastered") return false;
+      return new Date(progress.nextReviewDate) <= now;
+  });
+
+
   const weakCards = learningStore
     .getWeakCards(userId, 6)
     .filter((card) => publishedCardIds.has(card.id));
@@ -360,7 +371,10 @@ export default function Dashboard() {
           <Card className="p-5">
             <p className="text-sm text-muted-foreground">Weakest topics</p>
             <p className="text-2xl font-bold">
-              {analytics?.weakestTopics?.length || 0}
+              {analytics?.weakestTopics?.filter(
+                (t) => t.attempts > 0 &&
+                Math.round((Number(t.correct || 0) / t.attempts) * 100) < 100
+              ).length || 0}
             </p>
           </Card>
           <Card className="p-5">
@@ -636,21 +650,29 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6 space-y-5">
-            <div className="flex items-center gap-2">
-              <CalendarClock className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">Review Queue</h2>
-            </div>
-            <div className="space-y-3">
-              {upcomingReviews.length > 0 ? (
-                upcomingReviews.map((item) => {
-                  const card = findCard(item.cardId);
-                  if (!card) return null;
+        {(() => {
+          
+          const now = new Date();
+          const reviewDueCards = dueCards; 
 
+          return reviewDueCards.length > 0 ? (
+            <Card className="p-6 space-y-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5" />
+                  <h2 className="text-xl font-semibold">Review Queue</h2>
+                </div>
+                <Badge variant="outline">{reviewDueCards.length} due</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {reviewDueCards.slice(0, 8).map((card) => {
+                  const progress = progressByCard.get(card.id)!;
+                  const accuracyPct = progress.attempts > 0
+                    ? Math.round((progress.correctAttempts / progress.attempts) * 100)
+                    : 0;
                   return (
                     <div
-                      key={item.cardId}
+                      key={card.id}
                       className="flex items-center justify-between gap-4 rounded-md border p-3"
                     >
                       <div>
@@ -660,26 +682,20 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <Badge variant="secondary">{item.status}</Badge>
+                        <Badge variant={accuracyPct >= 70 ? "outline" : "secondary"}>
+                          {accuracyPct}%
+                        </Badge>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {formatDate(item.nextReviewDate)}
+                          Due {formatDate(progress.nextReviewDate)}
                         </p>
                       </div>
                     </div>
                   );
-                })
-              ) : (
-                <div className="rounded-md border border-dashed p-6 text-center">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
-                  <p className="font-medium">No reviews are due right now</p>
-                  <p className="text-sm text-muted-foreground">
-                    Learn new cards or come back after the next review date.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
+                })}
+              </div>
+            </Card>
+          ) : null;
+        })()}
 
         <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-6">
           <Card className="p-6 space-y-5">
