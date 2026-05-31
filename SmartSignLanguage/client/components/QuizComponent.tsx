@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   QuizQuestion,
   VocabularyCard,
@@ -40,6 +40,7 @@ export default function QuizComponent({
   const [submitted, setSubmitted] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const completedRef = useRef(false);
 
   const current = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
@@ -59,11 +60,30 @@ export default function QuizComponent({
     }
   };
 
+  const callOnComplete = (answers: number[]) => {
+    if (completedRef.current) return;
+    completedRef.current = true;
+    const correct = questions.filter(
+      (question, index) => question.correctAnswerIndex === answers[index],
+    ).length;
+    const incorrect = questions.filter(
+      (question, index) => question.correctAnswerIndex !== answers[index],
+    );
+    onComplete({
+      score: correct,
+      totalQuestions: questions.length,
+      answers,
+      incorrectCardIds: incorrect.map((q) => q.cardId),
+    });
+  };
+
   const handleNext = () => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setSubmitted(false);
     } else {
+      // Record score immediately when finishing last question
+      callOnComplete(selectedAnswers);
       setShowSummary(true);
     }
   };
@@ -97,12 +117,7 @@ export default function QuizComponent({
   );
 
   const finishQuiz = () => {
-    onComplete({
-      score: correctAnswers,
-      totalQuestions: questions.length,
-      answers: selectedAnswers,
-      incorrectCardIds: incorrectQuestions.map((question) => question.cardId),
-    });
+    callOnComplete(selectedAnswers);
   };
 
   if (showSummary) {

@@ -126,6 +126,8 @@ export default function Learn() {
   const [publishedLessons, setPublishedLessons] = useState<Lesson[]>(lessons);
   const [publishedCards, setPublishedCards] =
     useState<VocabType[]>(vocabularyCards);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [localQuizScores, setLocalQuizScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const loadPublishedContent = async () => {
@@ -239,7 +241,8 @@ export default function Learn() {
           (lesson) => lesson.level === course.id,
         ),
       })),
-    [publishedLessons],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [publishedLessons, refreshKey],
   );
 
   const selectedLesson = publishedLessons.find(
@@ -342,14 +345,22 @@ export default function Learn() {
     mastery: ReturnType<typeof getLessonMastery>,
     progress?: ReturnType<typeof getLessonProgress>,
   ) => {
-    if (progress?.status === "completed" || progress?.quizPassed) return 100;
+    if (progress?.status === "completed") {
+      return 100;
+    }
 
-    const learnedContribution = mastery.percent * 0.6;
-    const quizScore = progress?.quizScore ?? 0;
+    const learnedContribution = mastery.percent * 0.7;
     const quizContribution =
-      Math.min(quizScore / lesson.requiredQuizScore, 1) * 40;
+      progress?.quizPassed
+        ? 30
+        : Math.min(
+          (progress?.quizScore ?? 0)*0.3,
+          30
+          );
 
-    return Math.min(99, Math.round(learnedContribution + quizContribution));
+    return Math.round(
+      Math.min(99, learnedContribution + quizContribution),
+    );
   };
 
   const startLesson = (lesson: Lesson) => {
@@ -440,7 +451,12 @@ export default function Learn() {
           .filter((card) => card.category === selectedQuizCategory)
           .slice(0, 10);
     setQuizQuestions(buildQuiz(topicCards));
-    setQuizContext({ type: "free" });
+    // If there's a matching lesson, treat it as a lesson quiz so score is recorded
+    if (topicLesson) {
+      setQuizContext({ type: "lesson", lessonId: topicLesson.id });
+    } else {
+      setQuizContext({ type: "free" });
+    }
     setQuizMode(true);
   };
 
@@ -454,12 +470,24 @@ export default function Learn() {
       (results.score / results.totalQuestions) * 100,
     );
 
-    results.incorrectCardIds.forEach((cardId) => {
+    const wrongSet = new Set(results.incorrectCardIds);
+
+    quizQuestions.forEach((question) => {
+      const cardId = question.cardId;
+
       if (!learningStore.getProgressByCard(cardId)) {
         learningStore.addProgress(cardId, userId);
       }
-      learningStore.unmarkCardUnderstood(cardId, userId);
-      learningStore.updateProgress(cardId, userId, 2);
+
+      if (wrongSet.has(cardId)) {
+    
+        learningStore.unmarkCardUnderstood(cardId, userId);
+        learningStore.updateProgress(cardId, userId, 2);
+      } else {
+    
+        learningStore.markCardUnderstood(cardId, userId);
+        learningStore.updateProgress(cardId, userId, 4);
+      }
     });
 
     if (quizContext.type === "lesson") {
@@ -476,18 +504,26 @@ export default function Learn() {
         if (percentage >= lesson.requiredQuizScore) {
           learningStore.completeLesson(lesson.id, userId);
         }
+        // Update local state immediately so UI reflects new score/completion
+        setLocalQuizScores((prev) => ({ ...prev, [lesson.id]: percentage }));
         toast({
           title:
             percentage >= lesson.requiredQuizScore
-              ? "Lesson completed"
+              ? "Lesson completed! 🎉"
               : "Quiz needs retry",
           description:
             percentage >= lesson.requiredQuizScore
-              ? `You scored ${percentage}%.`
-              : `You scored ${percentage}%. Review the missed signs and retry the quiz.`,
+              ? `You scored ${percentage}%. Lesson marked as complete!`
+              : `You scored ${percentage}%. Need ${lesson.requiredQuizScore}% to pass. Review the missed signs and retry.`,
+          duration: 5000,
         });
         setSelectedLessonId(lesson.id);
+        setQuizMode(false);
+        setQuizQuestions([]);
+        // Force re-render so progress/quiz score display updates immediately
+        setRefreshKey((k) => k + 1);
         setActiveTab("learn");
+        return;
       }
     } else {
       toast({
@@ -498,15 +534,33 @@ export default function Learn() {
 
     setQuizMode(false);
     setQuizQuestions([]);
+    setRefreshKey((k) => k + 1);
   };
 
   if (quizMode) {
+    const handleBackToLearning = () => {
+      // If there are answered questions, save partial progress before leaving
+      if (quizContext.type === "lesson" && quizQuestions.length > 0) {
+        const lesson = publishedLessons.find(
+          (item) => item.id === quizContext.lessonId,
+        );
+        if (lesson) {
+          // Calculate score from questions answered so far in QuizComponent
+          // We don't have partial answers here, so just close without recording
+          // The user should finish the quiz to record score
+        }
+      }
+      setQuizMode(false);
+      setQuizQuestions([]);
+      setRefreshKey((k) => k + 1);
+    };
+
     return (
       <Layout>
         <div className="container max-w-4xl mx-auto py-12 px-4 font-kids">
           <Button
             variant="ghost"
-            onClick={() => setQuizMode(false)}
+            onClick={handleBackToLearning}
             className="mb-6"
           >
             Back to Learning
@@ -521,13 +575,14 @@ export default function Learn() {
   }
 
   const selectedLessonProgress = selectedLesson
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     ? getLessonProgress(selectedLesson.id)
     : undefined;
   const currentMetadata = currentCard ? getSignMetadata(currentCard) : null;
   const selectedLessonMastery = selectedLesson
     ? getLessonMastery(selectedLesson)
     : { mastered: 0, total: 0, percent: 0 };
-
+  
   return (
     <Layout>
       <div className="container max-w-7xl mx-auto py-12 px-4 space-y-8">
@@ -606,13 +661,28 @@ export default function Learn() {
                     {course.lessons.map((lesson) => {
                       const progress = getLessonProgress(lesson.id);
                       const mastery = getLessonMastery(lesson);
+                      // Merge localQuizScores so path updates immediately after quiz
+                      const mergedProgress = progress
+                        ? {
+                            ...progress,
+                            quizScore: localQuizScores[lesson.id] ?? progress.quizScore,
+                            quizPassed:
+                              (localQuizScores[lesson.id] ?? progress.quizScore ?? 0) >= lesson.requiredQuizScore
+                                ? true
+                                : progress.quizPassed,
+                            status:
+                              (localQuizScores[lesson.id] ?? progress.quizScore ?? 0) >= lesson.requiredQuizScore
+                                ? ("completed" as const)
+                                : progress.status,
+                          }
+                        : progress;
                       const completionPercent = getLessonCompletionPercent(
                         lesson,
                         mastery,
-                        progress,
+                        mergedProgress,
                       );
-                      const quizScore = progress?.quizScore;
-                      const completed = progress?.status === "completed";
+                      const quizScore = localQuizScores[lesson.id] ?? progress?.quizScore;
+                      const completed = mergedProgress?.status === "completed";
                       const isNext = !completed;
                       const LessonIcon = getLessonIcon(lesson.category);
 
@@ -759,7 +829,11 @@ export default function Learn() {
                   <Card className="p-4 bg-white/80 dark:bg-slate-900/70 border border-white/70 dark:border-slate-800">
                     <p className="text-sm text-muted-foreground">Quiz</p>
                     <p className="text-2xl font-bold">
-                      {selectedLessonProgress?.quizScore ?? "--"}%
+                      {selectedLesson && localQuizScores[selectedLesson.id] != null
+                        ? `${localQuizScores[selectedLesson.id]}%`
+                        : selectedLessonProgress?.quizScore != null
+                          ? `${selectedLessonProgress.quizScore}%`
+                          : "--"}
                     </p>
                   </Card>
                   <Card className="p-4 bg-white/80 dark:bg-slate-900/70 border border-white/70 dark:border-slate-800">
@@ -853,7 +927,7 @@ export default function Learn() {
               <Card className="p-7 space-y-5 rounded-3xl border border-slate-200/70 dark:border-slate-800">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Zap className="h-5 w-5 text-yellow-500" />
-                  Today's Review ({dueCards.length})
+                  Recommended Practice ({dueCards.length})
                 </h3>
                 {dueCards.length > 0 ? (
                   <div className="space-y-4">

@@ -339,25 +339,22 @@ export const useLearningStore = create<LearningStore>()(
         };
       },
 
-      getDueCards: (userId, limit = 20) => {
+      getDueCards: (userId, limit = 10) => {
         const store = get();
+        const now = new Date();
+        const userProgress = Array.from(store.progress.values())
+          .filter((p) => p.userId === userId && p.status !== "mastered")
+          .filter((p) => new Date(p.nextReviewDate) <= now || p.difficulty < 3)
+          .sort(
+            (a, b) =>
+              new Date(a.nextReviewDate).getTime() -
+              new Date(b.nextReviewDate).getTime(),
+          )
+          .slice(0, limit);
 
-        return Array.from(store.progress.values())
-        .filter(
-          (p) =>
-            p.userId === userId &&
-            p.attempts > 0 &&
-            p.difficulty < 3 &&          
-            p.status !== "mastered",
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.updatedAt).getTime() -
-            new Date(a.updatedAt).getTime(),
-        )
-        .slice(0, limit)
-        .map((p) => vocabularyCards.find((c) => c.id === p.cardId))
-        .filter(Boolean) as VocabularyCard[];
+        return userProgress
+          .map((p) => vocabularyCards.find((c) => c.id === p.cardId))
+          .filter((c) => c !== undefined) as VocabularyCard[];
       },
 
       getNewCards: (userId, limit = 10) => {

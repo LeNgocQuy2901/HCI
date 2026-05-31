@@ -55,7 +55,7 @@ const createLesson = (
     category,
     order,
     targetCardCount: cardIds.length,
-    requiredQuizScore: 70,
+    requiredQuizScore: 100,
     recognitionRequired: false,
     description: `Learn core ${categoryLabels[category].toLowerCase()} signs, then pass the quiz.`,
     cardIds,
