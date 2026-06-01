@@ -35,6 +35,7 @@ export function initializeDatabase() {
       fullName TEXT,
       avatarUrl TEXT NOT NULL DEFAULT '/img/avatar/1.jfif',
       role TEXT NOT NULL DEFAULT 'user',
+      status TEXT NOT NULL DEFAULT 'active',
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL
     )
@@ -51,6 +52,9 @@ export function initializeDatabase() {
     db.exec(
       "ALTER TABLE users ADD COLUMN avatarUrl TEXT NOT NULL DEFAULT '/img/avatar/1.jfif'",
     );
+  }
+  if (!existingUserColumns.has("status")) {
+    db.exec("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
   }
 
   // Create learning progress table
@@ -285,6 +289,37 @@ export function initializeDatabase() {
       updatedAt TEXT NOT NULL,
       FOREIGN KEY (signId) REFERENCES signs(id) ON DELETE CASCADE,
       FOREIGN KEY (lessonId) REFERENCES lessons(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id TEXT PRIMARY KEY,
+      userId TEXT,
+      name TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL DEFAULT 'general',
+      rating INTEGER NOT NULL DEFAULT 0,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'new',
+      adminNote TEXT NOT NULL DEFAULT '',
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id TEXT PRIMARY KEY,
+      adminUserId TEXT,
+      action TEXT NOT NULL,
+      targetType TEXT NOT NULL,
+      targetId TEXT NOT NULL,
+      detail TEXT NOT NULL DEFAULT '',
+      createdAt TEXT NOT NULL,
+      FOREIGN KEY (adminUserId) REFERENCES users(id) ON DELETE SET NULL
     )
   `);
 

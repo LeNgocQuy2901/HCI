@@ -21,6 +21,7 @@ export interface User {
   fullName: string;
   avatarUrl: string;
   role: "user" | "admin";
+  status?: "active" | "suspended";
   createdAt: string;
   updatedAt: string;
 }

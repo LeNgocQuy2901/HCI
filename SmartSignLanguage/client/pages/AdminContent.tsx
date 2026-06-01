@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { AdminHeader, AdminMetric } from "@/components/AdminChrome";
 import {
   Select,
   SelectContent,
@@ -529,34 +530,31 @@ export default function AdminContent() {
           </Card>
         ) : (
           <>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-7 w-7" />
-                  <h1 className="text-3xl font-bold">Content Management</h1>
-                </div>
-                <p className="text-muted-foreground">
-                  Edit vocabulary content, assign signs to lessons, and track
-                  data quality gaps before expanding the dataset.
-                </p>
-              </div>
-              <Button className="gap-2" onClick={createNewSign}>
-                <Plus className="h-4 w-4" />
-                New sign
-              </Button>
-            </div>
+            <AdminHeader
+              title="Content Management"
+              description="Edit vocabulary, metadata, media, lesson placement, and quiz coverage before publishing signs to learners."
+              icon={<FileText className="h-4 w-4" />}
+              action={
+                <Button className="gap-2" onClick={createNewSign}>
+                  <Plus className="h-4 w-4" />
+                  New sign
+                </Button>
+              }
+            />
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <Metric label="Signs" value={summary.totalSigns} />
-              <Metric label="Complete" value={summary.completeSigns} />
-              <Metric label="Missing video" value={summary.missingVideo} />
-              <Metric
+              <AdminMetric label="Signs" value={summary.totalSigns} detail="total library" />
+              <AdminMetric label="Complete" value={summary.completeSigns} detail="ready assets" />
+              <AdminMetric label="Missing video" value={summary.missingVideo} detail="needs media" />
+              <AdminMetric
                 label="Missing metadata"
                 value={summary.missingMetadata}
+                detail="needs guidance"
               />
-              <Metric
+              <AdminMetric
                 label="Quality score"
                 value={`${summary.averageScore}%`}
+                detail="content health"
               />
             </div>
 
@@ -1314,7 +1312,7 @@ export default function AdminContent() {
                                 {lesson.title}
                               </span>
                               <span className="block text-xs text-muted-foreground">
-                                {lesson.level} ·{" "}
+                                {lesson.level} -{" "}
                                 {categoryLabels[lesson.category]}
                               </span>
                             </span>
@@ -1366,15 +1364,6 @@ export default function AdminContent() {
         )}
       </div>
     </Layout>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number | string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-    </Card>
   );
 }
 

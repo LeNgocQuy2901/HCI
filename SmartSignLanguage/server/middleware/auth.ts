@@ -27,6 +27,18 @@ export function authMiddleware(
     return res.status(401).json({ error: "Invalid or expired token" });
   }
 
+  const db = getDatabase();
+  try {
+    const user = db
+      .prepare("SELECT status FROM users WHERE id = ?")
+      .get(payload.userId) as { status?: string } | undefined;
+    if (user?.status === "suspended") {
+      return res.status(403).json({ error: "Account has been suspended" });
+    }
+  } finally {
+    db.close();
+  }
+
   req.user = payload;
   next();
 }
