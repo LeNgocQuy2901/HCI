@@ -51,7 +51,8 @@ app.add_middleware(
 )
 
 models: dict[str, pipeline.WlaslLandmarkSequenceModel] = {}
-MIN_VIDEO_HAND_FRAMES_FOR_RESAMPLE = 1
+MIN_STATIC_VIDEO_HAND_FRAMES = 1
+MIN_SEQUENCE_VIDEO_HAND_FRAMES = 4
 
 
 def normalize_mode(mode: str = "words") -> str:
@@ -273,40 +274,64 @@ def video_frame_variants(frame_bgr: pipeline.np.ndarray) -> list[pipeline.np.nda
     return variants
 
 
-def predict_video_frame(
+def extract_video_frame(
     selected_model: pipeline.WlaslLandmarkSequenceModel,
     frame_bgr: pipeline.np.ndarray,
 ) -> dict[str, Any]:
-    first_prediction: dict[str, Any] | None = None
+    first_extracted: dict[str, Any] | None = None
 
     for variant in video_frame_variants(frame_bgr):
-        prediction = selected_model.predict(variant)
-        if first_prediction is None:
-            first_prediction = prediction
-        if prediction.get("status") != "no_hand":
-            return prediction
+        extracted = selected_model.extractor.process(variant)
+        if first_extracted is None:
+            first_extracted = extracted
+        if extracted["has_hand"]:
+            features = extracted["features"].copy()
+            if not selected_model.use_pose:
+                features[126:225] = 0
+            extracted["features"] = features
+            return extracted
 
-    return first_prediction or selected_model.predict(frame_bgr)
+    return first_extracted or selected_model.extractor.process(frame_bgr)
 
 
-def predict_resampled_video_sequence(
+def predict_video_features(
     selected_model: pipeline.WlaslLandmarkSequenceModel,
-    last_prediction: dict[str, Any],
+    feature_frames: list[pipeline.np.ndarray],
+    last_extracted: dict[str, Any],
 ) -> dict[str, Any] | None:
-    if len(selected_model.sequence) < MIN_VIDEO_HAND_FRAMES_FOR_RESAMPLE:
+    min_hand_frames = (
+        MIN_STATIC_VIDEO_HAND_FRAMES
+        if selected_model.sequence_strategy == "repeat_current"
+        else MIN_SEQUENCE_VIDEO_HAND_FRAMES
+    )
+    if len(feature_frames) < min_hand_frames:
         return None
 
-    source_sequence = pipeline.np.array(selected_model.sequence, dtype=pipeline.np.float32)
-    source_count = source_sequence.shape[0]
     target_count = selected_model.sequence_length
-    sample_positions = pipeline.np.linspace(0, source_count - 1, target_count)
-    sample_indices = pipeline.np.rint(sample_positions).astype(int)
-    resampled_sequence = pipeline.normalize_sequence(source_sequence[sample_indices])
+    source_sequence = pipeline.np.array(feature_frames, dtype=pipeline.np.float32)
 
-    raw_prediction = selected_model.model.predict(
-        pipeline.np.array([resampled_sequence], dtype=pipeline.np.float32),
-        verbose=0,
-    )[0]
+    if selected_model.sequence_strategy == "repeat_current":
+        frame_probabilities = []
+        for features in source_sequence:
+            repeated_sequence = pipeline.normalize_sequence(
+                pipeline.np.repeat(features[None, :], target_count, axis=0)
+            )
+            frame_probabilities.append(
+                selected_model.model.predict(
+                    pipeline.np.array([repeated_sequence], dtype=pipeline.np.float32),
+                    verbose=0,
+                )[0]
+            )
+        raw_prediction = pipeline.np.mean(frame_probabilities, axis=0)
+    else:
+        sample_positions = pipeline.np.linspace(0, len(source_sequence) - 1, target_count)
+        sample_indices = pipeline.np.rint(sample_positions).astype(int)
+        resampled_sequence = pipeline.normalize_sequence(source_sequence[sample_indices])
+        raw_prediction = selected_model.model.predict(
+            pipeline.np.array([resampled_sequence], dtype=pipeline.np.float32),
+            verbose=0,
+        )[0]
+
     prediction = pipeline.calibrate_probabilities(
         raw_prediction,
         selected_model.confidence_temperature,
@@ -337,11 +362,11 @@ def predict_resampled_video_sequence(
         confidence=float(prediction[class_id]),
         raw_confidence=float(raw_prediction[class_id]),
         class_id=class_id,
-        landmarks=last_prediction.get("landmarks") or [],
-        handedness=last_prediction.get("handedness") or [],
-        confidence_scores=last_prediction.get("confidence_scores") or [],
+        landmarks=last_extracted.get("landmarks") or [],
+        handedness=last_extracted.get("handedness") or [],
+        confidence_scores=last_extracted.get("hand_scores") or [],
         top_predictions=top_predictions,
-        bbox=last_prediction.get("bbox"),
+        bbox=last_extracted.get("bbox"),
         model_name=selected_model.name,
         frames_ready=target_count,
         frames_required=target_count,
@@ -384,9 +409,9 @@ async def predict_video(
             else sample_video_frame_indices(total_frames, sample_count)
         )
 
-        last_prediction: dict[str, Any] | None = None
+        last_extracted: dict[str, Any] | None = None
+        feature_frames: list[pipeline.np.ndarray] = []
         frames_processed = 0
-        frames_with_hands = 0
 
         if not frame_indices:
             frame_indices = list(range(sample_count))
@@ -400,51 +425,44 @@ async def predict_video(
                 continue
 
             frames_processed += 1
-            prediction = predict_video_frame(selected_model, frame_bgr)
-            prediction["mode"] = mode.lower()
-            prediction["frames_processed"] = frames_processed
-            prediction["frames_with_hands"] = len(selected_model.sequence)
-            prediction["video_total_frames"] = total_frames
-            last_prediction = prediction
-            frames_with_hands = max(frames_with_hands, len(selected_model.sequence))
+            extracted = extract_video_frame(selected_model, frame_bgr)
+            if not extracted["has_hand"]:
+                continue
 
-            if prediction.get("status") == "success":
-                capture.release()
-                selected_model.reset()
-                return prediction
+            last_extracted = extracted
+            feature_frames.append(extracted["features"])
 
+        frames_with_hands = len(feature_frames)
         capture.release()
 
-        resampled_prediction = predict_resampled_video_sequence(
+        video_prediction = predict_video_features(
             selected_model,
-            last_prediction or {},
+            feature_frames,
+            last_extracted or {},
         )
-        if resampled_prediction:
-            resampled_prediction["mode"] = mode.lower()
-            resampled_prediction["frames_processed"] = frames_processed
-            resampled_prediction["frames_with_hands"] = frames_with_hands
-            resampled_prediction["video_total_frames"] = total_frames
-            resampled_prediction["sequence_resampled"] = True
+        if video_prediction:
+            video_prediction["mode"] = mode.lower()
+            video_prediction["frames_processed"] = frames_processed
+            video_prediction["frames_with_hands"] = frames_with_hands
+            video_prediction["video_total_frames"] = total_frames
+            video_prediction["sequence_resampled"] = (
+                selected_model.sequence_strategy != "repeat_current"
+            )
             selected_model.reset()
-            return resampled_prediction
+            return video_prediction
 
         selected_model.reset()
 
-        if last_prediction:
-            last_prediction["frames_processed"] = frames_processed
-            last_prediction["frames_with_hands"] = frames_with_hands
-            last_prediction["video_total_frames"] = total_frames
-            if last_prediction.get("status") in {"warming_up", "no_hand"}:
-                last_prediction["gesture"] = (
-                    f"Detected {frames_with_hands}/{selected_model.sequence_length} "
-                    "hand frames"
-                )
-            return last_prediction
-
         return pipeline.response(
-            "no_hand",
-            "No readable hand frames detected in this video.",
+            "warming_up" if frames_with_hands else "no_hand",
+            (
+                f"Detected {frames_with_hands}/{MIN_SEQUENCE_VIDEO_HAND_FRAMES} "
+                "hand frames. Use a clearer video showing the full sign."
+                if frames_with_hands
+                else "No readable hand frames detected in this video."
+            ),
             model_name=selected_model.name,
+            frames_ready=frames_with_hands,
             frames_required=selected_model.sequence_length,
         )
     except Exception as exc:
