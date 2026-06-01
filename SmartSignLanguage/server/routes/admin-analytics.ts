@@ -26,7 +26,6 @@ router.get("/overview", (_req: Request, res: Response) => {
           GROUP BY COALESCE(e.signId, e.cardId)
           HAVING attempts > 0
           ORDER BY (CAST(correct AS REAL) / attempts) ASC, attempts DESC
-          LIMIT 10
         `,
       )
       .all();
@@ -50,7 +49,6 @@ router.get("/overview", (_req: Request, res: Response) => {
             ON completed.lessonId = l.id AND completed.eventType = 'lesson_completed'
           GROUP BY l.id
           ORDER BY completionRate ASC, started DESC
-          LIMIT 12
         `,
       )
       .all();
@@ -68,7 +66,6 @@ router.get("/overview", (_req: Request, res: Response) => {
           GROUP BY lessonId
           HAVING attempts > 0
           ORDER BY failRate DESC, attempts DESC
-          LIMIT 10
         `,
       )
       .all();
@@ -87,7 +84,6 @@ router.get("/overview", (_req: Request, res: Response) => {
           GROUP BY cardId
           HAVING attempts > 0
           ORDER BY failRate DESC, attempts DESC
-          LIMIT 10
         `,
       )
       .all();
@@ -110,7 +106,6 @@ router.get("/overview", (_req: Request, res: Response) => {
           GROUP BY s.id
           HAVING hasVideo = 0 OR hasMetadata = 0 OR activeQuizQuestions < 2
           ORDER BY s.status = 'published' DESC, activeQuizQuestions ASC, s.word
-          LIMIT 20
         `,
       )
       .all();
