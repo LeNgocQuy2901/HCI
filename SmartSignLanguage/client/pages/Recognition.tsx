@@ -78,6 +78,7 @@ interface HandDetectionOverlay {
 
 type RecognitionMode = "words" | "alnum" | "numbers";
 type RecognitionSource = "camera" | "upload";
+type UploadedMediaType = "image" | "video";
 type LessonPracticeState = {
   mode?: "lesson-practice";
   lessonId?: string;
@@ -257,6 +258,7 @@ export default function Recognition() {
   const practiceSavedRef = useRef(false);
   const practiceStartedAtRef = useRef(Date.now());
   const uploadedVideoUrlRef = useRef<string | null>(null);
+  const uploadedFileRef = useRef<File | null>(null);
   const uploadedImageRef = useRef<HTMLImageElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -269,6 +271,8 @@ export default function Recognition() {
   const [uploadedVideoError, setUploadedVideoError] = useState<string | null>(
     null,
   );
+  const [uploadedMediaType, setUploadedMediaType] =
+    useState<UploadedMediaType | null>(null);
   const [results, setResults] = useState<RecognitionResult[]>([]);
   const [liveResult, setLiveResult] = useState<RecognitionResult | null>(null);
   const [stats, setStats] = useState<Stats>({
@@ -881,14 +885,107 @@ export default function Recognition() {
     setIsRunning(false);
   };
 
+  const predictUploadedVideo = async () => {
+    const file = uploadedFileRef.current;
+    if (!file || uploadedMediaType !== "video") {
+      setUploadedVideoError("Please choose a video file before starting.");
+      setIsRunning(false);
+      return;
+    }
+
+    isProcessingRef.current = true;
+    setLiveResult({
+      timestamp: Date.now(),
+      gesture: "Processing uploaded video",
+      confidence: 0,
+      handedness: "Unknown",
+    });
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file, file.name);
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/predict-video?mode=${recognitionMode}`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Video prediction failed: ${errorText}`);
+      }
+
+      const prediction = (await response.json()) as InferencePrediction;
+      if (prediction.landmarks.length > 0) {
+        latestDetectionRef.current = {
+          landmarks: prediction.landmarks,
+          handedness: prediction.handedness,
+          confidence: prediction.confidence_scores ?? [],
+        };
+      }
+
+      if (prediction.status !== "success") {
+        setUploadedVideoError(
+          prediction.gesture || "No readable hand frames detected in this video.",
+        );
+        setLiveResult({
+          timestamp: Date.now(),
+          gesture: prediction.gesture || "No hand detected",
+          confidence: 0,
+          handedness: formatDetectedHands(
+            prediction.handedness,
+            prediction.landmarks.length,
+          ),
+        });
+        return;
+      }
+
+      const newResult: RecognitionResult = {
+        timestamp: Date.now(),
+        gesture: normalizeGestureLabel(prediction.gesture),
+        confidence: prediction.confidence,
+        handedness: formatDetectedHands(
+          prediction.handedness,
+          prediction.landmarks.length,
+        ),
+      };
+      const minAcceptedConfidence =
+        recognitionMode === "numbers"
+          ? NUMBER_MIN_ACCEPTED_CONFIDENCE
+          : recognitionMode === "alnum"
+            ? ALNUM_MIN_ACCEPTED_CONFIDENCE
+            : MIN_ACCEPTED_CONFIDENCE;
+
+      setUploadedVideoError(null);
+      setLiveResult(newResult);
+      if (prediction.confidence >= minAcceptedConfidence) {
+        lastAcceptedRef.current = newResult;
+        setResults((prev) => [newResult, ...prev].slice(0, 50));
+      }
+    } catch (err) {
+      console.error("Uploaded video prediction error:", err);
+      setUploadedVideoError(
+        err instanceof Error ? err.message : "Unable to process this video.",
+      );
+      setLiveResult(null);
+    } finally {
+      isProcessingRef.current = false;
+      setIsRunning(false);
+    }
+  };
+
   const handleMediaUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
 
-    if (!isImage) {
-      setUploadedVideoError("Please select a valid image file.");
+    if (!isImage && !isVideo) {
+      setUploadedVideoError("Please select a valid image or video file.");
       event.target.value = "";
       return;
     }
@@ -899,11 +996,14 @@ export default function Recognition() {
 
     const nextUrl = URL.createObjectURL(file);
     uploadedVideoUrlRef.current = nextUrl;
+    uploadedFileRef.current = file;
     setUploadedVideoName(file.name);
+    setUploadedMediaType(isImage ? "image" : "video");
     setUploadedVideoError(null);
     setRecognitionSource("upload");
-    const nextMode = recognitionMode === "words" ? "alnum" : recognitionMode;
-    if (recognitionMode === "words") {
+    const nextMode =
+      isImage && recognitionMode === "words" ? "alnum" : recognitionMode;
+    if (isImage && recognitionMode === "words") {
       setRecognitionMode("alnum");
     }
     setIsRunning(false);
@@ -944,6 +1044,9 @@ export default function Recognition() {
         setUploadedVideoName(null);
       };
       image.src = nextUrl;
+    } else if (video) {
+      video.src = nextUrl;
+      video.load();
     }
 
     latestDetectionRef.current = null;
@@ -986,7 +1089,7 @@ export default function Recognition() {
         video.load();
       }
 
-      if (recognitionMode === "words") {
+      if (uploadedMediaType === "image" && recognitionMode === "words") {
         setRecognitionMode("alnum");
         resetServerSequence("alnum");
       }
@@ -1002,17 +1105,22 @@ export default function Recognition() {
       }
 
       if (recognitionSource === "upload") {
-        if (recognitionMode === "words") {
+        if (uploadedMediaType === "image" && recognitionMode === "words") {
           setUploadedVideoError(
-            "Image upload supports Alphabet & Numbers and Numbers modes only.",
+            "Image upload supports Alphabet and Numbers modes only.",
           );
           setRecognitionMode("alnum");
           await resetServerSequence("alnum");
           return;
         }
 
-        const isImageReady = await prepareUploadedImage();
-        if (!isImageReady) return;
+        if (uploadedMediaType === "image") {
+          const isImageReady = await prepareUploadedImage();
+          if (!isImageReady) return;
+        } else if (!uploadedFileRef.current) {
+          setUploadedVideoError("Please choose an image or video file first.");
+          return;
+        }
       }
 
       await resetServerSequence(recognitionMode);
@@ -1021,7 +1129,11 @@ export default function Recognition() {
       setIsRunning(true);
 
       if (recognitionSource === "upload") {
-        void predictUploadedImage();
+        if (uploadedMediaType === "video") {
+          void predictUploadedVideo();
+        } else {
+          void predictUploadedImage();
+        }
       }
     } catch (err) {
       console.error("Failed to start recognition:", err);
@@ -1089,9 +1201,13 @@ export default function Recognition() {
 
   const handleModeChange = (mode: RecognitionMode) => {
     if (mode === recognitionMode) return;
-    if (recognitionSource === "upload" && mode === "words") {
+    if (
+      recognitionSource === "upload" &&
+      uploadedMediaType === "image" &&
+      mode === "words"
+    ) {
       setUploadedVideoError(
-        "Image upload supports Alphabet & Numbers and Numbers modes only.",
+        "Image upload supports Alphabet and Numbers modes only.",
       );
       return;
     }
@@ -1125,7 +1241,7 @@ export default function Recognition() {
           <PremiumPageHeader
             eyebrow="Live gesture intelligence"
             title="Realtime Sign Recognition"
-            description="Use your camera or upload an image to receive immediate, landmark-powered sign recognition feedback."
+            description="Use your camera or upload an image or video to receive landmark-powered sign recognition feedback."
             icon={<Camera className="h-6 w-6" />}
             aside={
               <div className="grid grid-cols-3 gap-2 text-center md:min-w-[360px]">
@@ -1240,11 +1356,25 @@ export default function Recognition() {
                         autoPlay
                         playsInline
                         muted
-                        className="hidden"
+                        controls={
+                          recognitionSource === "upload" &&
+                          uploadedMediaType === "video"
+                        }
+                        className={
+                          recognitionSource === "upload" &&
+                          uploadedMediaType === "video"
+                            ? "w-full h-auto max-h-[430px]"
+                            : "hidden"
+                        }
                       />
                       <canvas
                         ref={canvasRef}
-                        className="w-full h-auto max-h-[430px]"
+                        className={
+                          recognitionSource === "upload" &&
+                          uploadedMediaType === "video"
+                            ? "hidden"
+                            : "w-full h-auto max-h-[430px]"
+                        }
                         style={{ aspectRatio: "640/480" }}
                       />
 
@@ -1368,7 +1498,7 @@ export default function Recognition() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       className="hidden"
                       onChange={handleMediaUpload}
                     />
@@ -1377,10 +1507,11 @@ export default function Recognition() {
                       <div className="rounded-md border border-dashed p-4">
                         <div className="min-w-0">
                           <p className="text-sm font-medium">
-                            {uploadedVideoName || "No image selected"}
+                            {uploadedVideoName || "No file selected"}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Choose a JPG/PNG image for Alphabet and Numbers.
+                            Choose a video for any mode, or a JPG/PNG image for
+                            Alphabet and Numbers.
                           </p>
                           {uploadedVideoError && (
                             <p className="mt-1 text-sm text-red-600">
@@ -1400,6 +1531,7 @@ export default function Recognition() {
                           const isSelected = recognitionMode === mode.value;
                           const isUploadWordsDisabled =
                             recognitionSource === "upload" &&
+                            uploadedMediaType === "image" &&
                             mode.value === "words";
                           return (
                             <Button
