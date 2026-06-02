@@ -40,3 +40,6 @@ data/
 # Ignore local environments
 venv/
 VieSign-Web-main/
+
+# Generated k6 reports
+tests/k6/results/

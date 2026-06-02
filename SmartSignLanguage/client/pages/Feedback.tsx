@@ -17,6 +17,61 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuthStore } from "@/hooks/use-auth";
 import { MessageSquare, Send } from "lucide-react";
 
+type FeedbackForm = {
+  name: string;
+  email: string;
+  type: string;
+  rating: string;
+  subject: string;
+  message: string;
+};
+
+type FeedbackField = keyof Pick<FeedbackForm, "email" | "subject" | "message">;
+type FeedbackErrors = Partial<Record<FeedbackField, string>>;
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateFeedback(form: FeedbackForm): FeedbackErrors {
+  const errors: FeedbackErrors = {};
+  const email = form.email.trim();
+  const subject = form.subject.trim();
+  const message = form.message.trim();
+
+  if (email && !emailPattern.test(email)) {
+    errors.email = "Enter a valid email address or leave this field empty.";
+  }
+  if (subject.length < 3) {
+    errors.subject = "Subject must contain at least 3 characters.";
+  } else if (subject.length > 140) {
+    errors.subject = "Subject must contain at most 140 characters.";
+  }
+  if (message.length < 10) {
+    errors.message = "Message must contain at least 10 characters.";
+  } else if (message.length > 2000) {
+    errors.message = "Message must contain at most 2000 characters.";
+  }
+
+  return errors;
+}
+
+function getResponseError(body: unknown) {
+  if (!body || typeof body !== "object" || !("error" in body)) {
+    return "Unable to send feedback. Please try again.";
+  }
+
+  const error = body.error;
+  if (typeof error === "string") return error;
+  if (!Array.isArray(error)) return "Unable to send feedback. Please try again.";
+
+  return error
+    .map((item) => {
+      if (!item || typeof item !== "object" || !("message" in item)) return "";
+      return String(item.message);
+    })
+    .filter(Boolean)
+    .join(" ");
+}
+
 export default function Feedback() {
   const { toast } = useToast();
   const { token, user } = useAuthStore();
@@ -29,8 +84,19 @@ export default function Feedback() {
     message: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FeedbackErrors>({});
 
   const submitFeedback = async () => {
+    const nextErrors = validateFeedback(form);
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast({
+        title: "Could not send feedback",
+        description: "Please correct the highlighted fields.",
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const response = await fetch("/api/feedback", {
@@ -43,15 +109,23 @@ export default function Feedback() {
       });
 
       if (!response.ok) {
+        const body = await response.json().catch(() => null);
         toast({
           title: "Could not send feedback",
-          description: "Please check the subject and message.",
+          description: getResponseError(body),
         });
         return;
       }
 
       toast({ description: "Feedback sent. Thank you for helping improve the app." });
+      setErrors({});
       setForm((current) => ({ ...current, subject: "", message: "" }));
+    } catch (error) {
+      console.error("Failed to send feedback:", error);
+      toast({
+        title: "Could not send feedback",
+        description: "Unable to reach the server. Please try again.",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -82,9 +156,14 @@ export default function Feedback() {
             <Field label="Email">
               <Input
                 value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                onChange={(event) => {
+                  setForm({ ...form, email: event.target.value });
+                  setErrors((current) => ({ ...current, email: undefined }));
+                }}
                 placeholder="you@example.com"
+                aria-invalid={Boolean(errors.email)}
               />
+              <FieldError message={errors.email} />
             </Field>
             <Field label="Type">
               <Select value={form.type} onValueChange={(type) => setForm({ ...form, type })}>
@@ -115,17 +194,34 @@ export default function Feedback() {
           <Field label="Subject">
             <Input
               value={form.subject}
-              onChange={(event) => setForm({ ...form, subject: event.target.value })}
+              onChange={(event) => {
+                setForm({ ...form, subject: event.target.value });
+                setErrors((current) => ({ ...current, subject: undefined }));
+              }}
               placeholder="Short summary"
+              maxLength={140}
+              aria-invalid={Boolean(errors.subject)}
             />
+            <FieldError message={errors.subject} />
           </Field>
           <Field label="Message">
             <Textarea
               value={form.message}
-              onChange={(event) => setForm({ ...form, message: event.target.value })}
+              onChange={(event) => {
+                setForm({ ...form, message: event.target.value });
+                setErrors((current) => ({ ...current, message: undefined }));
+              }}
               rows={7}
               placeholder="Describe what happened, where you saw it, and what you expected."
+              maxLength={2000}
+              aria-invalid={Boolean(errors.message)}
             />
+            <div className="flex items-center justify-between gap-3">
+              <FieldError message={errors.message} />
+              <span className="ml-auto text-xs text-muted-foreground">
+                {form.message.trim().length}/2000 characters, minimum 10
+              </span>
+            </div>
           </Field>
           <div className="flex justify-end">
             <Button className="gap-2" onClick={submitFeedback} disabled={submitting}>
@@ -146,4 +242,12 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       {children}
     </div>
   );
+}
+
+function FieldError({ message }: { message?: string }) {
+  return message ? (
+    <p className="text-sm text-destructive" role="alert">
+      {message}
+    </p>
+  ) : null;
 }
