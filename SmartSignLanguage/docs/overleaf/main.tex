@@ -1,0 +1,79 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{fontspec}
+\usepackage[vietnamese]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{ragged2e}
+\usepackage{titlesec}
+\usepackage{hyperref}
+
+\geometry{top=2cm,bottom=2cm,left=3cm,right=2cm}
+\setmainfont{TeX Gyre Termes}
+\onehalfspacing
+
+% Hien thi CHUONG I nhung danh so muc dang 1.1, 1.1.1.
+\renewcommand{\thechapter}{\Roman{chapter}}
+\renewcommand{\thesection}{\arabic{chapter}.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{2}
+
+\titleformat{\chapter}[hang]
+  {\Large\bfseries}
+  {CHƯƠNG \thechapter:}
+  {0.5em}
+  {\MakeUppercase}
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+  {\textbf{ĐẠI HỌC QUỐC GIA HÀ NỘI}}\\[0.3cm]
+  {\textbf{TRƯỜNG ĐẠI HỌC CÔNG NGHỆ}}\\[0.5cm]
+
+  \rule{2.2cm}{0.4pt}\textbf{***}\rule{2.2cm}{0.4pt}\\[0.5cm]
+
+  % Khong lam PDF loi neu chua upload logo.
+  \IfFileExists{logoTruong.png}{
+    \includegraphics[width=3.2cm]{logoTruong.png}\\[0.8cm]
+  }{
+    \vspace{3.2cm}\\[0.8cm]
+  }
+
+  {\Large\textbf{BÁO CÁO BÀI TẬP LỚN}}\\[0.3cm]
+  {\Large\textbf{PHÁT TRIỂN ỨNG DỤNG WEB}}\\[0.9cm]
+
+  {\large\textbf{ĐỀ TÀI: SMART SIGN LANGUAGE}}\\[0.25cm]
+  {\large\textbf{HỆ THỐNG HỖ TRỢ HỌC VÀ NHẬN DIỆN}}\\[0.25cm]
+  {\large\textbf{NGÔN NGỮ KÝ HIỆU}}\\[1cm]
+
+  \begin{tabular}{>{\bfseries}l l}
+    Giảng viên: & TS. Tên giảng viên \\[0.25cm]
+    Môn học: & Tương tác Người -- Máy \\[0.25cm]
+    Sinh viên: & Họ và tên sinh viên \\[0.25cm]
+    Mã sinh viên: & 12345678 \\[0.25cm]
+    Lớp: & Tên lớp
+  \end{tabular}
+
+  \vfill
+  {\textbf{Hà Nội -- 2026}}
+\end{center}
+\end{titlepage}
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+
+\pagenumbering{arabic}
+\input{noidungchuong1}
+\input{chuong2}
+\input{chuong3}
+\input{chuong4}
+\input{chuong5}
+\input{chuong6}
+
+\end{document}

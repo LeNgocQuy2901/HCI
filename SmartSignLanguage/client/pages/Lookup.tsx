@@ -103,7 +103,7 @@ export default function Lookup() {
               </div>
 
               {/* Search input — thêm focus ring xanh đồng nhất với Index */}
-              <div className="relative">
+              <div className="relative" data-tour="lookup-search">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   value={query}
@@ -122,7 +122,10 @@ export default function Lookup() {
               </div>
 
               {/* ── Word list: selected = #0056d2 accent, border-left highlight ── */}
-              <div className="max-h-[520px] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
+              <div
+                className="max-h-[520px] overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800"
+                data-tour="lookup-results"
+              >
                 {results.length === 0 ? (
                   <div className="p-6 text-sm text-slate-400 text-center">
                     No matching vocabulary word found.
@@ -163,7 +166,7 @@ export default function Lookup() {
             </Card>
 
             {/* Detail card (unchanged from phase 1) */}
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden" data-tour="lookup-video">
               {selectedCard ? (
                 <div className="space-y-4 p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

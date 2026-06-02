@@ -11,7 +11,7 @@ export interface HandDetectionResult {
   confidence: number[];
 }
 
-export function useHandDetection() {
+export function useHandDetection(enabled = true) {
   const [handLandmarker, setHandLandmarker] =
     useState<HandLandmarker | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -19,6 +19,14 @@ export function useHandDetection() {
 
   useEffect(() => {
     let landmarker: HandLandmarker | null = null;
+    let cancelled = false;
+
+    if (!enabled) {
+      setHandLandmarker(null);
+      setIsReady(false);
+      setError(null);
+      return;
+    }
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       const reason = String(event.reason);
@@ -51,6 +59,11 @@ export function useHandDetection() {
           numHands: 2,
         });
 
+        if (cancelled) {
+          landmarker.close();
+          return;
+        }
+
         setHandLandmarker(landmarker);
         setError(null);
         setIsReady(true);
@@ -69,10 +82,13 @@ export function useHandDetection() {
     initializeHandDetection();
 
     return () => {
+      cancelled = true;
       landmarker?.close();
+      setHandLandmarker(null);
+      setIsReady(false);
       window.removeEventListener("unhandledrejection", handleUnhandledRejection);
     };
-  }, []);
+  }, [enabled]);
 
   const detectHands = useCallback(
     (video: HTMLVideoElement): HandDetectionResult | null => {

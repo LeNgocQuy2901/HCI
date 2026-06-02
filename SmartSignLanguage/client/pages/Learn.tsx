@@ -626,7 +626,7 @@ export default function Learn() {
             value={activeTab}
             onValueChange={(value) => navigateToTab(value as Tab)}
           >
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-5" data-tour="learn-tabs">
               <TabsTrigger value="path" className="gap-2">
                 <Target className="h-4 w-4" />
                 Path
@@ -649,7 +649,11 @@ export default function Learn() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="path" className="space-y-8">
+            <TabsContent
+              value="path"
+              className="space-y-8"
+              data-tour="learn-topic-path"
+            >
               <Card className="p-6 rounded-3xl border border-slate-200/70 dark:border-slate-800 bg-gradient-to-br from-sky-50 via-emerald-50 to-amber-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="h-12 w-12 rounded-2xl bg-white/80 dark:bg-slate-800 flex items-center justify-center shadow-sm">

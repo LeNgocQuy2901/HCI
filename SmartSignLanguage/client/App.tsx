@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
+import FirstVisitGuide from "@/components/FirstVisitGuide";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useLearningStore } from "@/hooks/use-learning-store";
 import Index from "./pages/Index";
@@ -62,6 +63,7 @@ function AppContent() {
               v7_relativeSplatPath: true,
             }}
           >
+            <FirstVisitGuide />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/learn/*" element={<Learn />} />

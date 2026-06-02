@@ -1,0 +1,354 @@
+\chapter{Đặt vấn đề}
+
+\section{Bối cảnh và lý do chọn đề tài}
+
+\subsection{Bối cảnh xã hội}
+
+Ngôn ngữ ký hiệu là phương tiện giao tiếp quan trọng đối với người khiếm
+thính. Bên cạnh người khiếm thính, người thân, bạn bè, giáo viên, tình nguyện
+viên và nhân viên hỗ trợ xã hội cũng có nhu cầu học các ký hiệu cơ bản để giao
+tiếp thuận tiện và bao trùm hơn.
+
+Khác với việc học từ vựng thông thường, việc học ngôn ngữ ký hiệu phụ thuộc
+nhiều vào yếu tố trực quan. Người học cần quan sát hình dạng bàn tay, hướng
+lòng bàn tay, vị trí tay so với cơ thể, chuyển động, nhịp độ và một phần biểu
+cảm khuôn mặt. Nếu chỉ sử dụng mô tả bằng văn bản hoặc hình ảnh tĩnh, người
+học có thể hiểu nghĩa của từ nhưng vẫn thực hiện sai động tác.
+
+Nền tảng web có khả năng hỗ trợ quá trình tự học nhờ ưu điểm dễ tiếp cận trên
+nhiều thiết bị và không yêu cầu cài đặt phần mềm chuyên biệt. Khi kết hợp video
+minh họa, bài kiểm tra, cơ chế ôn tập và phản hồi từ camera, hệ thống có thể tạo
+ra trải nghiệm học tập chủ động hơn so với việc chỉ xem video riêng lẻ.
+
+Trong phạm vi phiên bản hiện tại, đề tài tập trung vào từ vựng American Sign
+Language (ASL). Hệ thống chưa hỗ trợ Vietnamese Sign Language (VSL) hoặc dịch
+hội thoại ký hiệu liên tục.
+
+\subsection{Vấn đề từ góc nhìn tương tác người -- máy}
+
+Từ góc nhìn Human-Computer Interaction (HCI), một hệ thống học ASL cần giải
+quyết ba nhóm vấn đề chính: nhận thức, thao tác và phản hồi.
+
+Về nhận thức, giao diện cần ưu tiên video và hình ảnh trực quan, đồng thời hạn
+chế hiển thị quá nhiều thông tin cùng lúc. Nội dung nên được chia theo cấp độ
+và chủ đề để người mới không phải tiếp cận một danh sách từ vựng quá lớn ngay
+từ đầu.
+
+Về thao tác, người học cần dễ dàng tìm bài học, xem lại video, bắt đầu bài kiểm
+tra, tra cứu từ và bật camera để luyện tập. Các tác vụ chính cần được thể hiện
+rõ ràng, tránh yêu cầu người dùng thực hiện nhiều bước không cần thiết.
+
+Về phản hồi, hệ thống cần cho người học biết trạng thái hiện tại: video đang
+phát hay tạm dừng, bài học đã hoàn thành đến đâu, camera đã sẵn sàng hay chưa
+và kết quả nhận diện có độ tin cậy như thế nào. Khi xảy ra lỗi, giao diện cần
+đưa ra hướng dẫn để người dùng có thể tiếp tục thao tác.
+
+Các yêu cầu trên là cơ sở để xác định nhóm người dùng, thiết kế luồng tương tác
+và xây dựng tiêu chí đánh giá trải nghiệm trong các phần tiếp theo.
+
+\section{Đối tượng người dùng và nhu cầu}
+
+\subsection{Người mới bắt đầu học ASL}
+
+Đây là nhóm người dùng chính của hệ thống. Họ cần một lộ trình học dễ tiếp cận,
+nội dung được chia nhỏ và video minh họa rõ ràng. Sau mỗi bài học, người dùng
+cần thực hiện bài kiểm tra để đánh giá khả năng ghi nhớ và ôn lại các từ chưa
+thành thạo.
+
+\subsection{Người có nhu cầu giao tiếp cơ bản}
+
+Nhóm này bao gồm người thân, bạn bè, giáo viên hoặc tình nguyện viên muốn học
+một số ký hiệu thông dụng. Họ cần chức năng tra cứu nhanh, bài học theo chủ đề
+và khả năng xem lại động tác nhiều lần.
+
+\subsection{Quản trị viên nội dung}
+
+Quản trị viên cần công cụ để thêm, sửa, kiểm tra và xuất bản nội dung từ vựng,
+video, thông tin mô tả và câu hỏi trắc nghiệm. Bên cạnh đó, dữ liệu phân tích
+giúp quản trị viên phát hiện bài học có tỷ lệ hoàn thành thấp hoặc ký hiệu
+thường xuyên gặp lỗi khi nhận diện.
+
+\section{Hạn chế của các phương pháp hiện có}
+
+\subsection{Học qua tài liệu tĩnh và video riêng lẻ}
+
+Tài liệu và video minh họa giúp người học quan sát động tác mẫu nhưng chưa tạo
+thành một vòng học hoàn chỉnh. Người học vẫn phải tự ghi nhớ, tự đánh giá kết
+quả và tự lên lịch ôn tập.
+
+Phương pháp này tồn tại một số hạn chế:
+
+\begin{itemize}
+  \item Thiếu lộ trình học rõ ràng.
+  \item Thiếu cơ chế kiểm tra sau bài học.
+  \item Không theo dõi được tiến độ cá nhân.
+  \item Không cung cấp phản hồi trực tiếp để hỗ trợ người học tự đánh giá động
+        tác khi thực hành.
+  \item Khó xác định từ nào đã thành thạo và từ nào cần ôn lại.
+\end{itemize}
+
+\subsection{Ứng dụng từ điển và nền tảng học ký hiệu}
+
+Một số nền tảng hiện có cung cấp từ điển ký hiệu, video hoặc tài liệu theo chủ
+đề. Tuy nhiên, không phải hệ thống nào cũng tích hợp đồng thời lộ trình học,
+bài kiểm tra, cơ chế ôn tập ngắt quãng, bảng theo dõi tiến độ và luyện tập bằng
+camera.
+
+Bảng~\ref{tab:comparison} trình bày sự khác biệt giữa SmartSignLanguage và một
+số nền tảng hỗ trợ học ngôn ngữ ký hiệu phổ biến.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{longtable}{
+  |>{\raggedright\arraybackslash}p{1.8cm}
+  |>{\raggedright\arraybackslash}p{3.15cm}
+  |>{\raggedright\arraybackslash}p{3.15cm}
+  |>{\raggedright\arraybackslash}p{3.15cm}
+  |>{\raggedright\arraybackslash}p{3.15cm}|}
+  \caption{So sánh một số giải pháp hỗ trợ học ngôn ngữ ký hiệu}
+  \label{tab:comparison}\\
+  \hline
+  \textbf{Tiêu chí} &
+  \textbf{HandSpeak} &
+  \textbf{Signing Savvy} &
+  \textbf{Spread the Sign} &
+  \textbf{SmartSignLanguage} \\
+  \hline
+  \endfirsthead
+
+  \multicolumn{5}{c}{\tablename\ \thetable\ -- tiếp theo} \\
+  \hline
+  \textbf{Tiêu chí} &
+  \textbf{HandSpeak} &
+  \textbf{Signing Savvy} &
+  \textbf{Spread the Sign} &
+  \textbf{SmartSignLanguage} \\
+  \hline
+  \endhead
+
+  Video minh họa &
+  Có. Cung cấp từ điển ASL, video và nội dung về ngữ pháp, văn hóa Deaf. &
+  Có. Cung cấp video ký hiệu và cho phép xem lại nhiều lần. &
+  Có. Là từ điển trực quan hỗ trợ tra cứu ký hiệu thuộc nhiều ngôn ngữ. &
+  Có. Video được tích hợp trực tiếp vào thẻ từ vựng và bài học. \\
+  \hline
+
+  Lộ trình học &
+  Hạn chế. Có bài hướng dẫn được phân loại nhưng người học chủ yếu tự lựa chọn
+  nội dung. &
+  Hạn chế. Có danh sách từ theo chủ đề nhưng thiên về công cụ hỗ trợ tự học. &
+  Không phải chức năng chính. Nền tảng tập trung vào tra cứu từ và cụm từ. &
+  Có. Gồm ba cấp độ và 16 bài học được sắp xếp từ cơ bản đến nâng cao. \\
+  \hline
+
+  Bài kiểm tra &
+  Hạn chế. Có một số bài luyện tập nhưng chưa phải bài kiểm tra sau từng bài
+  học. &
+  Có. Người dùng có thể tạo bài kiểm tra từ danh sách từ. &
+  Không phải chức năng chính. &
+  Có. Bài kiểm tra được thiết kế theo nội dung bài học và kết quả được lưu lại. \\
+  \hline
+
+  Ôn tập từ yếu &
+  Hạn chế. Người học chủ yếu tự lựa chọn nội dung cần xem lại. &
+  Hạn chế. Có thẻ ghi nhớ và danh sách từ nhưng người dùng cần chủ động lựa
+  chọn nội dung ôn tập. &
+  Hạn chế. Tập trung vào tra cứu hơn là quản lý quá trình ôn tập cá nhân. &
+  Có. Hệ thống đưa từ yếu hoặc đến hạn vào danh sách ôn tập theo cơ chế SRS. \\
+  \hline
+
+  Theo dõi tiến độ &
+  Hạn chế. Không tập trung vào bảng theo dõi tiến độ cá nhân. &
+  Hạn chế. Có công cụ hỗ trợ tự học nhưng không tập trung vào một lộ trình
+  thống nhất. &
+  Hạn chế. Không tập trung vào quản lý tiến độ học tập. &
+  Có. Bảng theo dõi tổng hợp tiến độ bài học, kết quả bài kiểm tra và hoạt động
+  luyện tập. \\
+  \hline
+
+  Luyện tập bằng camera &
+  Không. Người học xem video và tự đối chiếu động tác. &
+  Không. Người học luyện tập thông qua video, thẻ ghi nhớ và bài kiểm tra. &
+  Không. Nền tảng cung cấp video để tra cứu và đối chiếu. &
+  Có. AI nhận diện ký hiệu qua camera hoặc tệp tải lên và đưa ra phản hồi sơ bộ
+  trong phạm vi tập nhãn mà mô hình đã được huấn luyện. \\
+  \hline
+\end{longtable}
+\endgroup
+
+Qua bảng so sánh, HandSpeak có thế mạnh về tài nguyên ASL, nội dung ngữ pháp và
+văn hóa Deaf. Signing Savvy hỗ trợ việc tự học thông qua danh sách từ, thẻ ghi
+nhớ và bài kiểm tra. Spread the Sign phù hợp với nhu cầu tra cứu ký hiệu thuộc
+nhiều ngôn ngữ khác nhau.
+
+SmartSignLanguage không nhằm thay thế hoàn toàn các nền tảng trên. Điểm khác
+biệt của đề tài là tích hợp các chức năng học tập vào một luồng sử dụng thống
+nhất: chọn bài học, xem video, thực hiện bài kiểm tra, ôn tập từ yếu, theo dõi
+tiến độ và luyện tập bổ sung bằng camera.
+
+\section{Khoảng trống cần giải quyết}
+
+Từ các hạn chế trên, đề tài xác định bốn khoảng trống chính:
+
+\begin{itemize}
+  \item Thiếu một môi trường học ASL tích hợp bài học, video, bài kiểm tra và
+        bảng theo dõi tiến độ trong một luồng sử dụng thống nhất.
+  \item Thiếu cơ chế ôn tập ngắt quãng (Spaced Repetition System -- SRS) để tự
+        động xác định các từ yếu hoặc đến hạn ôn tập.
+  \item Thiếu cơ chế phản hồi sơ bộ khi người học thực hành bằng camera.
+  \item Thiếu hệ thống quản trị nội dung linh hoạt để cập nhật, kiểm tra dữ liệu
+        động và theo dõi dữ liệu phân tích liên quan đến bài học, câu hỏi trắc
+        nghiệm và kết quả nhận diện.
+\end{itemize}
+
+SmartSignLanguage được xây dựng nhằm giải quyết các khoảng trống này trong
+phạm vi một hệ thống web hỗ trợ học ASL ở mức từ vựng và cụm từ cơ bản.
+
+\section{Mục tiêu của đề tài}
+
+\subsection{Mục tiêu tổng quát}
+
+Xây dựng một ứng dụng web hỗ trợ học và luyện tập từ vựng ASL theo hướng trực
+quan, dễ sử dụng và có khả năng theo dõi tiến độ cá nhân.
+
+\subsection{Mục tiêu chức năng}
+
+Hệ thống hướng đến các chức năng chính:
+
+\begin{itemize}
+  \item Cung cấp lộ trình học gồm ba cấp độ: Beginner, Intermediate và Advanced.
+  \item Tổ chức 16 bài học theo các chủ đề như Greetings, Family, Colors, Food
+        \& Drink, School, Travel và Deaf Community.
+  \item Hiển thị thẻ từ vựng kèm video, mô tả và hướng dẫn luyện tập.
+  \item Cung cấp bài kiểm tra sau bài học.
+  \item Hỗ trợ ôn tập các từ yếu hoặc đến hạn theo cơ chế SRS.
+  \item Cho phép tra cứu ký hiệu.
+  \item Nhận diện ký hiệu trong phạm vi mô hình đã huấn luyện: camera hỗ trợ
+        Words, Alphabet và Numbers; tệp tải lên hỗ trợ Alphabet và Numbers.
+  \item Chuyển đổi văn bản đơn giản thành chuỗi hoạt ảnh điểm mốc cơ thể.
+  \item Cung cấp bảng theo dõi tiến độ cho người học.
+  \item Cung cấp công cụ quản trị để thêm, sửa, kiểm tra và xuất bản dữ liệu từ
+        vựng, video và câu hỏi trắc nghiệm.
+  \item Cung cấp dữ liệu phân tích để hỗ trợ quản trị viên phát hiện bài học có
+        tỷ lệ hoàn thành thấp hoặc ký hiệu có tỷ lệ nhận diện thất bại cao.
+\end{itemize}
+
+\subsection{Mục tiêu HCI}
+
+Bên cạnh việc hoàn thiện chức năng, đề tài tập trung vào các mục tiêu HCI:
+
+\begin{itemize}
+  \item Giảm số bước cần thiết để người dùng bắt đầu một bài học.
+  \item Giúp người dùng dễ dàng tìm kiếm và xem lại nội dung.
+  \item Hiển thị trạng thái rõ ràng khi tải dữ liệu, sử dụng camera hoặc nhận
+        kết quả AI.
+  \item Hỗ trợ người dùng phục hồi khi thao tác sai hoặc khi camera không hoạt
+        động.
+  \item Hạn chế quá tải nhận thức bằng cách chia nội dung thành cấp độ và chủ
+        đề.
+  \item Đảm bảo các chức năng học cơ bản vẫn sử dụng được khi người dùng không
+        cấp quyền camera.
+\end{itemize}
+
+\section{Đề xuất giải pháp SmartSignLanguage}
+
+SmartSignLanguage là ứng dụng web hỗ trợ học, tra cứu và luyện tập ASL. Thay vì
+chỉ cung cấp video riêng lẻ, hệ thống xây dựng một vòng học gồm các bước:
+
+\begin{enumerate}
+  \item Người dùng chọn bài học theo cấp độ và chủ đề.
+  \item Người dùng xem video và thông tin của từng thẻ từ vựng.
+  \item Người dùng hoàn thành bài kiểm tra để đánh giá khả năng ghi nhớ.
+  \item Hệ thống lưu tiến độ và đưa các từ yếu vào danh sách ôn tập.
+  \item Người dùng có thể thực hành bổ sung bằng camera.
+  \item Bảng theo dõi hiển thị tiến độ và kết quả học tập.
+\end{enumerate}
+
+Chức năng nhận diện sử dụng MediaPipe để trích xuất điểm mốc cơ thể (landmark)
+của bàn tay và tư thế từ các khung hình. Các tọa độ landmark được chuẩn hóa và
+tổng hợp thành chuỗi dữ liệu đầu vào. Sau đó, mô hình học sâu phân loại ký hiệu
+trong tập nhãn đã được huấn luyện. Kết quả hiển thị gồm nhãn ký hiệu dự đoán, độ
+tin cậy và phản hồi sơ bộ hỗ trợ luyện tập.
+
+Phản hồi từ AI không thay thế giáo viên. Hệ thống chưa phân tích chính xác từng
+lỗi nhỏ về hình dạng bàn tay, hướng tay, chuyển động hoặc biểu cảm khuôn mặt.
+
+Chức năng Text-to-Sign chuyển đổi văn bản đơn giản thành chuỗi hoạt ảnh
+landmark. Hệ thống ưu tiên tìm từ hoặc cụm từ có sẵn trong dữ liệu. Nếu không
+tìm thấy, hệ thống có thể biểu diễn từ bằng cách đánh vần ngón tay
+(fingerspelling) khi dữ liệu chữ cái khả dụng. Đây chưa phải cơ chế dịch hoàn
+chỉnh từ ngôn ngữ tự nhiên sang ngữ pháp ASL.
+
+\section{Phạm vi và giới hạn}
+
+\subsection{Phạm vi}
+
+Phiên bản hiện tại tập trung vào:
+
+\begin{itemize}
+  \item Học ASL ở mức từ vựng và một số cụm từ cơ bản.
+  \item Ba cấp độ học và 16 bài học theo chủ đề.
+  \item Bài kiểm tra, ôn tập và theo dõi tiến độ.
+  \item Nhận diện Words, Alphabet và Numbers trong phạm vi mô hình.
+  \item Chuyển đổi văn bản đơn giản thành hoạt ảnh landmark.
+  \item Quản trị nội dung và theo dõi dữ liệu phân tích.
+\end{itemize}
+
+\subsection{Giới hạn}
+
+Hệ thống hiện còn một số giới hạn:
+
+\begin{itemize}
+  \item Chưa hỗ trợ VSL.
+  \item Chưa hỗ trợ nhận diện hoặc dịch câu ký hiệu liên tục.
+  \item Tập từ vựng AI còn giới hạn bởi tập dữ liệu và mô hình đã huấn luyện.
+  \item Kết quả nhận diện phụ thuộc vào ánh sáng, vị trí camera và tốc độ chuyển
+        động.
+  \item Text-to-Sign chưa xử lý đầy đủ ngữ pháp ASL.
+  \item Hoạt ảnh landmark chưa tự nhiên như video người thật hoặc avatar 3D có
+        biểu cảm.
+  \item Recognition là chức năng luyện tập bổ sung, chưa phải bước bắt buộc
+        trong mỗi bài học.
+\end{itemize}
+
+Các giới hạn này cần được trình bày rõ để tránh hiểu nhầm về năng lực của hệ
+thống và làm cơ sở cho hướng phát triển sau này.
+
+\section{Định hướng đánh giá trải nghiệm người dùng}
+
+Để đánh giá hệ thống từ góc nhìn HCI, báo cáo dự kiến sử dụng các tiêu chí:
+
+\begin{itemize}
+  \item Tỷ lệ hoàn thành các tác vụ cơ bản.
+  \item Thời gian trung bình để tìm và bắt đầu một bài học.
+  \item Thời gian trung bình để tra cứu một ký hiệu.
+  \item Số lỗi thao tác khi bật camera và bắt đầu recognition.
+  \item Mức độ dễ sử dụng thông qua bảng hỏi Likert hoặc System Usability Scale
+        (SUS).
+  \item Mức độ hài lòng đối với video, bài kiểm tra, danh sách ôn tập và phản
+        hồi recognition.
+  \item Nhận xét định tính của người dùng sau khi trải nghiệm hệ thống.
+\end{itemize}
+
+Các chỉ số HCI cần được đánh giá riêng với chỉ số kỹ thuật của AI như độ chính
+xác, độ tin cậy hoặc ma trận nhầm lẫn.
+
+\section{Cấu trúc báo cáo}
+
+Nội dung báo cáo được tổ chức như sau:
+
+\begin{itemize}
+  \item \textbf{Chương I:} Trình bày bối cảnh, đối tượng người dùng, hạn chế của
+        các giải pháp hiện có, mục tiêu, phạm vi và giải pháp đề xuất.
+  \item \textbf{Chương II:} Trình bày kiến thức nền tảng về ASL, HCI, thị giác
+        máy tính, MediaPipe, học sâu và cơ chế ôn tập ngắt quãng.
+  \item \textbf{Chương III:} Thu thập, phân tích và đặc tả yêu cầu hệ thống.
+  \item \textbf{Chương IV:} Trình bày thiết kế giao diện, kiến trúc hệ thống, cơ
+        sở dữ liệu, API và luồng xử lý.
+  \item \textbf{Chương V:} Trình bày quá trình cài đặt, kết quả triển khai, kiểm
+        thử và đánh giá trải nghiệm người dùng.
+  \item \textbf{Chương VI:} Tổng kết kết quả đạt được, giới hạn và hướng phát
+        triển.
+\end{itemize}

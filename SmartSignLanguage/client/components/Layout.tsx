@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   BarChart3,
+  CircleHelp,
   ClipboardList,
   FileText,
   Menu,
@@ -24,6 +25,7 @@ import {
 import { useState } from "react";
 import { useAuthStore } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { openFirstVisitGuide } from "@/components/FirstVisitGuide";
 
 interface LayoutProps {
   children: ReactNode;
@@ -137,6 +139,13 @@ export default function Layout({ children }: LayoutProps) {
                 <Link
                   key={link.href}
                   to={link.href}
+                  data-tour={
+                    link.href === "/recognition"
+                      ? "nav-recognition"
+                      : link.href === "/learn"
+                        ? "nav-learn"
+                        : undefined
+                  }
                   aria-current={isActivePath(link.href) ? "page" : undefined}
                   className={`relative whitespace-nowrap rounded-full px-3 py-2 text-sm lg:text-base font-semibold transition-colors ${
                     isActivePath(link.href)
@@ -182,6 +191,17 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Desktop Auth Buttons / User Menu */}
             <div className="hidden md:flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-11 w-11"
+                onClick={openFirstVisitGuide}
+                aria-label="Open usage guide"
+                title="Usage guide"
+              >
+                <CircleHelp size={18} />
+              </Button>
               <ThemeToggle />
               {isAuthenticated && user ? (
                 <DropdownMenu>
@@ -238,7 +258,7 @@ export default function Layout({ children }: LayoutProps) {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <>
+                <div className="flex items-center gap-3" data-tour="home-auth">
                   <Button
                     variant="outline"
                     size="sm"
@@ -254,7 +274,7 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     <Link to="/register">Sign Up</Link>
                   </Button>
-                </>
+                </div>
               )}
             </div>
 
@@ -289,6 +309,18 @@ export default function Layout({ children }: LayoutProps) {
               <div className="px-4">
                 <ThemeToggle fullWidth />
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openFirstVisitGuide();
+                }}
+              >
+                <CircleHelp size={16} />
+                Usage Guide
+              </Button>
               {navLinks.map((link) => (
                 <Link
                   key={link.href}

@@ -242,8 +242,6 @@ export default function Recognition() {
       width: 640,
       height: 480,
     });
-  const { detectHands } = useHandDetection();
-
   const animationFrameRef = useRef<number | null>(null);
   const currentFrameRef = useRef(0);
   const isProcessingRef = useRef(false);
@@ -287,6 +285,9 @@ export default function Recognition() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [recognitionMode, setRecognitionMode] =
     useState<RecognitionMode>("words");
+  const { detectHands } = useHandDetection(
+    isRunning && recognitionSource === "camera",
+  );
   const [practiceFeedback, setPracticeFeedback] = useState<string | null>(null);
   const [practiceAttempts, setPracticeAttempts] = useState<
     Array<{
@@ -1456,7 +1457,7 @@ export default function Recognition() {
                       </div>
                     </div>
 
-                    <div>
+                    <div data-tour="recognition-source">
                       <p className="mb-1.5 text-sm font-medium">
                         Choose input source
                       </p>
@@ -1522,7 +1523,7 @@ export default function Recognition() {
                       </div>
                     )}
 
-                    <div>
+                    <div data-tour="recognition-mode">
                       <p className="mb-1.5 text-sm font-medium">
                         Recognition mode
                       </p>
@@ -1554,6 +1555,7 @@ export default function Recognition() {
                     {!isRunning ? (
                       <Button
                         onClick={handleStart}
+                        data-tour="recognition-start"
                         disabled={
                           !serverConnected ||
                           (recognitionSource === "upload" && !uploadedVideoName)

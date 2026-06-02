@@ -709,6 +709,7 @@ export default function Translate() {
                 </label>
                 <Textarea
                   id="translate-input"
+                  data-tour="translate-input"
                   value={draftInput}
                   onChange={(event) => setDraftInput(event.target.value)}
                   maxLength={160}
@@ -731,6 +732,7 @@ export default function Translate() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
                   <Button
                     type="button"
+                    data-tour="translate-action"
                     size="lg"
                     onClick={handleGenerate}
                     disabled={!hasDraftInput || isGenerating || !landmarkData}
@@ -832,7 +834,7 @@ export default function Translate() {
             </section>
 
             <section className="lg:sticky lg:top-24 lg:self-start">
-              <Card className="overflow-hidden shadow-sm">
+              <Card className="overflow-hidden shadow-sm" data-tour="translate-preview">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
                   <div>
                     <h2 className="text-xl font-semibold">

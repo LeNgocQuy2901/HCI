@@ -330,7 +330,7 @@ export default function Dashboard() {
             </p>
           )}
 
-          <section>
+          <section data-tour="dashboard-next-step">
             <Card
               className={`${importantCardStyle} relative overflow-hidden p-6 sm:p-7`}
             >
@@ -404,7 +404,10 @@ export default function Dashboard() {
             </Card>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-2">
+          <section
+            className="grid gap-6 lg:grid-cols-2"
+            data-tour="dashboard-snapshot"
+          >
             <div className="space-y-4">
               <SectionTitle
                 eyebrow="At a glance"
@@ -461,7 +464,7 @@ export default function Dashboard() {
             />
           </section>
 
-          <section className="space-y-4">
+          <section className="space-y-4" data-tour="dashboard-focus">
             <SectionTitle eyebrow="Focus" title="Progress and weak areas" />
             <div className="grid gap-4 lg:grid-cols-2">
               <Card className={`${cardStyle} p-5`}>

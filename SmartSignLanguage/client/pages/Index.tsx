@@ -583,6 +583,7 @@ export default function Index() {
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Button
                   size="lg"
+                  data-tour="home-start-learning"
                   onClick={() => handleNavigate("/learn")}
                   className="h-14 gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-7 text-base font-bold text-white shadow-[0_16px_34px_rgba(124,58,237,.28)] transition-transform hover:scale-[1.03]"
                 >
