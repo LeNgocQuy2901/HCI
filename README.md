@@ -1,336 +1,233 @@
-# SmartSignLanguage
+# Smart Sign Language
 
-SmartSignLanguage là ứng dụng học và nhận diện ngôn ngữ ký hiệu, gồm frontend React/Vite, backend Express cho các chức năng web, và FastAPI inference server riêng để nhận diện ký hiệu bằng camera.
+Smart Sign Language là ứng dụng web hỗ trợ học, tra cứu, dịch và nhận diện ngôn ngữ ký hiệu. Dự án kết hợp giao diện React, API Express, cơ sở dữ liệu SQLite cục bộ và một inference server FastAPI riêng cho tính năng nhận diện bằng camera.
 
 ## Tính Năng Chính
 
-- Học từ vựng ngôn ngữ ký hiệu qua bài học và video mẫu.
-- Nhận diện ký hiệu realtime từ webcam.
-- AI inference server dùng MediaPipe Hands + Pose và model Keras.
-- Hỗ trợ model landmarks sequence từ `model_landmarks.keras` và `mapping.json`.
-- Có đăng nhập, đăng ký, hồ sơ người dùng, phản hồi và các trang học tập.
+- Học ngôn ngữ ký hiệu theo chủ đề, bài học và video minh họa.
+- Tra cứu từ vựng ký hiệu và xem nội dung liên quan.
+- Dịch văn bản sang chuỗi ký hiệu dựa trên dữ liệu landmark.
+- Nhận diện ký hiệu từ camera thông qua AI inference server.
+- Đăng ký, đăng nhập, quản lý hồ sơ và tiến độ học tập.
+- Gửi phản hồi từ người dùng.
+- Trang quản trị cho nội dung, vận hành và thống kê.
+- Proxy video từ Google Drive thông qua service account.
 
-## Công Nghệ
+## Công Nghệ Sử Dụng
 
-- Frontend: React 18, TypeScript, Vite, TailwindCSS, Radix UI.
-- Web backend: Express, SQLite, JWT.
-- AI backend: FastAPI, TensorFlow/Keras, MediaPipe, OpenCV.
-- Database local: `data/app.db`.
+### Frontend
+
+- React 18
+- TypeScript
+- Vite
+- React Router
+- Tailwind CSS
+- Radix UI
+- Zustand
+- TanStack Query
+- Framer Motion
+- MediaPipe Tasks Vision
+
+### Backend
+
+- Node.js
+- Express
+- SQLite với `better-sqlite3`
+- JWT authentication
+- Google Drive API
+
+### AI Inference
+
+- Python
+- FastAPI
+- Uvicorn
+- TensorFlow
+- MediaPipe
+- OpenCV
+- ONNX Runtime
 
 ## Cấu Trúc Thư Mục
 
 ```text
-SmartSignLanguage/
-  client/                     React frontend
-    pages/                    Các route chính: Learn, Translate, Recognition...
-    components/               Component UI và layout
-    hooks/                    Custom hooks
-    lib/                      Helper frontend
-
-  server/                     Express backend
-    routes/                   API routes
-    models/                   Database models
-    middleware/               Auth middleware
-    db.ts                     SQLite setup
-
-  ai-model/                   AI inference server
-    inference/
-      main.py                 FastAPI entrypoint
-      wlasl_landmark_pipeline.py
-    model/                    Model files
-    requirements.txt          Python dependencies
-    start-inference-server.bat
-
-  public/                     Static assets
-  data/                       SQLite database
-  shared/                     Shared TypeScript types
+.
+|-- SmartSignLanguage/
+|   |-- client/                 # React app
+|   |-- server/                 # Express API và database logic
+|   |-- shared/                 # Shared types/config
+|   |-- ai-model/
+|   |   |-- inference/          # FastAPI inference service
+|   |   |-- model/              # Model files
+|   |   `-- training/           # Notebook/script huấn luyện
+|   |-- public/                 # Static assets
+|   |-- docs/                   # Tài liệu báo cáo/Overleaf
+|   |-- tests/                  # K6 tests
+|   `-- package.json
+`-- README.md
 ```
 
-## Yêu Cầu
+## Yêu Cầu Môi Trường
 
-- Node.js 20+.
-- npm 10+.
-- Python 3.10 hoặc mới hơn.
-- Webcam nếu dùng trang nhận diện realtime.
+- Node.js 20 trở lên được khuyến nghị.
+- npm hoặc pnpm.
+- Python 3.10 trở lên cho AI inference server.
+- Git.
+- Camera/webcam nếu muốn dùng tính năng nhận diện.
 
-Trên Windows, TensorFlow bản native mới thường chạy CPU. Điều này vẫn dùng được cho demo realtime, nhưng tốc độ phụ thuộc máy.
-
-## Cài Đặt Frontend/Web Backend
-
-Từ thư mục project:
+## Cài Đặt Web App
 
 ```bash
-cd D:\GitHub\HCL\SmartSignLanguage
+cd SmartSignLanguage
 npm install
 ```
 
-Chạy kiểm tra TypeScript:
+Tạo file `.env` từ file mẫu:
 
 ```bash
-npm run typecheck
+cp .env.example .env
 ```
 
-## Cài Đặt AI Backend
+Các giá trị mặc định quan trọng:
 
-Từ thư mục `ai-model`:
+```env
+DATABASE_PATH=./data/app.db
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+VITE_API_URL=http://localhost:8000
+PORT=8080
+HOST=localhost
+NODE_ENV=development
+```
+
+Chạy ứng dụng web:
 
 ```bash
-cd D:\GitHub\HCL\SmartSignLanguage\ai-model
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-Hoặc chạy script Windows:
-
-```bat
-cd D:\GitHub\HCL\SmartSignLanguage\ai-model
-install-dependencies.bat
-```
-
-## File Model Cần Có
-
-Các file model phải nằm trong:
-
-```text
-ai-model/model/
-```
-
-Danh sách cần thiết:
-
-```text
-model_landmarks.keras
-mapping.json
-hand_landmarker.task
-pose_landmarker.task
-```
-
-File `model_weights.pkl` không cần cho runtime vì `model_landmarks.keras` đã chứa kiến trúc và weights.
-
-## Chạy Project
-
-Bạn cần chạy 2 server ở 2 terminal khác nhau.
-
-### Terminal 1: AI Inference Server
-
-```bash
-cd D:\GitHub\HCL\SmartSignLanguage\ai-model
-python -m uvicorn inference.main:app --host 0.0.0.0 --port 8000
-```
-
-Kiểm tra server AI:
-
-```text
-http://localhost:8000/health
-```
-
-Khi đúng model mới, response sẽ có:
-
-```json
-{
-  "backend": "wlasl-hands-pose-sequence",
-  "num_gestures": 10
-}
-```
-
-### Terminal 2: Web App
-
-```bash
-cd D:\GitHub\HCL\SmartSignLanguage
 npm run dev
 ```
 
-Mở trình duyệt:
+Mặc định web app chạy tại:
 
 ```text
 http://localhost:8080
 ```
 
-Trang nhận diện:
+## Cài Đặt AI Inference Server
 
-```text
-http://localhost:8080/recognition
+Di chuyển vào thư mục AI model:
+
+```bash
+cd SmartSignLanguage/ai-model
+python -m pip install -r requirements.txt
 ```
 
-## Biến Môi Trường
+Chạy inference server:
 
-File mẫu có sẵn tại `.env.example`.
-
-Biến quan trọng cho frontend nhận diện:
-
-```env
-VITE_API_URL=http://localhost:8000
+```bash
+python -m uvicorn inference.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Nếu AI server chạy port khác, cập nhật biến này trong `.env` hoặc `.env.local`.
+Trên Windows có thể dùng script:
 
-## Cách Hoạt Động Của Nhận Diện Realtime
-
-Luồng xử lý:
-
-```text
-Webcam frame
-  -> frontend gửi ảnh JPEG tới FastAPI
-  -> MediaPipe trích xuất 2 tay + pose
-  -> gom chuỗi 20 frame
-  -> normalize landmarks
-  -> model_landmarks.keras dự đoán 1 trong 10 từ
-  -> frontend hiển thị kết quả và vẽ landmarks
+```bat
+start-inference-server.bat
 ```
 
-Model cần đủ 20 frame trước khi dự đoán, nên lúc mới bấm Start Recognition, UI sẽ hiển thị trạng thái kiểu:
-
-```text
-Collecting frames 1/20
-```
-
-Sau khi đủ frame, kết quả nhận diện sẽ xuất hiện.
-
-## API AI Backend
-
-Base URL mặc định:
+API inference mặc định:
 
 ```text
 http://localhost:8000
 ```
 
-Endpoint chính:
+## Chạy Toàn Bộ Dự Án Trên Windows
 
-| Method | Endpoint | Mô tả |
-|---|---|---|
-| GET | `/health` | Kiểm tra server và model |
-| GET | `/api/info` | Thông tin API |
-| GET | `/api/gestures` | Danh sách từ model hỗ trợ |
-| POST | `/api/predict` | Dự đoán từ file ảnh |
-| POST | `/api/predict-base64` | Dự đoán từ ảnh base64 |
-| POST | `/api/reset-sequence` | Reset buffer 20 frame |
-
-Ví dụ kiểm tra health:
-
-```bash
-curl http://localhost:8000/health
-```
-
-## Scripts Hay Dùng
-
-Frontend/web:
-
-```bash
-npm run dev          # chạy dev server
-npm run build        # build production
-npm start            # chạy production build
-npm run typecheck    # kiểm tra TypeScript
-npm test             # chạy test
-npm run format.fix   # format code
-```
-
-AI backend:
-
-```bash
-python -m uvicorn inference.main:app --host 0.0.0.0 --port 8000
-```
-
-Windows script:
+Trong thư mục `SmartSignLanguage`, có thể dùng:
 
 ```bat
-ai-model\start-inference-server.bat
+run-project.bat
 ```
 
-## Troubleshooting
+Script này sẽ:
 
-### Frontend báo không kết nối được inference server
-
-Kiểm tra AI server đã chạy chưa:
-
-```text
-http://localhost:8000/health
-```
-
-Nếu không vào được, chạy lại:
-
-```bash
-cd D:\GitHub\HCL\SmartSignLanguage\ai-model
-python -m uvicorn inference.main:app --host 0.0.0.0 --port 8000
-```
-
-### Server chạy nhưng chỉ nhận diện 1 tay
-
-Đảm bảo `/health` trả về:
-
-```json
-"backend": "wlasl-hands-pose-sequence"
-```
-
-Nếu không phải backend này, bạn đang chạy server cũ. Tắt process cũ rồi chạy lại `inference.main:app`.
-
-MediaPipe cũng có thể chỉ thấy 1 tay nếu:
-
-- Hai tay chồng lên nhau.
-- Một tay ra khỏi khung hình.
-- Camera thiếu sáng.
-- Tay quá xa camera.
-- Chuyển động quá nhanh.
-
-### Lỗi thiếu model file
-
-Kiểm tra thư mục:
-
-```text
-ai-model/model/
-```
-
-Cần có:
-
-```text
-model_landmarks.keras
-mapping.json
-hand_landmarker.task
-pose_landmarker.task
-```
-
-### Port 8000 hoặc 8080 đã được dùng
-
-Windows:
-
-```bat
-netstat -ano | findstr :8000
-netstat -ano | findstr :8080
-```
-
-Sau đó tắt process theo PID nếu cần:
-
-```bat
-taskkill /PID <PID> /F
-```
-
-### TensorFlow cảnh báo không dùng GPU trên Windows
-
-Đây là cảnh báo bình thường với TensorFlow native Windows. App vẫn chạy bằng CPU.
-
-## Ghi Chú Về Model
-
-Model hiện tại được train với chuỗi landmarks:
-
-```text
-SEQ_LEN = 20
-FEATURE_DIM = 225
-```
-
-Feature gồm:
-
-```text
-left hand  = 21 landmarks * 3 = 63
-right hand = 21 landmarks * 3 = 63
-pose       = 33 landmarks * 3 = 99
-total      = 225
-```
-
-Vì model phụ thuộc vào chuỗi frame, kết quả realtime sẽ tốt hơn khi người dùng giữ ký hiệu ổn định trong một khoảng ngắn thay vì đổi động tác quá nhanh.
+- Kiểm tra/cài đặt dependency Node nếu chưa có.
+- Kiểm tra các file model cần thiết.
+- Mở inference server tại `http://localhost:8000`.
+- Mở web app tại `http://localhost:8080`.
 
 ## Build Production
 
 ```bash
+cd SmartSignLanguage
 npm run build
 npm start
 ```
 
-Lưu ý: production web server không tự chạy AI backend. Nếu cần nhận diện realtime, vẫn phải chạy FastAPI server riêng ở port 8000 hoặc cấu hình lại `VITE_API_URL`.
+Lệnh build tạo output trong:
+
+```text
+SmartSignLanguage/dist/
+```
+
+## Kiểm Tra Chất Lượng Code
+
+```bash
+npm run typecheck
+npm run test
+```
+
+Nếu cần format lại code:
+
+```bash
+npm run format.fix
+```
+
+## Dữ Liệu Và File Không Nên Commit
+
+Một số file được tạo cục bộ hoặc có kích thước lớn, không nên đưa lên GitHub:
+
+- `SmartSignLanguage/node_modules/`
+- `SmartSignLanguage/dist/`
+- `SmartSignLanguage/data/`
+- `SmartSignLanguage/.env`
+- `SmartSignLanguage/service-account-key.json`
+- `SmartSignLanguage/public/data/combined_avg_landmarks.json`
+- Cache Python như `__pycache__/`
+- File log như `*.log`
+
+Nếu cần dùng tính năng dịch dựa trên landmark, đặt file dữ liệu landmark tại:
+
+```text
+SmartSignLanguage/public/data/combined_avg_landmarks.json
+```
+
+File này có thể rất lớn, nên được tải về hoặc sinh lại cục bộ thay vì commit vào repository.
+
+## Google Drive Video
+
+Backend có endpoint proxy video từ Google Drive. Nếu dùng tính năng này, cần đặt service account key tại:
+
+```text
+SmartSignLanguage/service-account-key.json
+```
+
+Không commit file này lên GitHub. Tài khoản service account cần có quyền đọc các file video tương ứng trong Google Drive.
+
+## Các Route Chính
+
+```text
+/                  Trang chủ
+/learn             Học theo bài/chuyên mục
+/lookup            Tra cứu ký hiệu
+/translate         Dịch văn bản sang ký hiệu
+/recognition       Nhận diện ký hiệu bằng camera
+/dashboard         Bảng điều khiển người dùng
+/profile           Hồ sơ cá nhân
+/feedback          Gửi phản hồi
+/admin/content     Quản lý nội dung
+/admin/analytics   Thống kê quản trị
+/admin/operations  Vận hành hệ thống
+```
+
+## Ghi Chú Phát Triển
+
+- Express API được gắn vào Vite dev server trong quá trình development.
+- SQLite database được tạo tự động theo `DATABASE_PATH`.
+- AI inference server chạy riêng và được frontend gọi qua `VITE_API_URL`.
+- Các notebook và script huấn luyện nằm trong `SmartSignLanguage/ai-model/training`.
